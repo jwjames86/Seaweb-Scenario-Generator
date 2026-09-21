@@ -7,6 +7,16 @@ const state = {
   sailings: []
 };
 
+window.addEventListener("error",(event)=>{
+  const notice=document.getElementById("searchNotice");
+  if(!notice)return;
+  const onSearchPage=document.getElementById("search")?.classList.contains("active");
+  if(onSearchPage){
+    notice.className="notice error";
+    notice.textContent=`Search tool error: ${event.message || "A browser script error occurred."}`;
+  }
+});
+
 const marketAgencies = [
   ["Miami – US Currency","304548"],["Miami – Canadian Currency","501874"],
   ["Miami Webchat – US Currency","671675"],["Miami Webchat – Canadian Currency","674215"],
@@ -387,6 +397,57 @@ $("searchAnchorValue").addEventListener("keydown",e=>{
   if(e.key==="Escape"){e.preventDefault();closeAnchorMenu(true);$("anchorSelectTrigger").focus();}
 });
 document.addEventListener("click",e=>{if(!$("anchorSelect").contains(e.target))closeAnchorMenu(true);});
+
+
+function parseIsoLocal(iso){
+  const parts=String(iso||"").split("-").map(Number);
+  if(parts.length!==3 || parts.some(Number.isNaN)) return null;
+  return new Date(parts[0],parts[1]-1,parts[2],12,0,0,0);
+}
+
+function formatIsoLocal(date){
+  if(!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  const y=date.getFullYear();
+  const m=String(date.getMonth()+1).padStart(2,"0");
+  const d=String(date.getDate()).padStart(2,"0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(iso,days){
+  const date=parseIsoLocal(iso);
+  if(!date)return "";
+  date.setDate(date.getDate()+Number(days||0));
+  return formatIsoLocal(date);
+}
+
+function daysBetween(from,to){
+  const a=parseIsoLocal(from),b=parseIsoLocal(to);
+  if(!a||!b)return NaN;
+  return Math.round((b-a)/86400000);
+}
+
+function initSearchDates(){
+  // Keep existing values when present; otherwise initialize a 30-day window
+  // beginning today. Any later From-date change resets To to +30 days.
+  const fromEl=$("searchFrom"),toEl=$("searchTo");
+  if(!fromEl||!toEl)return;
+
+  let from=fromEl.value;
+  if(!from){
+    const today=new Date();
+    from=formatIsoLocal(today);
+    fromEl.value=from;
+  }
+
+  const autoTo=addDays(from,30);
+  toEl.min=from;
+  toEl.max=autoTo;
+
+  if(!toEl.value || Number.isNaN(daysBetween(from,toEl.value)) || daysBetween(from,toEl.value)<0 || daysBetween(from,toEl.value)>30){
+    toEl.value=autoTo;
+  }
+  updateDateHint();
+}
 
 function updateDateHint(){
   const from=$("searchFrom").value,to=$("searchTo").value;
