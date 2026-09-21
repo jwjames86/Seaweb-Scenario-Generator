@@ -13,9 +13,9 @@ export default {
 
 async function handleSailings(request, reqUrl) {
   const manual = reqUrl.searchParams.get("url");
-  let sourceUrl;
 
   if (manual) {
+    let sourceUrl;
     try {
       const u = new URL(manual);
       if (!/(^|\.)ncl\.com$/i.test(u.hostname)) {
@@ -25,97 +25,228 @@ async function handleSailings(request, reqUrl) {
     } catch {
       return json({ error: "That NCL URL is not valid." }, 400);
     }
-  } else {
-    // Keep the public query deliberately broad, mirroring Seaweb training:
-    // date window + exactly one of destination, embarkation port, or ship.
-    const criterion = reqUrl.searchParams.get("criterion") || "destination";
-    const value = (reqUrl.searchParams.get("value") || "").trim();
-    const u = new URL("https://www.ncl.com/vacations");
 
-    // Public NCL URL parameters are not stable enough to guarantee a direct ID-based filter
-    // from free text. We fetch the public vacation results and apply the single chosen
-    // training criterion after parsing. This avoids stacking filters that hide choices.
-    u.searchParams.set("autoPopulate", "f");
-    u.searchParams.set("from", "resultpage");
-    sourceUrl = u.toString();
-  }
+    const parsed = await fetchAndParse(sourceUrl);
+    if (!parsed.ok) return json({ error: parsed.error }, 502);
 
-  let response;
-  try {
-    response = await fetch(sourceUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; SeawebTrainingScenarioGenerator/1.0)",
-        "Accept": "text/html,application/xhtml+xml"
-      },
-      cf: { cacheTtl: 300, cacheEverything: true }
+    return json({
+      live: true,
+      sourceUrls: [sourceUrl],
+      retrievedAt: new Date().toISOString(),
+      message: parsed.results.length
+        ? `Imported ${parsed.results.length} public NCL itinerary option${parsed.results.length === 1 ? "" : "s"}.`
+        : "NCL.com responded, but this page did not expose itinerary cards that the training tool could read.",
+      results: parsed.results.slice(0, 40)
     });
-  } catch (e) {
-    return json({ error: "Could not reach NCL.com from the live adapter." }, 502);
   }
 
-  if (!response.ok) {
-    return json({ error: `NCL.com returned HTTP ${response.status}. Try the manual URL fallback.` }, 502);
+  const criterion = (reqUrl.searchParams.get("criterion") || "destination").toLowerCase();
+  const value = (reqUrl.searchParams.get("value") || "").trim();
+  const from = reqUrl.searchParams.get("from") || "";
+  const to = reqUrl.searchParams.get("to") || "";
+  const duration = (reqUrl.searchParams.get("duration") || "").trim();
+
+  if (!["destination", "departure", "ship"].includes(criterion)) {
+    return json({ error: "Choose Destination, Embarkation Port, or Ship." }, 400);
+  }
+  if (!value) return json({ error: "Enter a search value." }, 400);
+
+  if (from && to) {
+    const diff = daysBetweenIso(from, to);
+    if (diff < 0 || diff > 30) {
+      return json({ error: "The sailing search date range must be 30 days or less." }, 400);
+    }
   }
 
-  const html = await response.text();
-  const text = normalize(html);
-  let results = parseCruises(text, sourceUrl);
+  const sourceUrls = buildNclSourceUrls(criterion, value);
+  const attempts = [];
+  const merged = [];
 
-  const filters = {
-    criterion: (reqUrl.searchParams.get("criterion") || "destination").toLowerCase(),
-    value: (reqUrl.searchParams.get("value") || "").toLowerCase().trim(),
-    from: reqUrl.searchParams.get("from") || "",
-    to: reqUrl.searchParams.get("to") || "",
-    duration: (reqUrl.searchParams.get("duration") || "").trim()
-  };
+  for (const sourceUrl of sourceUrls.slice(0, 8)) {
+    const parsed = await fetchAndParse(sourceUrl);
+    attempts.push({
+      url: sourceUrl,
+      ok: parsed.ok,
+      cards: parsed.results?.length || 0,
+      error: parsed.error || null
+    });
+
+    if (parsed.ok && parsed.results?.length) {
+      for (const r of parsed.results) merged.push(r);
+      if (merged.length >= 12) break;
+    }
+  }
+
+  let results = dedupe(merged);
+  const wantedMonths = from && to ? monthsInWindow(from, to) : [];
 
   results = results.filter(r => {
     const haystack = {
       destination: `${r.title} ${r.ports.join(" ")}`.toLowerCase(),
       departure: (r.departure || "").toLowerCase(),
       ship: (r.ship || "").toLowerCase()
-    }[filters.criterion] || "";
+    }[criterion] || "";
 
-    if (filters.value && !haystack.includes(filters.value)) return false;
+    if (!haystack.includes(value.toLowerCase())) return false;
 
-    if (filters.duration) {
+    if (duration) {
       const d = Number(r.duration || 0);
-      if (filters.duration === "1-4" && !(d >= 1 && d <= 4)) return false;
-      if (filters.duration === "5-8" && !(d >= 5 && d <= 8)) return false;
-      if (filters.duration === "9-14" && !(d >= 9 && d <= 14)) return false;
-      if (filters.duration === "15+" && !(d >= 15)) return false;
+      if (duration === "1-4" && !(d >= 1 && d <= 4)) return false;
+      if (duration === "5-8" && !(d >= 5 && d <= 8)) return false;
+      if (duration === "9-14" && !(d >= 9 && d <= 14)) return false;
+      if (duration === "15+" && !(d >= 15)) return false;
     }
 
-    // Public cards may expose month-level availability rather than exact sail dates.
-    // Apply a conservative month-overlap check when month data exists.
-    if (filters.from && filters.to && r.sailingMonths?.length) {
-      const wantedMonths = monthsInWindow(filters.from, filters.to);
+    if (wantedMonths.length && r.sailingMonths?.length) {
       const cardMonths = r.sailingMonths.map(x => x.toLowerCase());
       if (!wantedMonths.some(m => cardMonths.includes(m.toLowerCase()))) return false;
     }
+
     return true;
   }).slice(0, 40);
 
+  const readablePages = attempts.filter(a => a.cards > 0).length;
+
   return json({
     live: true,
-    sourceUrl,
+    sourceUrls,
+    attempts,
     retrievedAt: new Date().toISOString(),
     message: results.length
-      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"} using the Seaweb-style broad search. Public cards can be month-level, so verify the exact departure date and cabin inventory in Seaweb.`
-      : "NCL.com responded, but the public page did not expose a matching itinerary card for this broad search. Try a different single search option or use the NCL URL fallback.",
+      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"}. Public NCL cards may show sailing month rather than the exact departure date, so confirm the exact sailing date in Seaweb.`
+      : readablePages
+        ? "NCL itinerary cards were retrieved, but none matched the selected 30-day window, vacation length, and single search option."
+        : "NCL.com responded, but its public result pages did not expose readable itinerary cards to the live adapter. Use the NCL URL fallback while the adapter is unavailable.",
     results
   });
 }
 
+async function fetchAndParse(sourceUrl) {
+  let response;
+  try {
+    response = await fetch(sourceUrl, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9"
+      },
+      cf: { cacheTtl: 180, cacheEverything: true }
+    });
+  } catch (e) {
+    return { ok: false, error: "Could not reach this NCL public results page.", results: [] };
+  }
+
+  if (!response.ok) {
+    return { ok: false, error: `NCL.com returned HTTP ${response.status}.`, results: [] };
+  }
+
+  const html = await response.text();
+  const text = normalize(html);
+  const results = parseCruises(text, response.url || sourceUrl);
+  return { ok: true, results };
+}
+
+function buildNclSourceUrls(criterion, value) {
+  const locales = [
+    "https://www.ncl.com/uk/en/vacations",
+    "https://www.ncl.com/no/en/vacations",
+    "https://www.ncl.com/fr/en/vacations"
+  ];
+
+  const urls = [];
+
+  if (criterion === "ship") {
+    const shipSlug = slug(value);
+    const shipToken = value.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
+    for (const base of locales) {
+      urls.push(`${base}?ships=${encodeURIComponent(shipToken)}`);
+      urls.push(`${base}?ship=${encodeURIComponent(shipSlug)}`);
+    }
+  }
+
+  if (criterion === "destination") {
+    const destSlug = slug(value);
+    const destToken = value.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
+    for (const base of locales) {
+      urls.push(`${base}?cruise-destination=${encodeURIComponent(destSlug)}`);
+      urls.push(`${base}?destinations=${encodeURIComponent(destToken)}`);
+    }
+  }
+
+  if (criterion === "departure") {
+    const code = embarkationCode(value.toLowerCase().trim());
+    const portSlug = slug(value);
+    for (const base of locales) {
+      if (code) {
+        urls.push(`${base}?cruise-port=${encodeURIComponent(code)}`);
+        urls.push(`${base}?port=${encodeURIComponent(code)}`);
+      }
+      urls.push(`${base}?cruise-port=${encodeURIComponent(portSlug)}`);
+    }
+  }
+
+  return [...new Set(urls)];
+}
+
+function embarkationCode(value) {
+  const map = {
+    "miami":"mia",
+    "miami, florida":"mia",
+    "boston":"bos",
+    "boston, massachusetts":"bos",
+    "seattle":"sea",
+    "seattle, washington":"sea",
+    "san juan":"sju",
+    "san juan, puerto rico":"sju",
+    "new york":"nyc",
+    "new york, new york":"nyc",
+    "tampa":"tpa",
+    "tampa, florida":"tpa",
+    "new orleans":"msy",
+    "new orleans, louisiana":"msy",
+    "los angeles":"lax",
+    "los angeles, california":"lax",
+    "honolulu":"hnl",
+    "honolulu, hawaii":"hnl",
+    "reykjavik":"rey",
+    "reykjavik, iceland":"rey",
+    "southampton":"sou",
+    "london (southampton)":"sou",
+    "barcelona":"bcn",
+    "barcelona, spain":"bcn",
+    "rome":"civ",
+    "rome (civitavecchia)":"civ",
+    "civitavecchia":"civ",
+    "venice (ravenna)":"rav",
+    "ravenna":"rav",
+    "copenhagen":"cph",
+    "istanbul":"ist",
+    "athens (piraeus)":"pir",
+    "piraeus":"pir",
+    "port canaveral":"pcv",
+    "orlando (port canaveral)":"pcv",
+    "jacksonville":"jax",
+    "galveston":"gls"
+  };
+  return map[value] || "";
+}
+
+function daysBetweenIso(a, b) {
+  const start = new Date(a + "T12:00:00Z");
+  const end = new Date(b + "T12:00:00Z");
+  return Math.round((end - start) / 86400000);
+}
+
 function parseCruises(text, sourceUrl) {
-  const starts = [...text.matchAll(/(\d{1,2})-day Cruise on (Norwegian [^\n]+)\n/gi)];
+  const starts = [...text.matchAll(/(\d{1,2})-day Cruise on (Norwegian [^\n]{2,90})\n+/gi)];
   const out = [];
 
   for (let i = 0; i < starts.length; i++) {
     const start = starts[i].index;
     const end = i + 1 < starts.length ? starts[i + 1].index : Math.min(text.length, start + 6000);
     const chunk = text.slice(start, end);
-    const head = chunk.match(/^(\d{1,2})-day Cruise on (Norwegian [^\n]+)\n([^\n]+)\nfrom ([^\n]+)/i);
+    const head = chunk.match(/^(\d{1,2})-day Cruise on (Norwegian [^\n]{2,90})\n+([^\n]{3,160})\n+from ([^\n]{2,120})/i);
     if (!head) continue;
 
     const duration = Number(head[1]);
