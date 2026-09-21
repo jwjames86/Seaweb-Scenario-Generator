@@ -144,15 +144,21 @@ async function renderAndParse(env, sourceUrl) {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && typeof data.result === "string") {
-          const text = normalize(data.result);
-          return {
-            ok: true,
-            rendered: true,
-            results: parseCruises(text, sourceUrl)
-          };
-        }
+        const body = await response.text();
+        let html = body;
+        // Browser Run content normally returns rendered HTML directly. Keep a
+        // compatibility fallback in case the response is wrapped as JSON.
+        try {
+          const data = JSON.parse(body);
+          if (typeof data?.result === "string") html = data.result;
+          else if (typeof data?.result?.content === "string") html = data.result.content;
+        } catch (_) {}
+        const text = normalize(html);
+        return {
+          ok: true,
+          rendered: true,
+          results: parseCruises(text, sourceUrl)
+        };
       }
     } catch (e) {
       // Fall through to raw fetch as a backup.
@@ -187,8 +193,10 @@ async function renderAndParse(env, sourceUrl) {
 }
 
 function buildNclSearchUrl(criterion, value, from, to) {
-  // This locale currently exposes public NCL result cards and USD pricing.
-  const u = new URL("https://www.ncl.com/no/en/vacations");
+  // International English result pages currently expose the itinerary cards
+  // more consistently than the US shell. Currency therefore reflects the
+  // public locale and is shown only as a reference, never as Seaweb pricing.
+  const u = new URL("https://www.ncl.com/uk/en/vacations");
   u.searchParams.set("autoPopulate", "f");
   u.searchParams.set("from", "resultpage");
   u.searchParams.set("currentPage", "1");
@@ -197,10 +205,11 @@ function buildNclSearchUrl(criterion, value, from, to) {
   if (criterion === "destination") {
     u.searchParams.set("cruise-destination", slug(value));
   } else if (criterion === "ship") {
-    u.searchParams.set("ship", slug(value));
+    const shipToken=value.trim().replace(/\s+/g,"_").replace(/[^A-Za-z0-9_]/g,"");
+    u.searchParams.set("ships", shipToken);
   } else if (criterion === "departure") {
     const code = embarkationCode(value.toLowerCase().trim());
-    u.searchParams.set("port", code || slug(value));
+    u.searchParams.set("cruise-port", code || slug(value));
   }
 
   const dateValue = nclDateParam(from, to);

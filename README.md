@@ -1,55 +1,80 @@
-# Seaweb Scenario Generator – V1
+# Seaweb Scenario Generator – V1.4
 
-A free, no-sign-in training prototype for generating and validating Norwegian Cruise Line Seaweb scenarios.
+A no-sign-in training prototype for Norwegian Cruise Line Seaweb scenario authoring and validation.
 
-## Included
+## V1.4 curriculum update
 
-- Dashboard
-- Real Sailing Search using public NCL.com vacation pages
-- Scenario Generator
-- Scenario Validator
-- Trainer / Trainee views
-- Saved Scenario Library using browser localStorage
-- Export / Import JSON backups
-- Copy and Print
-- Four starter templates
-- Cloudflare Worker + static assets in one free project
+The generator now reflects both current training tracks supplied by the trainer:
 
-## Important training-data rules
+- Guest Services – Days 6 through 11
+- Outbound Sales – Days 6 through 11
 
-The app intentionally separates:
-- **Verified from NCL.com**: public ship, itinerary, departure port, sailing month/date when exposed, ports, public starting fare/taxes/offers.
-- **Trainer / Seaweb data**: Agency, training guests, internal promo codes, exact cabin inventory/capacity/square footage, deposit/final-payment details, cancellation deadlines, Commenting Tool tasks and answer-key notes.
+The Scenario Focus list changes automatically by department and training day. The catalog is based on the supplied `GS Seaweb Scenarios.pdf` and `OB Seaweb Scenarios.pdf` training scenario sets.
 
-The live adapter never invents a sailing or public price. If NCL blocks the request or changes its page structure, the generator/validator/library still work and the app shows a manual NCL URL fallback.
+### Guest Services focus map
 
-## Free deployment on Cloudflare
+- Day 6: Basic Reservation; Payments
+- Day 7: Applying FCC; NorwegianCare
+- Day 8: Special Requests; Price Programs & FAS
+- Day 9: ADA & Special Requests; Infants & Guests 3-8
+- Day 10: Agencies: TA Booking; Multiple Reservations; Bundled Air & Ground Transfers
+- Day 11: Cancel & Reinstate; Price Drops - TRAINER DEMO; Land Pkgs / Cruisetour
 
-1. Create a free Cloudflare account.
-2. Install Node.js if you do not already have it.
-3. Unzip this project.
-4. In the project folder, run:
-   - `npx wrangler login`
-   - `npx wrangler deploy`
-5. Wrangler will return your free `workers.dev` URL.
-6. Open that URL and test **Real Sailing Search**.
+### Outbound Sales focus map
 
-No paid database is required for V1. Saved scenarios live in the user's browser.
+- Day 6: Basic Reservation
+- Day 7: Payments; Special Requests
+- Day 8: Norwegian Care; Price Programs & FAS; GTY Categories - Trainer Demo; Singles / Infants / Guests 3-8; Cruise First
+- Day 9: ADA & Special Request; New Guest; Multiple Reservations / Travel With
+- Day 10: Dining, Ent & Spa; Amenities; Bundled Air / Ground Transfers; Air Deviations; Cancellations / Reinstatements
+- Day 11: Hotel; Cruisetours; Air Choice
 
-## GitHub option
+## Department behavior
 
-If you create an empty GitHub repository, upload this project there. Cloudflare can then be connected to the repository for version control and future updates.
+### Guest Services
+- Defaults to Agency 5.
+- Uses the Guest Services Day 6–11 curriculum focus list.
+- Servicing scenarios emphasize GDPR verification, reservation changes, comments, confirmation, and current Seaweb/NCLHelp verification.
 
-## V1 limitation
+### Outbound Sales
+- Adds Market / Currency selection and automatically fills the corresponding agency number.
+- New-booking scenarios can include the outbound qualification prompts used in the current training materials.
+- Uses the Outbound Sales Day 6–11 curriculum focus list.
 
-NCL.com is a public website, not an official training API. The adapter parses public vacation-result cards and can be affected by NCL site changes or anti-bot behavior. For production/internal NCL use, replace the adapter with an approved internal NCL feed/API if one is available.
+## Training credit-card behavior
 
+When the selected curriculum scenario explicitly requires a card payment, the generator automatically displays a **TRAINING / TEST DATA ONLY** payment panel and includes the selected training card in the trainee scenario. Trainers can switch among the card profiles represented in the supplied training materials.
 
-## V1.1 – Seaweb-style itinerary search
+When a scenario uses CruiseNext/FCC/CruiseFirst or requires no new card payment, the card panel stays hidden by default. If a trainer manually changes the Payment / Booking Action to a card-payment action, the training-card panel appears automatically.
 
-The Real Sailing Search was simplified to mirror the Seaweb training workflow:
-- Search dates are limited to a maximum 30-day window.
+## Real Sailing Search
+
+- 30-day maximum date window, matching the Seaweb training search workflow.
 - Choose exactly one primary search option: Destination, Embarkation Port, or Ship.
 - Vacation Length is optional.
-- Port-of-call requirements are reviewed after itinerary results appear instead of being stacked into the initial search.
-- The interface intentionally avoids over-filtering so trainees/trainers see more itinerary choices.
+- Uses public NCL.com itinerary data only; internal Seaweb inventory, exact cabin attributes, internal promo codes, and policy dates are never inferred from public results.
+- Uses Cloudflare Browser Run to render JavaScript-heavy public NCL result pages when available, with raw-fetch fallback and caching.
+
+## Saved Scenario Library
+
+Scenarios remain browser-local in V1.4 and can be filtered by:
+- Department
+- Training Day
+- Scenario focus/title/ship/destination
+
+Export and Import JSON remain available for backup.
+
+## Deployment
+
+This project is designed for Cloudflare Workers with static assets.
+
+```bash
+npx wrangler deploy
+```
+
+The Worker requires the browser binding included in `wrangler.toml`:
+
+```toml
+[browser]
+binding = "BROWSER"
+```
