@@ -3,7 +3,23 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/sailings") {
-      return handleSailings(request, url);
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), { method: "GET" });
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+
+      const response = await handleSailings(request, url, env);
+      if (response.ok) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "public, max-age=600");
+        const cacheable = new Response(response.clone().body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers
+        });
+        ctx.waitUntil(cache.put(cacheKey, cacheable));
+      }
+      return response;
     }
 
     if (env.ASSETS) return env.ASSETS.fetch(request);
@@ -11,7 +27,7 @@ export default {
   }
 };
 
-async function handleSailings(request, reqUrl) {
+async function handleSailings(request, reqUrl, env) {
   const manual = reqUrl.searchParams.get("url");
 
   if (manual) {
@@ -26,16 +42,17 @@ async function handleSailings(request, reqUrl) {
       return json({ error: "That NCL URL is not valid." }, 400);
     }
 
-    const parsed = await fetchAndParse(sourceUrl);
+    const parsed = await renderAndParse(env, sourceUrl);
     if (!parsed.ok) return json({ error: parsed.error }, 502);
 
     return json({
       live: true,
-      sourceUrls: [sourceUrl],
+      rendered: parsed.rendered,
+      sourceUrl,
       retrievedAt: new Date().toISOString(),
       message: parsed.results.length
         ? `Imported ${parsed.results.length} public NCL itinerary option${parsed.results.length === 1 ? "" : "s"}.`
-        : "NCL.com responded, but this page did not expose itinerary cards that the training tool could read.",
+        : "NCL.com rendered successfully, but this page did not expose itinerary cards the training tool could read.",
       results: parsed.results.slice(0, 40)
     });
   }
@@ -58,26 +75,20 @@ async function handleSailings(request, reqUrl) {
     }
   }
 
-  const sourceUrls = buildNclSourceUrls(criterion, value);
-  const attempts = [];
-  const merged = [];
+  // Use one broad NCL result page, matching the Seaweb training pattern:
+  // 30-day date window + exactly one primary search criterion.
+  const sourceUrl = buildNclSearchUrl(criterion, value, from, to);
 
-  for (const sourceUrl of sourceUrls.slice(0, 8)) {
-    const parsed = await fetchAndParse(sourceUrl);
-    attempts.push({
-      url: sourceUrl,
-      ok: parsed.ok,
-      cards: parsed.results?.length || 0,
-      error: parsed.error || null
-    });
-
-    if (parsed.ok && parsed.results?.length) {
-      for (const r of parsed.results) merged.push(r);
-      if (merged.length >= 12) break;
-    }
+  const parsed = await renderAndParse(env, sourceUrl);
+  if (!parsed.ok) {
+    return json({
+      error: parsed.error,
+      sourceUrl,
+      hint: "Browser Run could not render the NCL result page. Try again after 10 seconds or use the NCL URL fallback."
+    }, 502);
   }
 
-  let results = dedupe(merged);
+  let results = parsed.results;
   const wantedMonths = from && to ? monthsInWindow(from, to) : [];
 
   results = results.filter(r => {
@@ -105,26 +116,52 @@ async function handleSailings(request, reqUrl) {
     return true;
   }).slice(0, 40);
 
-  const readablePages = attempts.filter(a => a.cards > 0).length;
-
   return json({
     live: true,
-    sourceUrls,
-    attempts,
+    rendered: parsed.rendered,
+    sourceUrl,
     retrievedAt: new Date().toISOString(),
     message: results.length
-      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"}. Public NCL cards may show sailing month rather than the exact departure date, so confirm the exact sailing date in Seaweb.`
-      : readablePages
-        ? "NCL itinerary cards were retrieved, but none matched the selected 30-day window, vacation length, and single search option."
-        : "NCL.com responded, but its public result pages did not expose readable itinerary cards to the live adapter. Use the NCL URL fallback while the adapter is unavailable.",
+      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"}. NCL's public cards may show sailing month rather than the exact departure date, so confirm the exact sailing date in Seaweb.`
+      : parsed.results.length
+        ? "NCL itineraries loaded, but none matched the selected date window, vacation length, and single search option."
+        : "NCL.com rendered, but no itinerary cards were found on the public result page.",
     results
   });
 }
 
-async function fetchAndParse(sourceUrl) {
-  let response;
+async function renderAndParse(env, sourceUrl) {
+  // Browser Run executes NCL's client-side JavaScript, unlike a plain fetch().
+  if (env.BROWSER && typeof env.BROWSER.quickAction === "function") {
+    try {
+      const response = await env.BROWSER.quickAction("content", {
+        url: sourceUrl,
+        gotoOptions: {
+          waitUntil: "networkidle2",
+          timeout: 30000
+        },
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && typeof data.result === "string") {
+          const text = normalize(data.result);
+          return {
+            ok: true,
+            rendered: true,
+            results: parseCruises(text, sourceUrl)
+          };
+        }
+      }
+    } catch (e) {
+      // Fall through to raw fetch as a backup.
+    }
+  }
+
+  // Backup path: useful if Browser Run is temporarily rate-limited.
   try {
-    response = await fetch(sourceUrl, {
+    const response = await fetch(sourceUrl, {
       redirect: "follow",
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
@@ -133,60 +170,61 @@ async function fetchAndParse(sourceUrl) {
       },
       cf: { cacheTtl: 180, cacheEverything: true }
     });
+
+    if (!response.ok) {
+      return { ok: false, error: `NCL.com returned HTTP ${response.status}.`, results: [] };
+    }
+
+    const html = await response.text();
+    return {
+      ok: true,
+      rendered: false,
+      results: parseCruises(normalize(html), response.url || sourceUrl)
+    };
   } catch (e) {
-    return { ok: false, error: "Could not reach this NCL public results page.", results: [] };
+    return { ok: false, error: "Could not load the NCL public search page.", results: [] };
   }
-
-  if (!response.ok) {
-    return { ok: false, error: `NCL.com returned HTTP ${response.status}.`, results: [] };
-  }
-
-  const html = await response.text();
-  const text = normalize(html);
-  const results = parseCruises(text, response.url || sourceUrl);
-  return { ok: true, results };
 }
 
-function buildNclSourceUrls(criterion, value) {
-  const locales = [
-    "https://www.ncl.com/uk/en/vacations",
-    "https://www.ncl.com/no/en/vacations",
-    "https://www.ncl.com/fr/en/vacations"
-  ];
-
-  const urls = [];
-
-  if (criterion === "ship") {
-    const shipSlug = slug(value);
-    const shipToken = value.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
-    for (const base of locales) {
-      urls.push(`${base}?ships=${encodeURIComponent(shipToken)}`);
-      urls.push(`${base}?ship=${encodeURIComponent(shipSlug)}`);
-    }
-  }
+function buildNclSearchUrl(criterion, value, from, to) {
+  // This locale currently exposes public NCL result cards and USD pricing.
+  const u = new URL("https://www.ncl.com/no/en/vacations");
+  u.searchParams.set("autoPopulate", "f");
+  u.searchParams.set("from", "resultpage");
+  u.searchParams.set("currentPage", "1");
+  u.searchParams.set("pageSize", "50");
 
   if (criterion === "destination") {
-    const destSlug = slug(value);
-    const destToken = value.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_|_$/g, "");
-    for (const base of locales) {
-      urls.push(`${base}?cruise-destination=${encodeURIComponent(destSlug)}`);
-      urls.push(`${base}?destinations=${encodeURIComponent(destToken)}`);
-    }
-  }
-
-  if (criterion === "departure") {
+    u.searchParams.set("cruise-destination", slug(value));
+  } else if (criterion === "ship") {
+    u.searchParams.set("ship", slug(value));
+  } else if (criterion === "departure") {
     const code = embarkationCode(value.toLowerCase().trim());
-    const portSlug = slug(value);
-    for (const base of locales) {
-      if (code) {
-        urls.push(`${base}?cruise-port=${encodeURIComponent(code)}`);
-        urls.push(`${base}?port=${encodeURIComponent(code)}`);
-      }
-      urls.push(`${base}?cruise-port=${encodeURIComponent(portSlug)}`);
-    }
+    u.searchParams.set("port", code || slug(value));
   }
 
-  return [...new Set(urls)];
+  const dateValue = nclDateParam(from, to);
+  if (dateValue) u.searchParams.set("date", dateValue);
+
+  return u.toString();
+}
+
+function nclDateParam(from, to) {
+  if (!from || !to) return "";
+  const start = new Date(from + "T12:00:00Z");
+  const end = new Date(to + "T12:00:00Z");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
+
+  const months = [];
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  const short = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+  while (cursor <= last) {
+    months.push(`${short[cursor.getUTCMonth()]}-${cursor.getUTCFullYear()}`);
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return months.join(",");
 }
 
 function embarkationCode(value) {
