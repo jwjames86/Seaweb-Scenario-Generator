@@ -1,4 +1,4 @@
-# Seaweb Scenario Generator – V1.6
+# Seaweb Scenario Generator – V1.4
 
 A no-sign-in training prototype for Norwegian Cruise Line Seaweb scenario authoring and validation.
 
@@ -116,3 +116,14 @@ Quality fixes:
 - ADA / accessible scenarios automatically select **ADA / Accessible** instead of a standard Balcony category and leave location/side availability-driven.
 - Outbound agency display is simplified to **Market / Currency | Agency ######** instead of repeating the number.
 - Curriculum defaults now auto-toggle FAS, travel protection and prepaid service charges when those components are explicitly part of the selected training focus.
+
+
+## V1.7 – Teams & Outlook share cards
+
+The Scenario Generator now includes a **Share Card** menu in the scenario output toolbar.
+
+- **Copy as Image** — recommended for Microsoft Teams and email. Copies a high-resolution PNG of the trainee-facing scenario so the visual design stays consistent.
+- **Copy Editable** — copies rich HTML plus a plain-text fallback. This is useful when recipients need to select or copy the wording; exact formatting can vary depending on the receiving application.
+- **Copy Plain Text** — simple fallback.
+
+All share options automatically exclude the **Trainer Guide / trainer-only content**, even when the trainer is currently in Trainer View. Collapsible trainee sections are expanded in the shared copy so no required instructions are hidden.
