@@ -26,12 +26,17 @@ async function handleSailings(request, reqUrl) {
       return json({ error: "That NCL URL is not valid." }, 400);
     }
   } else {
-    // Public NCL vacations results. We intentionally avoid pretending internal Seaweb data is public.
-    const ship = slug(reqUrl.searchParams.get("ship") || "");
-    const destination = slug(reqUrl.searchParams.get("destination") || "");
+    // Keep the public query deliberately broad, mirroring Seaweb training:
+    // date window + exactly one of destination, embarkation port, or ship.
+    const criterion = reqUrl.searchParams.get("criterion") || "destination";
+    const value = (reqUrl.searchParams.get("value") || "").trim();
     const u = new URL("https://www.ncl.com/vacations");
-    if (ship) u.searchParams.set("cruise-ship", ship);
-    if (destination) u.searchParams.set("cruise-destination", destination);
+
+    // Public NCL URL parameters are not stable enough to guarantee a direct ID-based filter
+    // from free text. We fetch the public vacation results and apply the single chosen
+    // training criterion after parsing. This avoids stacking filters that hide choices.
+    u.searchParams.set("autoPopulate", "f");
+    u.searchParams.set("from", "resultpage");
     sourceUrl = u.toString();
   }
 
@@ -57,31 +62,47 @@ async function handleSailings(request, reqUrl) {
   let results = parseCruises(text, sourceUrl);
 
   const filters = {
-    destination: (reqUrl.searchParams.get("destination") || "").toLowerCase(),
-    ship: (reqUrl.searchParams.get("ship") || "").toLowerCase(),
-    departure: (reqUrl.searchParams.get("departure") || "").toLowerCase(),
-    port: (reqUrl.searchParams.get("port") || "").toLowerCase(),
-    month: (reqUrl.searchParams.get("month") || "").toLowerCase(),
+    criterion: (reqUrl.searchParams.get("criterion") || "destination").toLowerCase(),
+    value: (reqUrl.searchParams.get("value") || "").toLowerCase().trim(),
+    from: reqUrl.searchParams.get("from") || "",
+    to: reqUrl.searchParams.get("to") || "",
     duration: (reqUrl.searchParams.get("duration") || "").trim()
   };
 
   results = results.filter(r => {
-    if (filters.ship && !r.ship.toLowerCase().includes(filters.ship)) return false;
-    if (filters.destination && !(r.title + " " + r.ports.join(" ")).toLowerCase().includes(filters.destination)) return false;
-    if (filters.departure && !r.departure.toLowerCase().includes(filters.departure)) return false;
-    if (filters.port && !r.ports.some(p => p.toLowerCase().includes(filters.port))) return false;
-    if (filters.month && !r.sailingMonths.some(m => m.toLowerCase().includes(filters.month) || filters.month.includes(m.toLowerCase()))) return false;
-    if (filters.duration && String(r.duration) !== filters.duration) return false;
+    const haystack = {
+      destination: `${r.title} ${r.ports.join(" ")}`.toLowerCase(),
+      departure: (r.departure || "").toLowerCase(),
+      ship: (r.ship || "").toLowerCase()
+    }[filters.criterion] || "";
+
+    if (filters.value && !haystack.includes(filters.value)) return false;
+
+    if (filters.duration) {
+      const d = Number(r.duration || 0);
+      if (filters.duration === "1-4" && !(d >= 1 && d <= 4)) return false;
+      if (filters.duration === "5-8" && !(d >= 5 && d <= 8)) return false;
+      if (filters.duration === "9-14" && !(d >= 9 && d <= 14)) return false;
+      if (filters.duration === "15+" && !(d >= 15)) return false;
+    }
+
+    // Public cards may expose month-level availability rather than exact sail dates.
+    // Apply a conservative month-overlap check when month data exists.
+    if (filters.from && filters.to && r.sailingMonths?.length) {
+      const wantedMonths = monthsInWindow(filters.from, filters.to);
+      const cardMonths = r.sailingMonths.map(x => x.toLowerCase());
+      if (!wantedMonths.some(m => cardMonths.includes(m.toLowerCase()))) return false;
+    }
     return true;
-  }).slice(0, 30);
+  }).slice(0, 40);
 
   return json({
     live: true,
     sourceUrl,
     retrievedAt: new Date().toISOString(),
     message: results.length
-      ? `Found ${results.length} public NCL sailing result${results.length === 1 ? "" : "s"}. Verify exact dates and cabin inventory in Seaweb.`
-      : "NCL.com responded, but no retrieved public cards matched all of these filters. Try fewer filters or paste an NCL vacations URL.",
+      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"} using the Seaweb-style broad search. Public cards can be month-level, so verify the exact departure date and cabin inventory in Seaweb.`
+      : "NCL.com responded, but the public page did not expose a matching itinerary card for this broad search. Try a different single search option or use the NCL URL fallback.",
     results
   });
 }
@@ -136,6 +157,20 @@ function parseCruises(text, sourceUrl) {
   }
 
   return dedupe(out);
+}
+
+function monthsInWindow(from, to) {
+  const out = [];
+  const start = new Date(from + "T12:00:00Z");
+  const end = new Date(to + "T12:00:00Z");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return out;
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+  while (cursor <= last) {
+    out.push(cursor.toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" }));
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return out;
 }
 
 function normalize(html) {

@@ -43,3 +43,13 @@ If you create an empty GitHub repository, upload this project there. Cloudflare 
 ## V1 limitation
 
 NCL.com is a public website, not an official training API. The adapter parses public vacation-result cards and can be affected by NCL site changes or anti-bot behavior. For production/internal NCL use, replace the adapter with an approved internal NCL feed/API if one is available.
+
+
+## V1.1 – Seaweb-style itinerary search
+
+The Real Sailing Search was simplified to mirror the Seaweb training workflow:
+- Search dates are limited to a maximum 30-day window.
+- Choose exactly one primary search option: Destination, Embarkation Port, or Ship.
+- Vacation Length is optional.
+- Port-of-call requirements are reviewed after itinerary results appear instead of being stacked into the initial search.
+- The interface intentionally avoids over-filtering so trainees/trainers see more itinerary choices.
