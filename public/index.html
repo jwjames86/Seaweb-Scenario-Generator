@@ -68,44 +68,58 @@
           <span class="status-badge">Live NCL Adapter</span>
         </div>
 
-        <div class="panel">
-          <div class="form-grid search-grid">
-            <label>Destination
-              <input id="searchDestination" placeholder="Caribbean, Alaska, Canada..." />
+        <div class="panel seaweb-search-panel">
+          <div class="search-mode-row">
+            <label class="radio-line"><input type="radio" name="vacationMode" checked disabled /> Search Vacation</label>
+            <span class="muted small-note">Search window is limited to 30 days, matching the Seaweb training workflow.</span>
+          </div>
+
+          <div class="form-grid seaweb-date-grid">
+            <label>From
+              <input id="searchFrom" type="date" />
             </label>
-            <label>Ship
-              <input id="searchShip" placeholder="Norwegian Aqua" />
+            <label>To
+              <input id="searchTo" type="date" />
+              <span id="dateWindowHint" class="field-hint">Maximum 30-day search window.</span>
             </label>
-            <label>Departure Port
-              <input id="searchDeparture" placeholder="Miami, Boston, Seattle..." />
-            </label>
-            <label>Required Port of Call
-              <input id="searchPort" placeholder="Tortola" />
-            </label>
-            <label>Month / Year
-              <input id="searchMonth" placeholder="January 2027" />
-            </label>
-            <label>Duration
+            <label>Vacation Length
               <select id="searchDuration">
-                <option value="">Any</option>
-                <option>4</option><option>5</option><option>7</option><option>9</option>
-                <option>10</option><option>11</option><option>12</option><option>14</option>
+                <option value="">Any Length</option>
+                <option value="1-4">1–4 days</option>
+                <option value="5-8">5–8 days</option>
+                <option value="9-14">9–14 days</option>
+                <option value="15+">15+ days</option>
               </select>
             </label>
           </div>
+
+          <div class="search-anchor">
+            <div class="anchor-title">Choose one search option</div>
+            <div class="anchor-options" role="radiogroup" aria-label="Search by">
+              <label class="anchor-card active"><input type="radio" name="searchAnchor" value="destination" checked /> Destination</label>
+              <label class="anchor-card"><input type="radio" name="searchAnchor" value="departure" /> Embarkation Port</label>
+              <label class="anchor-card"><input type="radio" name="searchAnchor" value="ship" /> Ship</label>
+            </div>
+            <label id="anchorFieldLabel">Destination
+              <input id="searchAnchorValue" placeholder="Example: Caribbean" list="anchorSuggestions" autocomplete="off" />
+            </label>
+            <datalist id="anchorSuggestions"></datalist>
+          </div>
+
           <div class="actions">
-            <button id="searchSailingsBtn" class="primary">Search NCL.com</button>
+            <button id="searchSailingsBtn" class="primary">Search Itineraries</button>
             <button id="clearSearchBtn" class="secondary">Clear</button>
           </div>
-          <div id="searchNotice" class="notice info">Search results are retrieved at request time. Public pricing can change.</div>
+          <div id="searchNotice" class="notice info">Enter a date range of 30 days or less, then choose one search option. Broader searches return more itinerary choices.</div>
         </div>
 
         <div id="searchResults" class="result-list"></div>
 
         <details class="panel manual">
-          <summary>Manual fallback: paste an NCL vacations URL</summary>
+          <summary>Advanced fallback: paste an NCL vacations URL</summary>
+          <p class="muted">Use this only when a public NCL search page is already open and you want the generator to try importing its visible itinerary data.</p>
           <div class="inline-form">
-            <input id="manualUrl" placeholder="https://www.ncl.com/.../vacations?..." />
+            <input id="manualUrl" placeholder="https://www.ncl.com/vacations?..." />
             <button id="manualImportBtn" class="secondary">Import URL</button>
           </div>
         </details>

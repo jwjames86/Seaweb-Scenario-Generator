@@ -42,3 +42,20 @@ footer{padding:18px 28px;text-align:center;color:#667085;font-size:12px;border-t
 @media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--line)}.sidebar-note{display:none}.two-col,.hero{grid-template-columns:1fr}.output-panel{position:static}.card-grid{grid-template-columns:repeat(2,1fr)}.search-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.topbar{padding:18px;align-items:flex-start;flex-direction:column}.content{padding:18px}.form-grid,.search-grid,.stat-grid,.card-grid{grid-template-columns:1fr}.hero{padding:22px}.hero h2{font-size:28px}.sidebar{padding:10px}.nav{white-space:nowrap}.inline-form{flex-direction:column}}
 @media print{.topbar,.sidebar,footer,.output-toolbar,.section-head,.panel:not(.output-panel){display:none!important}.shell{display:block}.content{padding:0}.page{display:none!important}#generator.page{display:block!important}.two-col{display:block}.two-col>.panel:first-child{display:none}.output-panel{border:0;box-shadow:none;padding:0}.scenario-paper{border:0;padding:0}.trainer-section{display:none!important}}
+
+/* Seaweb-style broad itinerary search */
+.seaweb-search-panel{border-top:4px solid #8dd7f0}
+.search-mode-row{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:18px}
+.radio-line{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:13px;color:var(--ink)}
+.radio-line input{width:auto}
+.small-note{font-size:12px}
+.seaweb-date-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:20px}
+.field-hint{font-size:11px;color:var(--muted);font-weight:500}
+.error-text{color:var(--red)}
+.search-anchor{border-top:1px solid var(--line);padding-top:18px}
+.anchor-title{font-size:12px;font-weight:850;color:#344054;margin-bottom:10px}
+.anchor-options{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.anchor-card{display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;cursor:pointer;color:#475467}
+.anchor-card input{width:auto}
+.anchor-card.active{border-color:#57bfe2;background:#edf9fd;color:#005d80;box-shadow:0 0 0 2px rgba(0,169,206,.08)}
+@media(max-width:680px){.seaweb-date-grid,.anchor-options{grid-template-columns:1fr}}

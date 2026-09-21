@@ -65,18 +65,117 @@ $("generateNamesBtn").onclick=()=>{
   $("guest1").value=pair[0]; $("guest2").value=pair[1];
 };
 
+const anchorSuggestions = {
+  destination:["Caribbean","Alaska","Canada & New England","Bermuda","Bahamas","Europe","Mediterranean","Northern Europe","Hawaii","Panama Canal","South America","Asia","Australia & New Zealand"],
+  departure:["Miami","Port Canaveral","New York","Boston","Seattle","Los Angeles","New Orleans","Tampa","San Juan","Honolulu","Barcelona","Rome (Civitavecchia)","Southampton"],
+  ship:["Norwegian Aqua","Norwegian Luna","Norwegian Prima","Norwegian Viva","Norwegian Encore","Norwegian Bliss","Norwegian Joy","Norwegian Breakaway","Norwegian Getaway","Norwegian Escape","Norwegian Epic","Norwegian Gem","Norwegian Jade","Norwegian Pearl","Norwegian Dawn","Norwegian Star","Norwegian Sun","Norwegian Spirit","Pride of America"]
+};
+
+function isoDate(d){
+  const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+  return x.toISOString().slice(0,10);
+}
+function addDays(dateString, days){
+  const d=new Date(dateString+"T12:00:00");
+  d.setDate(d.getDate()+days);
+  return isoDate(d);
+}
+function daysBetween(a,b){
+  return Math.round((new Date(b+"T12:00:00")-new Date(a+"T12:00:00"))/86400000);
+}
+function initSearchDates(){
+  const today=new Date();
+  const from=isoDate(today);
+  $("searchFrom").value=from;
+  $("searchTo").value=addDays(from,30);
+  $("searchFrom").min=from;
+  $("searchTo").min=from;
+  $("searchTo").max=addDays(from,30);
+  updateDateHint();
+}
+function currentAnchor(){
+  return document.querySelector('input[name="searchAnchor"]:checked')?.value||"destination";
+}
+function updateAnchorUI(){
+  const anchor=currentAnchor();
+  const names={destination:"Destination",departure:"Embarkation Port",ship:"Ship"};
+  const examples={destination:"Example: Caribbean",departure:"Example: Miami",ship:"Example: Norwegian Aqua"};
+  $("anchorFieldLabel").childNodes[0].textContent=names[anchor]+" ";
+  $("searchAnchorValue").placeholder=examples[anchor];
+  $("searchAnchorValue").value="";
+  $("anchorSuggestions").innerHTML=anchorSuggestions[anchor].map(v=>`<option value="${escapeAttr(v)}"></option>`).join("");
+  document.querySelectorAll(".anchor-card").forEach(c=>c.classList.toggle("active",c.querySelector("input").checked));
+}
+document.querySelectorAll('input[name="searchAnchor"]').forEach(r=>r.addEventListener("change",updateAnchorUI));
+
+function updateDateHint(){
+  const from=$("searchFrom").value,to=$("searchTo").value;
+  if(!from||!to)return;
+  const diff=daysBetween(from,to);
+  if(diff<0){
+    $("dateWindowHint").textContent="To date cannot be before From date.";
+    $("dateWindowHint").className="field-hint error-text";
+  }else if(diff>30){
+    $("dateWindowHint").textContent=`${diff} days selected. Seaweb searches are limited to 30 days.`;
+    $("dateWindowHint").className="field-hint error-text";
+  }else{
+    $("dateWindowHint").textContent=`${diff} day${diff===1?"":"s"} selected • maximum 30 days.`;
+    $("dateWindowHint").className="field-hint";
+  }
+}
+$("searchFrom").addEventListener("change",()=>{
+  const from=$("searchFrom").value;
+  if(!from)return;
+  $("searchTo").min=from;
+  $("searchTo").max=addDays(from,30);
+  if(!$("searchTo").value || daysBetween(from,$("searchTo").value)<0 || daysBetween(from,$("searchTo").value)>30){
+    $("searchTo").value=addDays(from,30);
+  }
+  updateDateHint();
+});
+$("searchTo").addEventListener("change",updateDateHint);
+
 function queryParams(){
-  const p = new URLSearchParams();
-  [["destination","searchDestination"],["ship","searchShip"],["departure","searchDeparture"],["port","searchPort"],["month","searchMonth"],["duration","searchDuration"]]
-    .forEach(([k,id])=>{if($(id).value.trim())p.set(k,$(id).value.trim())});
+  const p=new URLSearchParams();
+  const from=$("searchFrom").value,to=$("searchTo").value,anchor=currentAnchor(),value=$("searchAnchorValue").value.trim();
+  if(from)p.set("from",from);
+  if(to)p.set("to",to);
+  p.set("criterion",anchor);
+  if(value)p.set("value",value);
+  if($("searchDuration").value)p.set("duration",$("searchDuration").value);
   return p.toString();
 }
 
-$("clearSearchBtn").onclick=()=>["searchDestination","searchShip","searchDeparture","searchPort","searchMonth","searchDuration"].forEach(id=>$(id).value="");
+$("clearSearchBtn").onclick=()=>{
+  $("searchAnchorValue").value="";
+  $("searchDuration").value="";
+  document.querySelector('input[name="searchAnchor"][value="destination"]').checked=true;
+  updateAnchorUI();
+  initSearchDates();
+};
 
 $("searchSailingsBtn").onclick=async()=>{
+  const from=$("searchFrom").value,to=$("searchTo").value,value=$("searchAnchorValue").value.trim();
+  if(!from||!to){
+    $("searchNotice").className="notice error";
+    $("searchNotice").textContent="Enter both a From and To date.";
+    return;
+  }
+  const diff=daysBetween(from,to);
+  if(diff<0||diff>30){
+    $("searchNotice").className="notice error";
+    $("searchNotice").textContent="Seaweb itinerary searches must use a date range of 30 days or less.";
+    return;
+  }
+  if(!value){
+    $("searchNotice").className="notice error";
+    $("searchNotice").textContent=`Choose a ${currentAnchor()==="departure"?"departure port":currentAnchor()} before searching.`;
+    return;
+  }
+
   const btn=$("searchSailingsBtn"); btn.disabled=true; btn.textContent="Searching…";
-  $("searchNotice").className="notice info"; $("searchNotice").textContent="Retrieving public sailing data from NCL.com…";
+  $("searchNotice").className="notice info";
+  $("searchNotice").textContent=`Searching ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
   $("searchResults").innerHTML="";
   try{
     const r=await fetch(`/api/sailings?${queryParams()}`);
@@ -88,8 +187,8 @@ $("searchSailingsBtn").onclick=async()=>{
     renderSearchResults();
   }catch(e){
     $("searchNotice").className="notice error";
-    $("searchNotice").innerHTML=`Live retrieval failed: ${escapeHtml(e.message)}. The rest of the generator still works. Use the manual NCL URL fallback or open <a href="https://www.ncl.com/vacations" target="_blank" rel="noopener">NCL Vacations</a>.`;
-  }finally{btn.disabled=false;btn.textContent="Search NCL.com"}
+    $("searchNotice").innerHTML=`Live retrieval failed: ${escapeHtml(e.message)}. The scenario generator, validator, and library still work.`;
+  }finally{btn.disabled=false;btn.textContent="Search Itineraries"}
 };
 
 $("manualImportBtn").onclick=async()=>{
@@ -251,11 +350,9 @@ function runValidator(){
     if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
     if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
     else add("warning","Ports need verification","Public result did not expose a usable port list.");
-    if($("searchPort").value && s.ports?.length){
-      const wanted=$("searchPort").value.toLowerCase();
-      const found=s.ports.some(p=>p.toLowerCase().includes(wanted));
-      add(found?"passed":"error",found?"Required port is on itinerary":"Required port mismatch",found?`${$("searchPort").value} appears in the public itinerary.`:`${$("searchPort").value} does not appear in the selected public itinerary.`);
-    }
+    // Port-of-call requirements are intentionally checked after itinerary selection,
+    // rather than over-filtering the initial Seaweb-style search.
+    if(s.ports?.length) add("info","Port-of-call review available","Use the itinerary ports shown above to confirm any guest-requested port before assigning the scenario.");
   }else add("warning","No real sailing attached","Trainer must verify ship, itinerary and dates manually.");
   if(d.pricing)add("info","Trainer-entered pricing","Pricing is not being treated as verified public data. Reconfirm in Seaweb before class.");
   else add("passed","No fabricated pricing","The scenario instructs the trainee to quote the current Seaweb price.");
@@ -358,4 +455,4 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-renderStarters();renderSelectedSailing();updateStats();
+renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();
