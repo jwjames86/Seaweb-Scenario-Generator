@@ -1114,9 +1114,286 @@ function renderValidator(){
   $("validatorResults").innerHTML=state.validation.map(c=>`<div class="validation-item ${c.severity}"><strong>${c.severity.toUpperCase()} • ${escapeHtml(c.title)}</strong><span>${escapeHtml(c.detail)}</span></div>`).join("");
 }
 
+function ensureScenarioReady(){
+  if(!state.currentScenario) generateScenario();
+  return !!state.currentScenario;
+}
+
+function makeTraineeShareClone(){
+  const source=$("scenarioOutput");
+  const clone=source.cloneNode(true);
+
+  // Never share trainer-only content.
+  clone.querySelectorAll(".trainer-section").forEach(el=>el.remove());
+
+  // Email and Teams do not reliably support <details>. Convert each one into
+  // a static, readable section so the copied card contains the full trainee material.
+  clone.querySelectorAll("details").forEach(details=>{
+    const replacement=document.createElement("section");
+    replacement.className="share-expanded-section";
+
+    const summary=details.querySelector("summary");
+    if(summary){
+      const heading=document.createElement("div");
+      heading.className="share-expanded-heading";
+      const main=summary.querySelector("span")?.textContent || summary.textContent || "Additional Information";
+      heading.textContent=main.trim();
+      replacement.appendChild(heading);
+    }
+
+    [...details.children].forEach(child=>{
+      if(child.tagName!=="SUMMARY") replacement.appendChild(child.cloneNode(true));
+    });
+    details.replaceWith(replacement);
+  });
+
+  // A recipient should get a clean trainee card, not UI-only controls.
+  clone.querySelectorAll("button,input,select,textarea").forEach(el=>el.remove());
+  clone.removeAttribute("id");
+  clone.classList.add("shared-trainee-card");
+  return clone;
+}
+
+const shareStyleProps=[
+  "display","position","box-sizing","width","max-width","min-width",
+  "margin-top","margin-right","margin-bottom","margin-left",
+  "padding-top","padding-right","padding-bottom","padding-left",
+  "font-family","font-size","font-weight","font-style","line-height",
+  "letter-spacing","text-transform","text-align","color","background-color",
+  "border-top","border-right","border-bottom","border-left","border-radius",
+  "list-style-type","list-style-position","column-count","column-gap",
+  "grid-template-columns","grid-column","gap","align-items","justify-content",
+  "flex-direction","flex-wrap","flex","white-space"
+];
+
+function inlineComputedStyles(root){
+  const nodes=[root,...root.querySelectorAll("*")];
+  nodes.forEach(el=>{
+    const cs=getComputedStyle(el);
+    const inline=[];
+    shareStyleProps.forEach(prop=>{
+      const value=cs.getPropertyValue(prop);
+      if(value && value!=="normal" && value!=="auto" && value!=="none"){
+        inline.push(`${prop}:${value}`);
+      }
+    });
+    if(el.classList.contains("trainer-section")) inline.push("display:none");
+    el.setAttribute("style",inline.join(";"));
+  });
+}
+
+function makeOffscreenShareHost(){
+  const host=document.createElement("div");
+  host.className="share-render-host";
+  host.style.cssText=[
+    "position:fixed",
+    "left:-12000px",
+    "top:0",
+    "width:900px",
+    "padding:0",
+    "margin:0",
+    "background:#ffffff",
+    "z-index:-9999",
+    "pointer-events:none"
+  ].join(";");
+  document.body.appendChild(host);
+  return host;
+}
+
+function canvasBlob(canvas){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Could not create card image.")),"image/png");
+  });
+}
+
+function escapeXml(value=""){
+  return String(value).replace(/[<>&'"]/g,ch=>({
+    "<":"&lt;",">":"&gt;","&":"&amp;","'":"&apos;",'"':"&quot;"
+  }[ch]));
+}
+
+async function renderShareCardToPng(){
+  const host=makeOffscreenShareHost();
+  const clone=makeTraineeShareClone();
+  clone.style.width="900px";
+  clone.style.maxWidth="900px";
+  clone.style.margin="0";
+  clone.style.background="#ffffff";
+  clone.style.boxSizing="border-box";
+  host.appendChild(clone);
+
+  // Let layout settle before measuring.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+  const width=900;
+  const height=Math.ceil(clone.getBoundingClientRect().height);
+  if(height>15000){
+    host.remove();
+    throw new Error("This scenario is too long for one image. Use Copy Editable instead.");
+  }
+
+  const css=`
+    *{box-sizing:border-box}
+    body{margin:0}
+    .shared-trainee-card{font-family:Arial,Helvetica,sans-serif;color:#101828;background:#fff;padding:32px;width:${width}px}
+    .shared-trainee-card h2{font-size:25px;line-height:1.25;margin:8px 0 18px;color:#10294b}
+    .shared-trainee-card h3{font-size:18px;margin:0 0 12px;color:#101828}
+    .shared-trainee-card h4{font-size:14px;margin:20px 0 8px;color:#101828}
+    .scenario-meta-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+    .chip{display:inline-block;background:#f1eee7;border:1px solid #d7d0c6;border-radius:3px;padding:5px 8px;font-size:11px;color:#454949}
+    .scenario-intro{font-size:14px;line-height:1.65;color:#344054;margin:0 0 24px}
+    .scenario-section{margin:24px 0}
+    .section-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#00484F;margin-bottom:6px}
+    .call-section{background:#EBE7DF;border-left:5px solid #68ACAA;padding:18px 20px}
+    .call-section p{margin:0;line-height:1.7}
+    .glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .glance-card{background:#fff;border:1px solid #d9d4ca;border-radius:9px;padding:13px;min-height:88px}
+    .glance-card.wide{grid-column:1/-1}
+    .glance-card>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667085;font-weight:700}
+    .glance-card>strong{display:block;font-size:13px;line-height:1.4;color:#101828;margin:4px 0}
+    .glance-card>small{display:block;font-size:11px;line-height:1.35;color:#667085}
+    .task-checklist{list-style:none;padding:0;margin:0}
+    .task-checklist li{display:flex;gap:10px;line-height:1.5;padding:9px 0;border-bottom:1px solid #ece8e0}
+    .check-box{display:block;width:16px;height:16px;border:1.5px solid #006099;border-radius:3px;flex:0 0 16px;margin-top:2px}
+    .details-section{border-top:1px solid #ded9cf;padding-top:22px}
+    .detail-list{padding-left:22px}.detail-list li{margin:5px 0;line-height:1.45}
+    .instruction-strip{background:#edf6f5;border-left:4px solid #68ACAA;padding:12px 14px;margin:12px 0 18px}
+    .instruction-strip strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+    .instruction-strip span{display:block;font-size:13px;line-height:1.5;margin-top:4px}
+    .payment-section{background:#fffbef;border:1px solid #e6cd88;border-radius:10px;padding:16px 18px}
+    .scenario-payment-card{border:1px solid #e6cd88;background:#fffcf5;border-radius:8px;padding:14px}
+    .training-only-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#9a6700}
+    .end-call-section{background:#f7f3ec;border-radius:10px;padding:18px 20px}
+    .closing-card{margin-top:14px;border-top:1px solid #ddd5c6;padding-top:13px}
+    .closing-card strong,.closing-card span{display:block;margin:4px 0}
+    .share-expanded-section{border:1px solid #d7d2c8;border-radius:10px;margin:22px 0;background:#fff;overflow:hidden}
+    .share-expanded-heading{padding:13px 16px;font-size:14px;font-weight:700;background:#f7f3ec;color:#101828}
+    .support-body{padding:14px 18px 16px}
+    .support-list{columns:2;column-gap:28px;padding-left:22px}.support-list li{margin:0 0 8px}
+    .independent-callout{padding:14px 16px;background:#f7f3ec;border-left:4px solid #E6CD88}
+    .trainer-section{display:none!important}
+    p,li{font-size:13px;line-height:1.55;color:#273248}
+  `;
+
+  const serialized=new XMLSerializer().serializeToString(clone);
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <foreignObject width="100%" height="100%">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        <style>${css}</style>
+        ${serialized}
+      </div>
+    </foreignObject>
+  </svg>`;
+
+  const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  try{
+    const img=new Image();
+    await new Promise((resolve,reject)=>{
+      img.onload=resolve;
+      img.onerror=()=>reject(new Error("Could not render the card image."));
+      img.src=url;
+    });
+    const scale=2;
+    const canvas=document.createElement("canvas");
+    canvas.width=width*scale;
+    canvas.height=height*scale;
+    const ctx=canvas.getContext("2d");
+    ctx.scale(scale,scale);
+    ctx.fillStyle="#ffffff";
+    ctx.fillRect(0,0,width,height);
+    ctx.drawImage(img,0,0,width,height);
+    return await canvasBlob(canvas);
+  }finally{
+    URL.revokeObjectURL(url);
+    host.remove();
+  }
+}
+
+async function copyCardAsImage(){
+  if(!ensureScenarioReady())return;
+  if(!navigator.clipboard || typeof ClipboardItem==="undefined"){
+    alert("This browser does not support copying images to the clipboard. Use Copy Editable instead.");
+    return;
+  }
+  const btn=$("copyCardImageBtn");
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Creating image…</strong><small>Please wait</small></span>`;
+  try{
+    const png=await renderShareCardToPng();
+    await navigator.clipboard.write([new ClipboardItem({"image/png":png})]);
+    closeShareMenu();
+    flash("Trainee card copied as an image — paste it into Teams or email.");
+  }catch(err){
+    alert(`Could not copy the card image: ${err.message}\n\nTry Copy Editable instead.`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
+}
+
+async function copyCardFormatted(){
+  if(!ensureScenarioReady())return;
+  const host=makeOffscreenShareHost();
+  const clone=makeTraineeShareClone();
+  clone.style.width="760px";
+  clone.style.maxWidth="760px";
+  clone.style.padding="28px";
+  clone.style.background="#ffffff";
+  host.appendChild(clone);
+
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  inlineComputedStyles(clone);
+
+  const html=`<div style="background:#ffffff;padding:4px">${clone.outerHTML}</div>`;
+  const text=clone.innerText;
+
+  try{
+    if(navigator.clipboard && typeof ClipboardItem!=="undefined"){
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html":new Blob([html],{type:"text/html"}),
+        "text/plain":new Blob([text],{type:"text/plain"})
+      })]);
+    }else{
+      await navigator.clipboard.writeText(text);
+    }
+    closeShareMenu();
+    flash("Editable trainee card copied — paste it into Teams or Outlook.");
+  }catch(err){
+    await navigator.clipboard.writeText(text);
+    closeShareMenu();
+    flash("Formatted copy was blocked, so plain text was copied instead.");
+  }finally{
+    host.remove();
+  }
+}
+
+function openShareMenu(){
+  $("shareScenarioMenu").classList.add("open");
+  $("shareScenarioBtn").setAttribute("aria-expanded","true");
+}
+function closeShareMenu(){
+  $("shareScenarioMenu").classList.remove("open");
+  $("shareScenarioBtn").setAttribute("aria-expanded","false");
+}
+$("shareScenarioBtn").onclick=(e)=>{
+  e.stopPropagation();
+  $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
+};
+$("copyCardImageBtn").onclick=copyCardAsImage;
+$("copyCardFormattedBtn").onclick=copyCardFormatted;
+document.addEventListener("click",e=>{
+  const control=$("shareControl");
+  if(control && !control.contains(e.target))closeShareMenu();
+});
+
 $("copyScenarioBtn").onclick=async()=>{
-  await navigator.clipboard.writeText($("scenarioOutput").innerText);
-  flash("Scenario copied to clipboard.");
+  if(!ensureScenarioReady())return;
+  const clone=makeTraineeShareClone();
+  await navigator.clipboard.writeText(clone.innerText);
+  closeShareMenu();
+  flash("Plain-text trainee scenario copied.");
 };
 $("printScenarioBtn").onclick=()=>window.print();
 

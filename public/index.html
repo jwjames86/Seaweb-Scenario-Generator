@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.6.2" />
+  <link rel="stylesheet" href="/styles.css?v=1.7" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.6 • NCL Brand + Trainee Experience</span>
+            <span class="pill">V1.7 • NCL Brand + Share Cards</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -263,8 +263,26 @@
           <div class="panel output-panel">
             <div class="output-toolbar">
               <span id="scenarioStatus" class="status-badge neutral">Draft</span>
-              <div>
-                <button id="copyScenarioBtn" class="tiny">Copy</button>
+              <div class="output-actions">
+                <div class="share-control" id="shareControl">
+                  <button id="shareScenarioBtn" class="tiny share-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
+                    Share Card <span aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="shareScenarioMenu" class="share-menu" role="menu">
+                    <button id="copyCardImageBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">▣</span>
+                      <span><strong>Copy as Image</strong><small>Recommended for Teams &amp; email — preserves the look</small></span>
+                    </button>
+                    <button id="copyCardFormattedBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">A</span>
+                      <span><strong>Copy Editable</strong><small>Formatted text that recipients can select and copy</small></span>
+                    </button>
+                    <button id="copyScenarioBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">¶</span>
+                      <span><strong>Copy Plain Text</strong><small>Simple fallback with no card styling</small></span>
+                    </button>
+                  </div>
+                </div>
                 <button id="printScenarioBtn" class="tiny">Print</button>
                 <button id="saveScenarioBtn" class="tiny primary">Save</button>
               </div>
@@ -307,6 +325,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.6.3"></script>
+  <script src="/app.js?v=1.7"></script>
 </body>
 </html>

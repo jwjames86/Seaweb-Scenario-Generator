@@ -273,3 +273,58 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:600px){
   .glance-grid{grid-template-columns:1fr}.glance-card.wide{grid-column:auto}
 }
+
+
+/* V1.7 • Teams / Outlook trainee share cards */
+.output-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.share-control{position:relative;display:inline-block}
+.share-trigger{display:inline-flex;align-items:center;gap:6px}
+.share-trigger[aria-expanded="true"]{background:var(--aqua);border-color:var(--turquoise)}
+.share-menu{
+  display:none;
+  position:absolute;
+  right:0;
+  top:calc(100% + 7px);
+  z-index:80;
+  width:330px;
+  background:#fff;
+  border:1px solid #8f9391;
+  border-radius:4px;
+  box-shadow:0 16px 38px rgba(0,0,0,.19);
+  padding:6px;
+}
+.share-menu.open{display:grid;gap:3px}
+.share-menu button{
+  width:100%;
+  display:flex;
+  align-items:flex-start;
+  gap:11px;
+  padding:11px 10px;
+  border:0;
+  border-radius:3px;
+  background:#fff;
+  color:#101010;
+  text-align:left;
+  cursor:pointer;
+}
+.share-menu button:hover{background:#edf5f4}
+.share-menu button:disabled{opacity:.65;cursor:wait}
+.share-menu-icon{
+  width:31px;height:31px;flex:0 0 31px;
+  display:grid;place-items:center;
+  border-radius:3px;
+  background:var(--aqua);
+  color:var(--turquoise);
+  font-size:15px;
+  font-weight:700;
+}
+.share-menu button>span:last-child{display:flex;flex-direction:column;gap:2px;min-width:0}
+.share-menu strong{font-size:12px;font-weight:600}
+.share-menu small{font-size:10px;line-height:1.35;color:#68706e}
+.share-render-host .trainer-section{display:none!important}
+.share-expanded-section{border:1px solid #d7d2c8;border-radius:10px;margin:22px 0;background:#fff;overflow:hidden}
+.share-expanded-heading{padding:13px 16px;font-size:14px;font-weight:700;background:#f7f3ec;color:#101828}
+
+@media(max-width:680px){
+  .share-menu{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto}
+}
