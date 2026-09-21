@@ -1,4 +1,4 @@
-# Seaweb Scenario Generator – V1.4
+# Seaweb Scenario Generator – V1.6
 
 A no-sign-in training prototype for Norwegian Cruise Line Seaweb scenario authoring and validation.
 
@@ -78,3 +78,41 @@ The Worker requires the browser binding included in `wrangler.toml`:
 [browser]
 binding = "BROWSER"
 ```
+
+
+## V1.5 – NCL brand refresh + searchable sailing menus
+
+- Applies the NCL 2026 brand palette with Sand as the application background and Aqua / Medium Blue / Teal primary accents.
+- Uses Poppins as the Google Font substitute for Greycliff CF.
+- Adds the user-provided official black NCL shield + tagline lockup to the application header.
+- Replaces the browser-native datalist with a custom searchable dropdown for Destination, Embarkation Port, and Ship.
+- Supports browse, type-to-filter, keyboard navigation, selected-state checkmarks, and free-text searches.
+- Preserves the existing V1.4 curriculum, training-card, library, validator, and Browser Run sailing-search logic.
+
+
+## V1.6 – New-hire trainee layout
+
+V1.6 restructures generated scenarios around how new hires work through a call instead of presenting the exercise as one long reference document.
+
+Trainee view now includes:
+- **Your Call**: short natural customer story.
+- **Guest Request at a Glance**: compact sailing, stateroom, promotion, protection, payment and special-request cards.
+- **Complete These Tasks**: an ordered workflow checklist.
+- **Progressive Call Flow Support**: guided on Day 6, supported on Day 7, lighter on Days 8–9, and intentionally more independent on Days 10–11.
+- **Before You End the Call**: recap, payment/deadline, confirmation and branded-closing checks.
+- **After Completion: Knowledge Check**: collapsed until the trainee finishes the operational task.
+
+Trainer view adds:
+- Learning objective
+- Scenario approach
+- Prerequisite skills
+- Expected workflow
+- Expected completion state
+- Common mistakes to watch for
+- Trainer check / answer guide
+- Public-source metadata
+
+Quality fixes:
+- ADA / accessible scenarios automatically select **ADA / Accessible** instead of a standard Balcony category and leave location/side availability-driven.
+- Outbound agency display is simplified to **Market / Currency | Agency ######** instead of repeating the number.
+- Curriculum defaults now auto-toggle FAS, travel protection and prepaid service charges when those components are explicitly part of the selected training focus.
