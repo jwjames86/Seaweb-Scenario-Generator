@@ -59,3 +59,20 @@ footer{padding:18px 28px;text-align:center;color:#667085;font-size:12px;border-t
 .anchor-card input{width:auto}
 .anchor-card.active{border-color:#57bfe2;background:#edf9fd;color:#005d80;box-shadow:0 0 0 2px rgba(0,169,206,.08)}
 @media(max-width:680px){.seaweb-date-grid,.anchor-options{grid-template-columns:1fr}}
+
+/* V1.4 department/day curriculum */
+.curriculum-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.curriculum-note{margin:16px 0;background:#eef8fc;border:1px solid #cce9f4;border-left:4px solid var(--aqua);border-radius:10px;padding:13px 14px;display:flex;flex-direction:column;gap:5px}
+.curriculum-note span{font-size:13px;color:#475467;line-height:1.45}
+.hidden-field{display:none!important}
+.payment-training-panel{border:1px solid #fedf89;background:#fffcf5;border-radius:14px;padding:16px;margin:18px 0}
+.payment-panel-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:14px}
+.payment-panel-head>div{display:flex;flex-direction:column;gap:4px}.payment-panel-head span:not(.status-badge){font-size:12px;color:var(--muted)}
+.training-card-preview{display:grid;grid-template-columns:1.7fr .7fr .5fr;gap:10px;margin-top:12px}
+.training-card-preview>div{background:#fff;border:1px solid #eadfbd;border-radius:10px;padding:11px;display:flex;flex-direction:column;gap:4px}
+.training-card-preview>div.wide{grid-column:1/-1}.training-card-preview span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#7a6a43;font-weight:800}.training-card-preview strong{font-size:13px}
+.scenario-meta-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.scenario-payment-card{border:1px solid #fedf89;background:#fffcf5;border-radius:10px;padding:14px;margin:10px 0 18px}.scenario-payment-card p{margin:8px 0 0}.training-only-label{font-size:11px;font-weight:900;letter-spacing:.08em;color:#9a6700}
+.compact-list{columns:2;column-gap:32px;padding-left:22px}.compact-list li{break-inside:avoid;margin:4px 0}
+.library-filter-grid{display:grid;grid-template-columns:190px 140px 1fr;gap:10px}
+@media(max-width:850px){.curriculum-grid{grid-template-columns:1fr}.training-card-preview,.library-filter-grid{grid-template-columns:1fr}.training-card-preview>div.wide{grid-column:auto}.compact-list{columns:1}}

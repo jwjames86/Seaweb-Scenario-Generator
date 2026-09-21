@@ -7,11 +7,95 @@ const state = {
   sailings: []
 };
 
+const marketAgencies = [
+  ["Miami – US Currency","304548"],["Miami – Canadian Currency","501874"],
+  ["Miami Webchat – US Currency","671675"],["Miami Webchat – Canadian Currency","674215"],
+  ["Remote Outbound – US Currency","622001"],["Remote Outbound – Canadian Currency","622055"],
+  ["Sawgrass – US Currency","246598"],["Sawgrass – Canadian Currency","502395"],
+  ["Groups – US Currency","432234"],["Groups – Canadian Currency","484500"],
+  ["International – LATAM","562094"],["International – Brazil","542760"],["International – Russia","302311"],
+  ["International – Spain","257840"],["International – Israel","655664"],["International – UK (London / GBP)","256393"],
+  ["International – Ireland / EUR","565102"],["International – Italy","271269"],["International – MEA (Middle East/Africa)","655662"],
+  ["International – South Africa","655662"],["International – Germany","257839"],["International – Scandinavia","25784830"],
+  ["Webchat UK – UK","688136"]
+];
+
+const trainingCards = {
+  standardSesame:{label:"Standard Training Card – Sesame St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"123 Sesame Street, Miami, FL 33126"},
+  standardMain:{label:"Standard Training Card – Main St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
+  alternateMain:{label:"Alternate Training Card – Main St.",number:"4917 6100 0000 0000",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
+  obSpecial:{label:"OB Special Requests Training Card",number:"4444 3333 2222 1111",expiration:"05/2028",ccv:"456",address:"123 Sesame Street, Miami, FL 33126"}
+};
+
+const scenarioCatalog = {
+  "Guest Services": {
+    6: [
+      {name:"Basic Reservation",payment:"Offer / Hold only",cardRequired:false,commenting:false,difficulty:"Beginner",kind:"new",objective:"Create a basic reservation, review stateroom choices and pricing, verify guest details, place the booking on hold/offer, and explain the deposit deadline."},
+      {name:"Payments",payment:"Minimum Deposit",cardRequired:true,cardProfile:"standardMain",commenting:false,difficulty:"Beginner",kind:"new",objective:"Create a reservation, process the minimum deposit, discuss refundability, remaining balance, split payments, and Auto Final Payment."}
+    ],
+    7: [
+      {name:"Applying FCC",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Intermediate",kind:"new",objective:"Place the booking in offer status before applying CruiseNext/FCC and guest discount coupons, review the updated pricing, and add reservation comments."},
+      {name:"NorwegianCare",payment:"Minimum Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Intermediate",kind:"followup",objective:"Service the Basic Reservation, add NorwegianCare, answer removal/refund timing questions, review updated pricing, process a payment when accepted, and notate the reservation."}
+    ],
+    8: [
+      {name:"Special Requests",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Intermediate",kind:"followup",objective:"Service the Payments reservation, complete GDPR verification, add stateroom preferences and special-occasion notes, recap changes, and send an updated confirmation."},
+      {name:"Price Programs & FAS",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Intermediate",kind:"followup",objective:"Service the Basic Reservation, add Free at Sea selections and prepaid service charges, review applicable deadlines and pricing, and notate the reservation."}
+    ],
+    9: [
+      {name:"ADA & Special Requests",payment:"Minimum Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an accessible-stateroom booking, add ADA and dietary requests, apply eligible promotions/coupons in the correct order, process the deposit, and document the reservation."},
+      {name:"Infants & Guests 3-8",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"new",objective:"Create a multi-occupancy family booking with an infant, create/verify guest profiles, handle occupancy rules, PPSRVCHG/FAS selections, special requests, and CruiseNext/discount coupons."}
+    ],
+    10: [
+      {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
+      {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
+      {name:"Bundled Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent reservation with bundled air and ground-transfer requirements, review air terms, document special requests, process payment, and send the correct confirmation."}
+    ],
+    11: [
+      {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
+      {name:"Price Drops - TRAINER DEMO",payment:"No Payment / Service Only",cardRequired:false,commenting:false,difficulty:"Advanced",kind:"demo",objective:"Trainer-led demonstration of the price-drop workflow and the required Seaweb/NCLHelp checks."},
+      {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."}
+    ]
+  },
+  "Outbound Sales": {
+    6: [
+      {name:"Basic Reservation",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:false,difficulty:"Beginner",kind:"outbound-new",objective:"Qualify the outbound guest, create the reservation, quote pricing, collect the initial deposit, and send the guest confirmation."}
+    ],
+    7: [
+      {name:"Payments",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Beginner",kind:"outbound-new",objective:"Qualify the guest, create the reservation, process payment, complete mandatory fields/comments, and review final-payment and Auto Final Payment information."},
+      {name:"Special Requests",payment:"Full Payment",cardRequired:true,cardProfile:"obSpecial",commenting:true,difficulty:"Intermediate",kind:"outbound-new",objective:"Qualify the guest, create the reservation, add stateroom and dietary requests, collect full payment, document the booking, and send confirmation."}
+    ],
+    8: [
+      {name:"Norwegian Care",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Intermediate",kind:"followup",objective:"Follow up on the Basic Reservation, add Norwegian Care, review updated pricing and coverage/removal timing, recap, and notate the reservation."},
+      {name:"Price Programs & FAS",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Intermediate",kind:"new",objective:"Build a booking with FAS/PPSRVCHG, travel protection and special requests; place it in offer before applying guest discount coupons, then review updated pricing."},
+      {name:"GTY Categories - Trainer Demo",payment:"No Payment / Service Only",cardRequired:false,commenting:false,difficulty:"Intermediate",kind:"demo",objective:"Trainer-led demonstration of Guarantee (GTY) category behavior and how to explain it to a guest."},
+      {name:"Singles / Infants / Guests 3-8",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Intermediate",kind:"new",objective:"Practice solo, infant, and multi-guest bookings; handle occupancy, FAS/PPSRVCHG, travel protection, special requests, CruiseNext, and required deposit rules."},
+      {name:"Cruise First",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:false,difficulty:"Intermediate",kind:"followup",objective:"Follow up on the Basic Reservation to purchase/apply CruiseFirst, collect the required payment, and review CruiseFirst terms and system workflow."}
+    ],
+    9: [
+      {name:"ADA & Special Request",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an ADA booking with accessible stateroom requirements, dietary/special requests, FAS/PPSRVCHG and travel protection, then apply CruiseNext and document actionable requests correctly."},
+      {name:"New Guest",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create new guest profiles that match travel documents, build the reservation, add selected promotions/special requests, take the initial deposit, and document/send confirmation."},
+      {name:"Multiple Reservations / Travel With",payment:"Full Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two separate related reservations, locate connecting/adjacent staterooms, apply different protection choices, take full payment, add TWITH, and complete follow-up dining/entertainment work."}
+    ],
+    10: [
+      {name:"Dining, Ent & Spa",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing reservation, add FAS dining/internet/shore excursions and Essentials TP as appropriate, collect required payment, make dining reservations, and notate changes."},
+      {name:"Amenities",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Add paid onboard amenities, complete the card message fields, collect payment, notate the reservation, and send the amenity invoice."},
+      {name:"Bundled Air / Ground Transfers",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"new",objective:"Build a reservation with bundled air and ground transfers, review air terms, apply CruiseNext, add special requests/celebration details, and document the booking."},
+      {name:"Air Deviations",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service bundled air with deviation requests, review applicable terms/fees, update the reservation, collect any required payment, and document the change."},
+      {name:"Cancellations / Reinstatements",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Cancel a reservation after verification, explain refund timing and card refund details, then practice reinstatement and identify any fare/category/stateroom/promotion changes."}
+    ],
+    11: [
+      {name:"Hotel",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Follow up on the Bundled Air/Ground Transfer reservation and add a two-night pre-cruise hotel in the Land tab, then recap and notate the change."},
+      {name:"Cruisetours",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create a pre-cruisetour reservation with FAS/PPSRVCHG, Norwegian Care, bundled air and special requests, take necessary payment, and send confirmation."},
+      {name:"Air Choice",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Practice Interactive Air/Air Choice, remove or adjust transfers, explain flexible-air terms, handle CruiseNext/deposit questions, take required payment, and document the reservation."}
+    ]
+  }
+};
+
 const starters = [
-  {type:"Basic Reservation",difficulty:"Beginner",desc:"New reservation, category/location preference, hold/offer and confirmation."},
-  {type:"Payments",difficulty:"Intermediate",desc:"New booking, minimum deposit, payment questions and final-payment discussion."},
-  {type:"FCC / CruiseNext & Coupons",difficulty:"Advanced",desc:"Offer first, coupon/FCC workflow, revised pricing and Commenting Tool."},
-  {type:"Special Request",difficulty:"Intermediate",desc:"Follow-up servicing call with GDPR verification, requests and reservation notes."}
+  {department:"Guest Services",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"GS Day 6: basic reservation and hold/offer workflow."},
+  {department:"Guest Services",day:7,focus:"Applying FCC",difficulty:"Intermediate",desc:"GS Day 7: offer-first FCC/CruiseNext and coupon workflow."},
+  {department:"Outbound Sales",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"OB Day 6: qualifying, new reservation, and initial deposit."},
+  {department:"Outbound Sales",day:10,focus:"Dining, Ent & Spa",difficulty:"Advanced",desc:"OB Day 10: follow-up servicing, paid add-ons, and dining."}
 ];
 
 const namePairs = [
@@ -43,22 +127,100 @@ $("trainerModeBtn").onclick=()=>setMode("trainer");
 $("traineeModeBtn").onclick=()=>setMode("trainee");
 $("previewTraineeBtn").onclick=()=>{setMode("trainee");go("generator")};
 
+function currentFocusMeta(){
+  const dept=$("department")?.value||"Guest Services";
+  const day=$("trainingDay")?.value||"6";
+  return (scenarioCatalog[dept]?.[day]||[]).find(x=>x.name===$("scenarioType")?.value) || null;
+}
+
+function populateMarketAgencies(){
+  $("marketAgency").innerHTML=marketAgencies.map(([label,value])=>`<option value="${escapeAttr(value)}">${escapeHtml(label)} — ${escapeHtml(value)}</option>`).join("");
+}
+
+function populateTrainingCards(){
+  $("trainingCardProfile").innerHTML=Object.entries(trainingCards).map(([key,c])=>`<option value="${key}">${escapeHtml(c.label)}</option>`).join("");
+}
+
+function renderTrainingCard(){
+  const c=trainingCards[$("trainingCardProfile").value]||trainingCards.standardSesame;
+  $("trainingCardPreview").innerHTML=`
+    <div><span>Card Number</span><strong>${escapeHtml(c.number)}</strong></div>
+    <div><span>Expiration</span><strong>${escapeHtml(c.expiration)}</strong></div>
+    <div><span>CCV</span><strong>${escapeHtml(c.ccv)}</strong></div>
+    <div class="wide"><span>Billing Address</span><strong>${escapeHtml(c.address)}</strong></div>`;
+}
+
+function updateDepartmentUI(){
+  const dept=$("department").value;
+  const outbound=dept==="Outbound Sales";
+  $("marketAgencyField").classList.toggle("hidden-field",!outbound);
+  if(outbound){
+    $("agency").value=$("marketAgency").value||marketAgencies[0][1];
+  }else{
+    $("agency").value="5";
+  }
+  updateScenarioFocus();
+}
+
+function updateScenarioFocus(preferred){
+  const dept=$("department").value;
+  const day=$("trainingDay").value;
+  const options=scenarioCatalog[dept]?.[day]||[];
+  $("scenarioType").innerHTML=options.map(x=>`<option value="${escapeAttr(x.name)}">${escapeHtml(x.name)}</option>`).join("");
+  if(preferred && options.some(x=>x.name===preferred)) $("scenarioType").value=preferred;
+  applyFocusDefaults();
+}
+
+function paymentActionNeedsCard(){
+  return ["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes($("paymentAction").value);
+}
+
+function refreshTrainingCardPanel(preferredProfile){
+  const meta=currentFocusMeta()||{};
+  const showCard=!!meta.cardRequired||paymentActionNeedsCard();
+  $("trainingCardPanel").classList.toggle("hidden-field",!showCard);
+  if(showCard){
+    const desired=preferredProfile||meta.cardProfile||$("trainingCardProfile").value||"standardSesame";
+    if(trainingCards[desired]) $("trainingCardProfile").value=desired;
+    renderTrainingCard();
+  }
+}
+
+function applyFocusDefaults(){
+  const meta=currentFocusMeta();
+  if(!meta)return;
+  $("difficulty").value=meta.difficulty||"Intermediate";
+  $("paymentAction").value=meta.payment||"No Payment / Service Only";
+  $("commentToggle").checked=!!meta.commenting;
+  $("confirmToggle").checked=true;
+  refreshTrainingCardPanel(meta.cardProfile);
+  $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • Day ${escapeHtml($("trainingDay").value)} • ${escapeHtml(meta.name)}</strong><span>${escapeHtml(meta.objective)}</span>`;
+}
+
 function renderStarters(){
   $("starterTemplates").innerHTML=starters.map((s,i)=>`
     <div class="template-card">
-      <span class="chip">${s.difficulty}</span>
-      <h4>${s.type}</h4><p>${s.desc}</p>
-      <button class="secondary" onclick="loadStarter(${i})">Use Template</button>
+      <div class="meta"><span class="chip">${escapeHtml(s.department)}</span><span class="chip">Day ${s.day}</span></div>
+      <h4>${escapeHtml(s.focus)}</h4><p>${escapeHtml(s.desc)}</p>
+      <button class="secondary" onclick="loadStarter(${i})">Use Quick Start</button>
     </div>`).join("");
 }
 window.loadStarter=(i)=>{
-  $("scenarioType").value=starters[i].type;
-  $("difficulty").value=starters[i].difficulty;
-  if(starters[i].type.includes("FCC")){$("paymentAction").value="FCC / CruiseNext";$("commentToggle").checked=true;}
-  if(starters[i].type==="Payments")$("paymentAction").value="Minimum Deposit";
-  if(starters[i].type==="Special Request")$("commentToggle").checked=true;
+  const s=starters[i];
+  $("department").value=s.department;
+  $("trainingDay").value=String(s.day);
+  updateDepartmentUI();
+  updateScenarioFocus(s.focus);
+  $("difficulty").value=s.difficulty;
   go("generator");
 };
+
+$("department").addEventListener("change",updateDepartmentUI);
+$("trainingDay").addEventListener("change",()=>updateScenarioFocus());
+$("scenarioType").addEventListener("change",applyFocusDefaults);
+$("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
+$("trainingCardProfile").addEventListener("change",renderTrainingCard);
+$("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
@@ -238,25 +400,79 @@ function renderSelectedSailing(){
   $("selectedSailingSummary").innerHTML=`<div class="verified">● Verified from NCL.com</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${escapeHtml((s.sailingMonths||[]).join(", "))}${s.departure?" • From "+escapeHtml(s.departure):""}${s.duration?" • "+s.duration+" days":""}</span>`;
 }
 
+function selectedMarketLabel(){
+  const opt=$("marketAgency")?.selectedOptions?.[0];
+  return opt ? opt.textContent : "";
+}
+
 function scenarioData(){
+  const meta=currentFocusMeta()||{};
+  const cardKey=$("trainingCardProfile")?.value||meta.cardProfile||"standardSesame";
   return {
     id: state.currentScenario?.id || crypto.randomUUID(),
-    title: `${$("scenarioType").value} – ${state.selectedSailing?.ship||$("guest1").value}`,
-    type:$("scenarioType").value,difficulty:$("difficulty").value,guestCount:+$("guestCount").value,
-    agency:$("agency").value,guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
+    department:$("department").value,
+    trainingDay:+$("trainingDay").value,
+    approach:$("scenarioApproach").value,
+    title:`${$("department").value} Day ${$("trainingDay").value} – ${$("scenarioType").value}`,
+    type:$("scenarioType").value,
+    difficulty:$("difficulty").value,
+    guestCount:+$("guestCount").value,
+    agency:$("agency").value,
+    market:$("department").value==="Outbound Sales"?selectedMarketLabel():"Agency 5",
+    guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
     category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
     latitudes:$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
+    cardRequired:!!meta.cardRequired || paymentActionNeedsCard(),
+    cardProfile:cardKey,
+    card:(!!meta.cardRequired || paymentActionNeedsCard()) ? trainingCards[cardKey] : null,
+    curriculumObjective:meta.objective||"",
+    curriculumKind:meta.kind||"",
     createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),
     favorite:state.currentScenario?.favorite||false,archived:false
   };
 }
 
+function focusConsiderations(d){
+  const name=(d.type||"").toLowerCase();
+  const items=[
+    "Anticipate the steps based on the reason for the call and control the call flow.",
+    "Verify all guest names match travel documents exactly and confirm dates of birth before saving.",
+    "Confirm the reservation status, gross amount due, and final payment date in Seaweb.",
+    "Review the current applicable promo codes in the approved internal sources."
+  ];
+  if(name.includes("fcc")||name.includes("price programs")) items.push("Why must the booking be in the correct status before applying coupons or discounts?","What is the deadline to add or change applicable Free at Sea selections?");
+  if(name.includes("norwegian")) items.push("What is the deadline to add/remove travel protection, and how does final-payment status affect available coverage?");
+  if(name.includes("special request")||name.includes("ada")) items.push("Is the request actionable, and should it be entered in Special Requests, Reservation Comments, or both?","Does the itinerary include tender ports or other accessibility considerations?");
+  if(name.includes("infant")||name.includes("guests 3-8")||name.includes("singles")) items.push("Does the selected stateroom capacity support the full occupancy?","How do deposit, promotion, and service-charge rules differ for infants, children, solos, or Guests 3–8?");
+  if(name.includes("multiple")) items.push("Should the reservations be linked with TWITH?","If one caller pays for another reservation, what Authorized Person guidance and notation are required?");
+  if(name.includes("ta booking")||d.curriculumKind==="ta") items.push("What information must the travel agent provide before pricing or creating a reservation?","Where is commission displayed and what servicing restrictions apply to a travel-agent booking?");
+  if(name.includes("air")||name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable air/land terms, deposit requirements, ticketing or confirmation timing, and transfer details.");
+  if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
+  if(name.includes("amenities")||name.includes("dining")) items.push("Is payment due immediately for the selected add-on?","Which confirmation or amenity invoice must be sent after the transaction?");
+  if(name.includes("cruise first")) items.push("What are the CruiseFirst terms and where is the credit purchased/applied?");
+  if(name.includes("gty")) items.push("What expectations must be set for a Guarantee category, including stateroom assignment and location?");
+  if(d.sailing?.ports?.length) items.push(`Confirm any requested port of call against the selected itinerary: ${d.sailing.ports.join(", ")}.`);
+  return [...new Set(items)];
+}
+
+function outboundQualificationHtml(){
+  return `<h3>Outbound Qualification</h3><ol class="compact-list">
+    <li>Are you currently working with a travel agent?</li><li>Have you sailed with Norwegian before?</li>
+    <li>Who will be joining you?</li><li>Are you celebrating anything special?</li>
+    <li>Which itinerary or destination interests you most?</li><li>When would you like to sail?</li>
+    <li>How many days would you like to vacation?</li><li>Which port would you like to cruise from?</li>
+    <li>What stateroom experience are you looking for?</li><li>Military or teacher eligibility?</li>
+    <li>Any health, mobility, or dietary needs?</li><li>Interest in pre-air/hotel?</li><li>Present travel protection.</li>
+  </ol>`;
+}
+
 function generateScenario(){
   const d=scenarioData();
-  const guestNames=[d.guest1,d.guest2].filter(Boolean).slice(0,d.guestCount);
+  const meta=currentFocusMeta()||{};
+  const guestNames=[d.guest1,d.guest2].filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
   const sailText=s ? `${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(" / ")}`:""}` : "a Norwegian Cruise Line sailing selected according to the trainer's instructions";
@@ -267,69 +483,62 @@ function generateScenario(){
   if(d.psc)addOns.push("prepaid service charges");
   const pricing = d.pricing ? `<p><strong>Quote Advertised Pricing:</strong> “The current training quote is ${escapeHtml(d.pricing)}. How does that sound?”</p>` :
     `<p><strong>Pricing Task:</strong> Review the current Seaweb pricing with the guest. Do not use a fabricated amount; quote what Seaweb displays at the time of the exercise.</p>`;
-  const ports=s?.ports?.length?s.ports.join(", "):"Verify the itinerary in Seaweb / NCL source.";
-  const considerations=[
-    "What are the Initial Date and Effective Date, and what does each represent?",
-    "Is the reservation in Offer or Booked status?",
-    "What is the first deposit date / minimum amount due for this reservation?",
-    "What are the current applicable promo codes, and where can they be viewed?",
-    "What is the Gross Amount Due and Final Payment Date?",
-    "What is the last date the guest may cancel without penalty?",
-    "Verify the selected stateroom's square footage and capacity in Seaweb.",
-    "If another guest joins, does the selected stateroom capacity allow it?"
-  ];
-  if(d.payment.includes("Auto")) considerations.push("Where is Auto Final Payment enrolled, and may a different card be used?");
-  if(d.fas) considerations.push("What is the deadline to add the applicable Free at Sea promotion?");
-  if(d.travel) considerations.push("What is the deadline to add travel protection?");
-  if(s?.ports?.length) considerations.push(`Confirm that the itinerary includes the requested ports. Public source ports: ${ports}.`);
 
   const paymentInstruction={
+    "No Payment / Service Only":"Complete the servicing task without collecting a new card payment unless Seaweb shows a newly due amount that is part of the trainer's instructions.",
     "Offer / Hold only":"Place the reservation in Offer/Hold status without collecting payment. Explain the applicable deposit deadline shown in Seaweb.",
-    "Minimum Deposit":"Process only the minimum amount due using approved TRAINING / TEST payment data supplied by the trainer.",
-    "Full Payment":"Review the full amount due and process the approved TRAINING / TEST payment amount supplied by the trainer.",
-    "FCC / CruiseNext":"Place the booking in the required status, then apply the eligible FCC/CruiseNext and any training coupons according to the Seaweb workflow.",
-    "Auto Final Payment discussion":"Discuss Auto Final Payment and complete the enrollment steps in the training environment if instructed."
-  }[d.payment];
+    "Minimum Deposit":"Process only the minimum amount due using the training credit card information below.",
+    "Initial Deposit":"Process the required initial deposit using the training credit card information below.",
+    "Full Payment":"Review the full amount due and process full payment using the training credit card information below.",
+    "FCC / CruiseNext":"Use the applicable training FCC/CruiseNext/CruiseFirst credit according to the scenario workflow. Do not substitute a card unless the exercise specifically requires an additional payment.",
+    "Amenity Payment":"Process the payment due for the amenity/add-on using the training credit card information below and send the appropriate invoice/confirmation.",
+    "Auto Final Payment discussion":"Discuss Auto Final Payment and complete the enrollment steps in the training environment if instructed.",
+    "Refund / Reinstate":"Follow the cancellation/refund or reinstatement workflow. Verify the original form of payment and applicable refund timing; do not collect a new card payment unless required by the updated booking."
+  }[d.payment]||"Complete the payment/booking action shown in Seaweb.";
 
-  const extra = d.commenting ? " Add reservation notes using the Commenting Tool." : "";
-  const addonsText = addOns.length ? ` During the interaction, address ${addOns.join(", ")} as part of the exercise.` : " The guests are not requesting additional add-ons unless instructed by the trainer.";
+  const approachText={
+    current:"Use the current department/day training focus and preserve its core workflow.",
+    variation:"This is a trainer-generated variation of the current department/day skill. Keep the required workflow while varying guests, sailing, stateroom, or preferences.",
+    new:"This is a new practice case built around the same department/day learning objective."
+  }[d.approach];
+
+  const cardHtml=d.cardRequired&&d.card?`<h3>Training Credit Card Information</h3>
+    <div class="scenario-payment-card"><div class="training-only-label">TRAINING / TEST DATA ONLY</div>
+      <p><strong>Card #:</strong> ${escapeHtml(d.card.number)}<br><strong>Expiration:</strong> ${escapeHtml(d.card.expiration)}<br><strong>CCV:</strong> ${escapeHtml(d.card.ccv)}<br><strong>Billing Address:</strong> ${escapeHtml(d.card.address)}</p>
+    </div>`:"";
+
+  const extraGuests=d.guestCount>2?Array.from({length:d.guestCount-2},(_,i)=>`<li><strong>Guest ${i+3}:</strong> Create or locate an appropriate training guest profile and verify all required fields.</li>`).join(""):"";
+  const customerLead=meta.kind==="demo"?`This is a <strong>trainer-led demonstration</strong>. Use the selected or trainer-provided reservation/sailing to demonstrate the ${escapeHtml(d.type)} workflow.`:
+    (meta.kind==="followup"?`<strong>${escapeHtml(primary)}</strong> calls regarding an existing training reservation. ${escapeHtml(d.curriculumObjective)}`:
+    `<strong>${escapeHtml(primary)}</strong>${guestNames[1]?` and <strong>${escapeHtml(guestNames[1])}</strong>`:""} are working with you on ${escapeHtml(sailText)}. ${escapeHtml(d.curriculumObjective)}`);
 
   const html=`
+    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">Day ${d.trainingDay}</span><span class="chip">${escapeHtml(d.difficulty)}</span></div>
     <h2>Seaweb Scenario – ${escapeHtml(d.type)}</h2>
-    <p>Please complete the following scenario independently. If you encounter any difficulties, refer to the <strong>Seaweb User Guide</strong> in <strong>NCLHelp</strong> for step-by-step guidance. Once you've completed your booking, post your reservation number in the class chat.</p>
+    <p>Please complete the following scenario independently. If you encounter any difficulties, refer to the <strong>Seaweb User Guide</strong> in <strong>NCLHelp</strong> for step-by-step guidance. Once you've completed your booking or servicing task, post the reservation number in the class chat.</p>
+    <p class="trainer-section"><strong>Scenario approach:</strong> ${escapeHtml(approachText)}</p>
     <h3>Customer Scenario</h3>
-    <p><strong>${escapeHtml(primary)}</strong>${guestNames[1]?` and <strong>${escapeHtml(guestNames[1])}</strong>`:""} call to plan ${escapeHtml(sailText)}. They request a <strong>${escapeHtml(d.category)}</strong> stateroom${pref?` <strong>${escapeHtml(pref)}</strong>`:""}, if available.${addonsText}</p>
-    <p>Create or service the reservation according to the guest's preferences. Review available options, provide accurate pricing, and confirm all guest details—including legal names exactly as they appear on travel documents and dates of birth—before completing the requested action.</p>
-    <h3>Sailing Details</h3>
+    <p>${customerLead}</p>
+    ${d.department==="Outbound Sales" && ["outbound-new","new"].includes(meta.kind)?outboundQualificationHtml():""}
+    <p>Review the available options, provide accurate pricing, and confirm all guest details—including legal names exactly as they appear on travel documents and dates of birth—before saving or completing the requested action.</p>
+    <h3>Sailing / Reservation Details</h3>
     <ul>
-      <li><strong>Agency:</strong> ${escapeHtml(d.agency)}</li>
-      ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li>
-      <li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li>
-      <li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li>
-      <li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li>
-      <li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
-      <li><strong>Guests:</strong> ${d.guestCount}</li>
+      <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
+      <li><strong>Training Day:</strong> Day ${d.trainingDay}</li>
+      <li><strong>Agency:</strong> ${escapeHtml(d.agency)}${d.department==="Outbound Sales"?` — ${escapeHtml(d.market)}`:""}</li>
+      ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
+      <li><strong>Total Guests:</strong> ${d.guestCount}</li>
     </ul>
-    <h3>Category & Stateroom</h3>
-    <p>${escapeHtml(d.category)}, ${escapeHtml(d.location)} location, ${escapeHtml(d.side)} side preference. Review actual available staterooms in Seaweb before selecting.</p>
+    <h3>Category & Stateroom</h3><p>${escapeHtml(d.category)}, ${escapeHtml(d.location)} location, ${escapeHtml(d.side)} side preference. Review actual available staterooms in Seaweb before selecting.</p>
     ${pricing}
-    <h3>Guest Information</h3>
-    <ul>${guestNames.map((g,i)=>`<li><strong>Guest ${i+1}:</strong> ${escapeHtml(g)}${d.latitudes?" — locate/verify training Latitudes profile in Seaweb":""}</li>`).join("")}</ul>
+    <h3>Guest Information</h3><ul>${guestNames.map((g,i)=>`<li><strong>Guest ${i+1}:</strong> ${escapeHtml(g)}${d.latitudes?" — locate/verify the training Latitudes profile in Seaweb":""}</li>`).join("")}${extraGuests}</ul>
     <h3>Payment / Booking Action</h3><p>${escapeHtml(paymentInstruction)}</p>
-    <h3>Required Actions</h3>
-    <ul>
-      ${d.confirmation?`<li>Send the guest confirmation to <strong>${escapeHtml(d.email||"training123@ncl.com")}</strong>.</li>`:""}
-      ${d.commenting?`<li>Recap the reservation and add appropriate reservation notes using the <strong>Commenting Tool</strong>.</li>`:""}
-      <li>Recap the reservation and confirm the guest understands the next required action.</li>
-    </ul>
-    <h3>Branded Closing</h3>
-    <p>Before ending the call, ensure customer satisfaction by asking, <strong>“Is there anything else I can help you with today, ${escapeHtml(primary.split(" ")[0]||"") }?”</strong> followed by <strong>“Thank you for choosing Norwegian Cruise Line.”</strong></p>
-    <div class="trainer-section">
-      <h3>Things to Consider</h3>
-      <ul>${considerations.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>
-      ${d.trainerNotes?`<h3>Trainer Notes</h3><p>${escapeHtml(d.trainerNotes)}</p>`:""}
-      ${s?`<h3>Public Source Metadata</h3><p><span class="verified">Verified from NCL.com</span><br>${escapeHtml(s.sourceUrl||"")}<br>Retrieved ${new Date(s.retrievedAt||Date.now()).toLocaleString()}</p>`:""}
-    </div>`;
+    ${cardHtml}
+    ${addOns.length?`<h3>Additional Components</h3><p>Include or discuss: ${escapeHtml(addOns.join(", "))}.</p>`:""}
+    <h3>Required Actions</h3><ul>${d.confirmation?`<li>Send the appropriate guest/agency confirmation to <strong>${escapeHtml(d.email||"training123@ncl.com")}</strong>.</li>`:""}${d.commenting?`<li>Recap and add appropriate reservation notes using the <strong>Commenting Tool</strong>.</li>`:""}<li>Recap the reservation or changes and confirm the guest understands the next required action.</li></ul>
+    <h3>Branded Closing</h3><p>Before ending the call, ensure customer satisfaction and use the appropriate Norwegian Cruise Line branded closing. When addressing the primary guest by name: <strong>“Is there anything else I can help you with today, ${escapeHtml(primary.split(" ")[0]||"")}?”</strong> followed by <strong>“Thank you for choosing Norwegian Cruise Line.”</strong></p>
+    <div class="trainer-section"><h3>Curriculum Objective</h3><p>${escapeHtml(d.curriculumObjective)}</p><h3>Things to Consider</h3><ul>${focusConsiderations(d).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>${d.trainerNotes?`<h3>Trainer Notes</h3><p>${escapeHtml(d.trainerNotes)}</p>`:""}${s?`<h3>Public Source Metadata</h3><p><span class="verified">Verified from NCL.com</span><br>${escapeHtml(s.sourceUrl||"")}<br>Retrieved ${new Date(s.retrievedAt||Date.now()).toLocaleString()}</p>`:""}</div>`;
+
   $("scenarioOutput").innerHTML=html;
   d.html=html;
   state.currentScenario=d;
@@ -342,32 +551,54 @@ $("generateBtn").onclick=generateScenario;
 function runValidator(){
   const d=state.currentScenario||scenarioData(), s=d.sailing, checks=[];
   const add=(severity,title,detail)=>checks.push({severity,title,detail});
-  if(!d.guest1)add("error","Missing primary guest","Guest 1 is required.");
-  else add("passed","Primary guest present",d.guest1);
-  if(d.guestCount>1 && !d.guest2)add("error","Guest count mismatch","Two or more guests selected, but Guest 2 is blank.");
+  const meta=currentFocusMeta()||{};
+
+  if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
+  else add("passed","Department selected",`${d.department} • Day ${d.trainingDay} • ${d.type}`);
+  if(!d.guest1 && meta.kind!=="demo")add("error","Missing primary guest","Guest 1 is required for trainee scenarios.");
+  else if(d.guest1)add("passed","Primary guest present",d.guest1);
+  if(d.guestCount>1 && !d.guest2 && meta.kind!=="demo")add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+
+  if(d.department==="Guest Services"){
+    if(String(d.agency)!=="5")add("error","Guest Services agency mismatch","Current Guest Services scenarios use Agency 5.");
+    else add("passed","Guest Services agency","Agency 5 is selected.");
+  }else if(d.department==="Outbound Sales"){
+    if(!d.agency)add("error","Outbound agency missing","Choose the market/currency agency before assigning the scenario.");
+    else add("passed","Outbound market agency selected",`${d.market}`);
+  }
+
   if(s){
     add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
     if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
     if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
-    else add("warning","Ports need verification","Public result did not expose a usable port list.");
-    // Port-of-call requirements are intentionally checked after itinerary selection,
-    // rather than over-filtering the initial Seaweb-style search.
-    if(s.ports?.length) add("info","Port-of-call review available","Use the itinerary ports shown above to confirm any guest-requested port before assigning the scenario.");
+    else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
+    if(s.ports?.length) add("info","Port-of-call review available","Confirm any scenario-specific port requirement after selecting the sailing rather than over-filtering the initial search.");
   }else add("warning","No real sailing attached","Trainer must verify ship, itinerary and dates manually.");
+
   if(d.pricing)add("info","Trainer-entered pricing","Pricing is not being treated as verified public data. Reconfirm in Seaweb before class.");
   else add("passed","No fabricated pricing","The scenario instructs the trainee to quote the current Seaweb price.");
-  if(d.category==="Random")add("info","Random category","Trainer should confirm the generated/assigned category before releasing.");
+
+  if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
   else add("passed","Category instruction is explicit",d.category);
-  if(d.payment==="Offer / Hold only" && d.type==="Payments")add("warning","Scenario type / action mismatch","Payments scenario is set to Offer/Hold only.");
-  if(d.type==="FCC / CruiseNext & Coupons" && d.payment!=="FCC / CruiseNext")add("error","FCC workflow mismatch","FCC / CruiseNext scenario should use the FCC / CruiseNext payment action.");
+
+  if(d.cardRequired){
+    if(!d.card)add("error","Training credit card missing","This scenario requires a card payment, but no training card profile is attached.");
+    else add("passed","Training credit card included",`${d.card.label} • TRAINING / TEST DATA ONLY`);
+    if(meta.cardRequired && ["No Payment / Service Only","Offer / Hold only","FCC / CruiseNext","Refund / Reinstate"].includes(d.payment)) add("warning","Payment action may conflict with curriculum","The selected training focus is tagged as requiring a card payment, but the current payment action may not collect one.");
+    if(!meta.cardRequired && paymentActionNeedsCard()) add("info","Trainer-added card payment","This variation adds a card payment even though the source curriculum focus does not require one by default.");
+  }else add("passed","Payment method aligned","No training credit card is required for this focus by default.");
+
+  if((d.type.includes("FCC")||d.type.includes("Price Programs")) && d.payment!=="FCC / CruiseNext" && !d.type.includes("Price Programs")) add("warning","FCC workflow review","Confirm the selected payment action preserves the offer-first coupon/FCC workflow.");
   if(d.confirmation && !d.email)add("error","Confirmation email missing","Confirmation is required but no training email is entered.");
   else if(d.confirmation)add("passed","Confirmation task included",d.email);
+  if(meta.commenting && !d.commenting)add("warning","Commenting Tool expected","The current curriculum focus includes reservation notation/comments.");
+
   if(d.html){
     if(d.html.includes("Thank you for choosing Norwegian Cruise Line."))add("passed","Branded closing present","Required NCL closing is included.");
-    else add("error","Branded closing missing","Add the NCL branded closing.");
+    else add("warning","Branded closing missing","Add the appropriate NCL branded closing.");
     if(/Category & Category/i.test(d.html))add("warning","Repeated heading detected","Review duplicated wording in the scenario.");
   }
-  add("info","Cabin-specific attributes need Seaweb verification","Capacity, exact square footage, minibar and exact inventory are not inferred from NCL public search data.");
+  add("info","Cabin-specific attributes need Seaweb verification","Capacity, exact square footage, minibar, exact inventory, policy deadlines, and internal promo codes are not inferred from public NCL search data.");
   state.validation=checks;
   renderValidator();
   return checks;
@@ -405,12 +636,18 @@ function updateStats(){
 }
 function renderLibrary(){
   const q=$("librarySearch").value.toLowerCase().trim();
-  let items=saved().filter(x=>!q||JSON.stringify([x.title,x.type,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q));
+  const deptFilter=$("libraryDepartmentFilter").value;
+  const dayFilter=$("libraryDayFilter").value;
+  let items=saved().filter(x=>{
+    if(deptFilter && x.department!==deptFilter)return false;
+    if(dayFilter && String(x.trainingDay)!==String(dayFilter))return false;
+    return !q||JSON.stringify([x.title,x.type,x.department,x.trainingDay,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+  });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
       <div style="display:flex;justify-content:space-between;gap:12px">
         <div>
-          <div class="meta"><span class="chip">${escapeHtml(x.type)}</span><span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
+          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span>${x.trainingDay?`<span class="chip">Day ${escapeHtml(String(x.trainingDay))}</span>`:""}<span class="chip">${escapeHtml(x.type)}</span><span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
           <h3>${escapeHtml(x.title)}</h3>
           <div class="muted">${escapeHtml(x.sailing?.ship||"No real sailing")} ${x.sailing?.title?"• "+escapeHtml(x.sailing.title):""}</div>
           <div class="muted" style="font-size:11px;margin-top:6px">Updated ${new Date(x.updatedAt).toLocaleString()}</div>
@@ -423,9 +660,11 @@ function renderLibrary(){
         <button class="secondary" onclick="archiveSaved('${x.id}')">${x.archived?"Unarchive":"Archive"}</button>
         <button class="secondary" onclick="deleteSaved('${x.id}')">Delete</button>
       </div>
-    </div>`).join(""):`<div class="panel muted">No saved scenarios match your search.</div>`;
+    </div>`).join(""):`<div class="panel muted">No saved scenarios match your filters.</div>`;
 }
 $("librarySearch").oninput=renderLibrary;
+$("libraryDepartmentFilter").onchange=renderLibrary;
+$("libraryDayFilter").onchange=renderLibrary;
 window.toggleFavorite=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.favorite=!x.favorite;setSaved(a);renderLibrary()};
 window.archiveSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.archived=!x.archived;setSaved(a);renderLibrary()};
 window.deleteSaved=(id)=>{if(!confirm("Delete this saved scenario?"))return;setSaved(saved().filter(x=>x.id!==id));renderLibrary()};
@@ -433,11 +672,24 @@ window.duplicateSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(!x)
 window.openSaved=(id)=>{
   const x=saved().find(v=>v.id===id);if(!x)return;
   state.currentScenario=x;state.selectedSailing=x.sailing||null;
-  $("scenarioType").value=x.type;$("difficulty").value=x.difficulty;$("guestCount").value=x.guestCount;$("agency").value=x.agency;
-  $("guest1").value=x.guest1||"";$("guest2").value=x.guest2||"";$("category").value=x.category;$("locationPref").value=x.location;$("sidePref").value=x.side;
-  $("paymentAction").value=x.payment;$("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"";
-  $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=!!x.confirmation;
+  $("department").value=x.department||"Guest Services";
+  $("trainingDay").value=String(x.trainingDay||6);
+  if($("department").value==="Outbound Sales" && x.agency) $("marketAgency").value=String(x.agency);
+  updateDepartmentUI();
+  updateScenarioFocus(x.type);
+  $("scenarioApproach").value=x.approach||"variation";
+  $("difficulty").value=x.difficulty||"Intermediate";
+  $("guestCount").value=String(x.guestCount||2);
+  $("agency").value=x.agency||($("department").value==="Guest Services"?"5":$("marketAgency").value);
+  $("guest1").value=x.guest1||"";$("guest2").value=x.guest2||"";
+  if([...$("category").options].some(o=>o.value===x.category)) $("category").value=x.category;
+  if([...$("locationPref").options].some(o=>o.value===x.location)) $("locationPref").value=x.location;
+  if([...$("sidePref").options].some(o=>o.value===x.side)) $("sidePref").value=x.side;
+  if([...$("paymentAction").options].some(o=>o.value===x.payment)) $("paymentAction").value=x.payment;
+  $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
+  $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;$("trainerNotes").value=x.trainerNotes||"";
+  if(x.cardProfile && trainingCards[x.cardProfile]){$("trainingCardProfile").value=x.cardProfile;renderTrainingCard();}
   renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
 };
 $("exportBtn").onclick=()=>{
@@ -455,4 +707,4 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();

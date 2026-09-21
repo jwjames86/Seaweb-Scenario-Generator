@@ -58,7 +58,7 @@
           <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
         </div>
 
-        <div class="section-head"><div><h3>Starter Templates</h3><p>Use as a starting point, then connect to a real sailing.</p></div></div>
+        <div class="section-head"><div><h3>Department Quick Starts</h3><p>Jump directly into a Day 6–11 Guest Services or Outbound Sales training focus.</p></div></div>
         <div id="starterTemplates" class="card-grid"></div>
       </section>
 
@@ -127,7 +127,7 @@
 
       <section id="generator" class="page">
         <div class="section-head">
-          <div><h2>Scenario Generator</h2><p>Create a structured training exercise from a real sailing or trainer-entered details.</p></div>
+          <div><h2>Scenario Generator</h2><p>Create a structured training exercise aligned to the Guest Services or Outbound Sales Day 6–11 curriculum.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
 
@@ -135,17 +135,27 @@
           <div class="panel">
             <div id="selectedSailingSummary" class="selected-sailing empty">No real sailing selected yet.</div>
 
-            <div class="form-grid">
-              <label>Scenario Type
-                <select id="scenarioType">
-                  <option>Basic Reservation</option>
-                  <option>Payments</option>
-                  <option>FCC / CruiseNext & Coupons</option>
-                  <option>Special Request</option>
-                  <option>Existing Reservation</option>
-                  <option>Modification</option>
-                  <option>Cancellation</option>
-                  <option>Upgrade</option>
+            <div class="form-grid curriculum-grid">
+              <label>Department
+                <select id="department">
+                  <option value="Guest Services">Guest Services</option>
+                  <option value="Outbound Sales">Outbound Sales</option>
+                </select>
+              </label>
+              <label>Training Day
+                <select id="trainingDay">
+                  <option value="6">Day 6</option><option value="7">Day 7</option><option value="8">Day 8</option>
+                  <option value="9">Day 9</option><option value="10">Day 10</option><option value="11">Day 11</option>
+                </select>
+              </label>
+              <label>Scenario Focus
+                <select id="scenarioType"></select>
+              </label>
+              <label>Scenario Approach
+                <select id="scenarioApproach">
+                  <option value="variation">Generate Variation</option>
+                  <option value="current">Current Training Focus</option>
+                  <option value="new">New Scenario Based on Skill</option>
                 </select>
               </label>
               <label>Difficulty
@@ -154,10 +164,13 @@
                 </select>
               </label>
               <label>Guests
-                <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+                <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+              </label>
+              <label id="marketAgencyField" class="hidden-field">Outbound Market / Currency
+                <select id="marketAgency"></select>
               </label>
               <label>Agency
-                <input id="agency" value="5" />
+                <input id="agency" value="5" readonly />
               </label>
               <label>Guest 1
                 <input id="guest1" value="Maxim De Winter" />
@@ -168,19 +181,19 @@
               <label>Stateroom Category
                 <select id="category">
                   <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
-                  <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Random</option>
+                  <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
                 </select>
               </label>
               <label>Location Preference
-                <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option></select>
+                <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
               </label>
               <label>Side Preference
                 <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
               </label>
-              <label>Payment Action
+              <label>Payment / Booking Action
                 <select id="paymentAction">
-                  <option selected>Offer / Hold only</option><option>Minimum Deposit</option><option>Full Payment</option>
-                  <option>FCC / CruiseNext</option><option>Auto Final Payment discussion</option>
+                  <option>No Payment / Service Only</option><option selected>Offer / Hold only</option><option>Minimum Deposit</option><option>Initial Deposit</option><option>Full Payment</option>
+                  <option>FCC / CruiseNext</option><option>Amenity Payment</option><option>Auto Final Payment discussion</option><option>Refund / Reinstate</option>
                 </select>
               </label>
               <label>Advertised Pricing (optional)
@@ -189,6 +202,19 @@
               <label>Training Confirmation Email
                 <input id="confirmationEmail" value="training123@ncl.com" />
               </label>
+            </div>
+
+            <div id="curriculumNote" class="curriculum-note trainer-only"></div>
+
+            <div id="trainingCardPanel" class="payment-training-panel hidden-field">
+              <div class="payment-panel-head">
+                <div><strong>Training Credit Card Information</strong><span>Shown because this scenario requires a card payment.</span></div>
+                <span class="status-badge review">TRAINING / TEST DATA ONLY</span>
+              </div>
+              <label>Training Card Profile
+                <select id="trainingCardProfile"></select>
+              </label>
+              <div id="trainingCardPreview" class="training-card-preview"></div>
             </div>
 
             <fieldset>
@@ -245,7 +271,11 @@
           </div>
         </div>
         <div class="panel">
-          <input id="librarySearch" placeholder="Search title, ship, destination, type..." />
+          <div class="library-filter-grid">
+            <select id="libraryDepartmentFilter"><option value="">All Departments</option><option>Guest Services</option><option>Outbound Sales</option></select>
+            <select id="libraryDayFilter"><option value="">All Days</option><option value="6">Day 6</option><option value="7">Day 7</option><option value="8">Day 8</option><option value="9">Day 9</option><option value="10">Day 10</option><option value="11">Day 11</option></select>
+            <input id="librarySearch" placeholder="Search title, skill, ship, destination..." />
+          </div>
           <div class="notice warning">Browser-local scenarios are device/browser specific. Export a JSON backup for safekeeping.</div>
         </div>
         <div id="libraryList" class="result-list"></div>
