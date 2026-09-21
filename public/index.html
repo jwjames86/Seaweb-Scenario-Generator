@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seaweb Scenario Generator</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">NORWEGIAN CRUISE LINE • TRAINING PROTOTYPE</div>
+      <h1>Seaweb Scenario Generator</h1>
+    </div>
+    <div class="mode-switch" role="group" aria-label="View mode">
+      <button id="trainerModeBtn" class="active">Trainer View</button>
+      <button id="traineeModeBtn">Trainee View</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <aside class="sidebar">
+      <button class="nav active" data-page="dashboard">Dashboard</button>
+      <button class="nav" data-page="search">Real Sailing Search</button>
+      <button class="nav" data-page="generator">Scenario Generator</button>
+      <button class="nav" data-page="validator">Scenario Validator</button>
+      <button class="nav" data-page="library">Saved Scenario Library</button>
+      <div class="sidebar-note">
+        <strong>V1 Storage</strong>
+        <span>Saved scenarios stay in this browser unless exported.</span>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="dashboard" class="page active">
+        <div class="hero">
+          <div>
+            <span class="pill">V1 • No Sign-In Required</span>
+            <h2>Build realistic Seaweb practice scenarios faster.</h2>
+            <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
+            <div class="actions">
+              <button class="primary" data-go="search">Find Real Sailing</button>
+              <button class="secondary" data-go="generator">Generate Scenario</button>
+            </div>
+          </div>
+          <div class="hero-card">
+            <div class="source-row"><span class="dot live"></span><strong>Verified from NCL.com</strong></div>
+            <p>Ship, itinerary, ports, departure port, sailing month/date when exposed, public fare, taxes/fees, public offers.</p>
+            <div class="source-row"><span class="dot trainer"></span><strong>Trainer / Seaweb Data</strong></div>
+            <p>Agency, training guests, internal promo codes, exact deposit/final-payment details, Commenting Tool tasks and answer-key notes.</p>
+          </div>
+        </div>
+
+        <div class="stat-grid">
+          <div class="stat"><span>Saved Scenarios</span><strong id="savedCount">0</strong></div>
+          <div class="stat"><span>Ready for Trainee</span><strong id="readyCount">0</strong></div>
+          <div class="stat"><span>Needs Review</span><strong id="reviewCount">0</strong></div>
+          <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
+        </div>
+
+        <div class="section-head"><div><h3>Starter Templates</h3><p>Use as a starting point, then connect to a real sailing.</p></div></div>
+        <div id="starterTemplates" class="card-grid"></div>
+      </section>
+
+      <section id="search" class="page">
+        <div class="section-head">
+          <div><h2>Real Sailing Search</h2><p>Public NCL.com data only. Exact cabin inventory and internal Seaweb fields are never inferred.</p></div>
+          <span class="status-badge">Live NCL Adapter</span>
+        </div>
+
+        <div class="panel">
+          <div class="form-grid search-grid">
+            <label>Destination
+              <input id="searchDestination" placeholder="Caribbean, Alaska, Canada..." />
+            </label>
+            <label>Ship
+              <input id="searchShip" placeholder="Norwegian Aqua" />
+            </label>
+            <label>Departure Port
+              <input id="searchDeparture" placeholder="Miami, Boston, Seattle..." />
+            </label>
+            <label>Required Port of Call
+              <input id="searchPort" placeholder="Tortola" />
+            </label>
+            <label>Month / Year
+              <input id="searchMonth" placeholder="January 2027" />
+            </label>
+            <label>Duration
+              <select id="searchDuration">
+                <option value="">Any</option>
+                <option>4</option><option>5</option><option>7</option><option>9</option>
+                <option>10</option><option>11</option><option>12</option><option>14</option>
+              </select>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="searchSailingsBtn" class="primary">Search NCL.com</button>
+            <button id="clearSearchBtn" class="secondary">Clear</button>
+          </div>
+          <div id="searchNotice" class="notice info">Search results are retrieved at request time. Public pricing can change.</div>
+        </div>
+
+        <div id="searchResults" class="result-list"></div>
+
+        <details class="panel manual">
+          <summary>Manual fallback: paste an NCL vacations URL</summary>
+          <div class="inline-form">
+            <input id="manualUrl" placeholder="https://www.ncl.com/.../vacations?..." />
+            <button id="manualImportBtn" class="secondary">Import URL</button>
+          </div>
+        </details>
+      </section>
+
+      <section id="generator" class="page">
+        <div class="section-head">
+          <div><h2>Scenario Generator</h2><p>Create a structured training exercise from a real sailing or trainer-entered details.</p></div>
+          <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div id="selectedSailingSummary" class="selected-sailing empty">No real sailing selected yet.</div>
+
+            <div class="form-grid">
+              <label>Scenario Type
+                <select id="scenarioType">
+                  <option>Basic Reservation</option>
+                  <option>Payments</option>
+                  <option>FCC / CruiseNext & Coupons</option>
+                  <option>Special Request</option>
+                  <option>Existing Reservation</option>
+                  <option>Modification</option>
+                  <option>Cancellation</option>
+                  <option>Upgrade</option>
+                </select>
+              </label>
+              <label>Difficulty
+                <select id="difficulty">
+                  <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Challenge</option>
+                </select>
+              </label>
+              <label>Guests
+                <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+              </label>
+              <label>Agency
+                <input id="agency" value="5" />
+              </label>
+              <label>Guest 1
+                <input id="guest1" value="Maxim De Winter" />
+              </label>
+              <label>Guest 2
+                <input id="guest2" value="Rebecca De Winter" />
+              </label>
+              <label>Stateroom Category
+                <select id="category">
+                  <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
+                  <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Random</option>
+                </select>
+              </label>
+              <label>Location Preference
+                <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option></select>
+              </label>
+              <label>Side Preference
+                <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
+              </label>
+              <label>Payment Action
+                <select id="paymentAction">
+                  <option selected>Offer / Hold only</option><option>Minimum Deposit</option><option>Full Payment</option>
+                  <option>FCC / CruiseNext</option><option>Auto Final Payment discussion</option>
+                </select>
+              </label>
+              <label>Advertised Pricing (optional)
+                <input id="pricing" placeholder="$1,559 pp / $3,118 total" />
+              </label>
+              <label>Training Confirmation Email
+                <input id="confirmationEmail" value="training123@ncl.com" />
+              </label>
+            </div>
+
+            <fieldset>
+              <legend>Scenario Tasks</legend>
+              <label class="check"><input id="latitudesToggle" type="checkbox" checked /> Past Guests / Latitudes</label>
+              <label class="check"><input id="commentToggle" type="checkbox" /> Use Commenting Tool</label>
+              <label class="check"><input id="confirmToggle" type="checkbox" checked /> Send Guest Confirmation</label>
+              <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
+              <label class="check"><input id="travelToggle" type="checkbox" /> Travel Protection discussion</label>
+              <label class="check"><input id="pscToggle" type="checkbox" /> Prepaid Service Charges discussion</label>
+            </fieldset>
+
+            <label>Trainer Notes
+              <textarea id="trainerNotes" rows="4" placeholder="Internal trainer notes / answer-key reminders"></textarea>
+            </label>
+
+            <div class="actions">
+              <button id="generateBtn" class="primary">Generate Scenario</button>
+              <button id="generateNamesBtn" class="secondary">Generate Fictional Names</button>
+            </div>
+          </div>
+
+          <div class="panel output-panel">
+            <div class="output-toolbar">
+              <span id="scenarioStatus" class="status-badge neutral">Draft</span>
+              <div>
+                <button id="copyScenarioBtn" class="tiny">Copy</button>
+                <button id="printScenarioBtn" class="tiny">Print</button>
+                <button id="saveScenarioBtn" class="tiny primary">Save</button>
+              </div>
+            </div>
+            <article id="scenarioOutput" class="scenario-paper">
+              <p class="empty-copy">Choose your options and click <strong>Generate Scenario</strong>.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="validator" class="page">
+        <div class="section-head">
+          <div><h2>Scenario Validator</h2><p>Checks the scenario against the selected sailing and its own instructions.</p></div>
+          <button id="runValidatorBtn" class="primary">Run Validator</button>
+        </div>
+        <div id="validatorSummary" class="validator-summary"></div>
+        <div id="validatorResults" class="validation-list"></div>
+      </section>
+
+      <section id="library" class="page">
+        <div class="section-head">
+          <div><h2>Saved Scenario Library</h2><p>V1 saves locally to this browser. Export a backup before switching devices.</p></div>
+          <div class="actions">
+            <button id="exportBtn" class="secondary">Export JSON</button>
+            <label class="file-button secondary">Import JSON<input id="importFile" type="file" accept=".json,application/json" hidden /></label>
+          </div>
+        </div>
+        <div class="panel">
+          <input id="librarySearch" placeholder="Search title, ship, destination, type..." />
+          <div class="notice warning">Browser-local scenarios are device/browser specific. Export a JSON backup for safekeeping.</div>
+        </div>
+        <div id="libraryList" class="result-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
+  <script src="/app.js"></script>
+</body>
+</html>
