@@ -75,24 +75,41 @@ async function handleSailings(request, reqUrl, env) {
     }
   }
 
-  // IMPORTANT: Do NOT stack the date into NCL's public URL.
-  // Seaweb training uses a date window + ONE anchor, but NCL's public URL
-  // date parameters are not stable enough for this prototype. We fetch the
-  // broad public result set for the chosen anchor, then apply the 30-day
-  // month window locally.
-  const sourceUrl = buildNclSearchUrl(criterion, value);
-  const parsed = await renderAndParse(env, sourceUrl);
+  const wantedMonths = from && to ? monthsInWindow(from, to) : [];
+  const candidateUrls = buildNclSearchUrls(criterion, value, from, to);
 
-  if (!parsed.ok) {
+  // NCL currently exposes more than one public URL vocabulary depending on
+  // which page generated the link (for example cruise-ship vs ships). Try the
+  // current canonical form first, then known public fallbacks until cards parse.
+  let parsed = null;
+  let sourceUrl = candidateUrls[0];
+  const attempts = [];
+
+  for (const candidate of candidateUrls) {
+    sourceUrl = candidate;
+    const attempt = await renderAndParse(env, candidate);
+    attempts.push({
+      url: candidate,
+      ok: attempt.ok,
+      cards: attempt.results?.length || 0,
+      method: attempt.diagnostic?.method || "unknown"
+    });
+    if (attempt.ok && attempt.results?.length) {
+      parsed = attempt;
+      break;
+    }
+    if (!parsed) parsed = attempt;
+  }
+
+  if (!parsed?.ok) {
     return json({
-      error: parsed.error,
+      error: parsed?.error || "The NCL public page could not be read.",
       sourceUrl,
-      hint: "The NCL public page could not be read. Try again after 10 seconds or use the NCL URL fallback.",
-      diagnostic: parsed.diagnostic
+      hint: "Try again after 10 seconds or use the NCL URL fallback.",
+      diagnostic: { attempts }
     }, 502);
   }
 
-  const wantedMonths = from && to ? monthsInWindow(from, to) : [];
   const wanted = value.toLowerCase();
 
   let results = parsed.results.filter(r => {
@@ -141,15 +158,42 @@ async function handleSailings(request, reqUrl, env) {
       filteredCards: results.length,
       criterion,
       value,
-      wantedMonths
+      wantedMonths,
+      attempts
     }
   });
 }
 
 async function renderAndParse(env, sourceUrl) {
-  // Markdown is much easier and more stable to parse than NCL's rendered DOM.
-  // It also uses only one Browser Run request, important on Cloudflare Free.
   if (env.BROWSER && typeof env.BROWSER.quickAction === "function") {
+    // 1) Fully rendered HTML is the most reliable source for NCL's JS-heavy page.
+    try {
+      const response = await env.BROWSER.quickAction("content", {
+        url: sourceUrl,
+        gotoOptions: {
+          waitUntil: "networkidle2",
+          timeout: 30000
+        },
+        waitForTimeout: 1800,
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+      });
+
+      if (response.ok) {
+        const body = await response.text();
+        let html = unwrapQuickActionText(body, "content");
+        const text = normalizeHtml(html);
+        const results = parseCruises(text, sourceUrl);
+        if (results.length) {
+          return {
+            ok: true,
+            results,
+            diagnostic: { method: "browser-content", textLength: text.length }
+          };
+        }
+      }
+    } catch (_) {}
+
+    // 2) Markdown normalizes dynamic page content well when HTML structure shifts.
     try {
       const response = await env.BROWSER.quickAction("markdown", {
         url: sourceUrl,
@@ -157,19 +201,13 @@ async function renderAndParse(env, sourceUrl) {
           waitUntil: "networkidle2",
           timeout: 30000
         },
-        waitForTimeout: 1500,
+        waitForTimeout: 1800,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
       });
 
       if (response.ok) {
         const body = await response.text();
-        let markdown = body;
-        try {
-          const data = JSON.parse(body);
-          if (typeof data?.result === "string") markdown = data.result;
-          else if (typeof data?.result?.markdown === "string") markdown = data.result.markdown;
-        } catch (_) {}
-
+        const markdown = unwrapQuickActionText(body, "markdown");
         const text = normalizeMarkdown(markdown);
         const results = parseCruises(text, sourceUrl);
         return {
@@ -178,11 +216,10 @@ async function renderAndParse(env, sourceUrl) {
           diagnostic: { method: "browser-markdown", textLength: text.length }
         };
       }
-    } catch (e) {
-      // Fall through to the raw public page as a backup.
-    }
+    } catch (_) {}
   }
 
+  // Last-resort public HTML fetch.
   try {
     const response = await fetch(sourceUrl, {
       redirect: "follow",
@@ -220,25 +257,87 @@ async function renderAndParse(env, sourceUrl) {
   }
 }
 
-function buildNclSearchUrl(criterion, value) {
-  const u = new URL("https://www.ncl.com/uk/en/vacations");
-  u.searchParams.set("autoPopulate", "f");
-  u.searchParams.set("from", "resultpage");
-  u.searchParams.set("currentPage", "1");
-  u.searchParams.set("pageSize", "50");
+function unwrapQuickActionText(body, preferredKey) {
+  let text = String(body || "");
+  try {
+    const data = JSON.parse(text);
+    if (typeof data?.result === "string") return data.result;
+    if (typeof data?.result?.[preferredKey] === "string") return data.result[preferredKey];
+    if (typeof data?.result?.content === "string") return data.result.content;
+    if (typeof data?.result?.markdown === "string") return data.result.markdown;
+    if (typeof data?.content === "string") return data.content;
+    if (typeof data?.markdown === "string") return data.markdown;
+  } catch (_) {}
+  return text;
+}
 
-  if (criterion === "destination") {
-    u.searchParams.set("cruise-destination", destinationSlug(value));
-  } else if (criterion === "ship") {
-    const shipToken = value.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
-    u.searchParams.set("ships", shipToken);
+function buildNclSearchUrls(criterion, value, from, to) {
+  const base = "https://www.ncl.com/uk/en/vacations";
+  const urls = [];
+  const monthParam = nclMonthParam(from, to);
+
+  const addBaseParams = (u) => {
+    u.searchParams.set("autoPopulate", "f");
+    u.searchParams.set("from", "resultpage");
+    u.searchParams.set("currentPage", "1");
+    u.searchParams.set("pageSize", "50");
+    if (monthParam) u.searchParams.set("date", monthParam);
+    return u;
+  };
+
+  if (criterion === "ship") {
+    // Current canonical public URL.
+    let u = addBaseParams(new URL(base));
+    u.searchParams.set("cruise-ship", slug(value));
+    urls.push(u.toString());
+
+    // Public results also still expose this legacy/current mixed form.
+    u = addBaseParams(new URL(base));
+    u.searchParams.set("ships", value.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, ""));
+    urls.push(u.toString());
+
+    u = addBaseParams(new URL(base));
+    u.searchParams.set("ship", slug(value));
+    urls.push(u.toString());
   } else if (criterion === "departure") {
-    const code = embarkationCode(value.toLowerCase().trim());
-    // NCL's current public results use "port" for embarkation filters.
-    u.searchParams.set("port", code || slug(value));
+    const code = embarkationCode(value.toLowerCase().trim()) || slug(value);
+
+    let u = addBaseParams(new URL(base));
+    u.searchParams.set("cruise-port", code);
+    urls.push(u.toString());
+
+    u = addBaseParams(new URL(base));
+    u.searchParams.set("port", code);
+    urls.push(u.toString());
+  } else {
+    let u = addBaseParams(new URL(base));
+    u.searchParams.set("cruise-destination", destinationSlug(value));
+    urls.push(u.toString());
+
+    u = addBaseParams(new URL(base));
+    u.searchParams.set("destinations", destinationSlug(value));
+    urls.push(u.toString());
   }
 
-  return u.toString();
+  return [...new Set(urls)];
+}
+
+function nclMonthParam(from, to) {
+  if (!from || !to) return "";
+  const start = new Date(from + "T12:00:00Z");
+  const end = new Date(to + "T12:00:00Z");
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
+
+  const short = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const months = [];
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), 1));
+
+  while (cursor <= last) {
+    months.push(`${short[cursor.getUTCMonth()]}-${cursor.getUTCFullYear()}`);
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+  return months.join(",");
 }
 
 function destinationSlug(value) {
@@ -303,7 +402,7 @@ function daysBetweenIso(a, b) {
 }
 
 function parseCruises(text, sourceUrl) {
-  const headerRe = /(?:^|\n)(\d{1,2})-day Cruise on ((?:Norwegian [^\n]+)|Pride of America)(?=\n|$)/gi;
+  const headerRe = /(?:^|\n)\s*(\d{1,2})\s*[-–—]\s*day\s+Cruise\s+on\s+((?:Norwegian\s+[^\n]+)|Pride\s+of\s+America)\s*(?=\n|$)/gi;
   const starts = [...text.matchAll(headerRe)];
   const out = [];
 
