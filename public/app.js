@@ -406,11 +406,12 @@ function updateDateHint(){
 $("searchFrom").addEventListener("change",()=>{
   const from=$("searchFrom").value;
   if(!from)return;
+  const autoTo=addDays(from,30);
   $("searchTo").min=from;
-  $("searchTo").max=addDays(from,30);
-  if(!$("searchTo").value || daysBetween(from,$("searchTo").value)<0 || daysBetween(from,$("searchTo").value)>30){
-    $("searchTo").value=addDays(from,30);
-  }
+  $("searchTo").max=autoTo;
+  // Seaweb-style behavior: every new From date automatically creates
+  // the full 30-day search window. Trainers can shorten To afterward.
+  $("searchTo").value=autoTo;
   updateDateHint();
 });
 $("searchTo").addEventListener("change",updateDateHint);
@@ -462,7 +463,7 @@ $("searchSailingsBtn").onclick=async()=>{
     const data=await r.json();
     if(!r.ok) throw new Error(data.error||"Search failed");
     state.sailings=data.results||[];
-    $("searchNotice").className="notice "+(data.live?"success":"warning");
+    $("searchNotice").className="notice "+(state.sailings.length?"success":"warning");
     $("searchNotice").textContent=data.message||`Found ${state.sailings.length} results.`;
     renderSearchResults();
   }catch(e){
