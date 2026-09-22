@@ -102,10 +102,10 @@ const scenarioCatalog = {
 };
 
 const starters = [
-  {department:"Guest Services",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"GS Day 6: basic reservation and hold/offer workflow."},
-  {department:"Guest Services",day:7,focus:"Applying FCC",difficulty:"Intermediate",desc:"GS Day 7: offer-first FCC/CruiseNext and coupon workflow."},
-  {department:"Outbound Sales",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"OB Day 6: qualifying, new reservation, and initial deposit."},
-  {department:"Outbound Sales",day:10,focus:"Dining, Ent & Spa",difficulty:"Advanced",desc:"OB Day 10: follow-up servicing, paid add-ons, and dining."}
+  {department:"Guest Services",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"Guest Services basic reservation and hold/offer workflow."},
+  {department:"Guest Services",day:7,focus:"Applying FCC",difficulty:"Intermediate",desc:"Guest Services offer-first FCC/CruiseNext and coupon workflow."},
+  {department:"Outbound Sales",day:6,focus:"Basic Reservation",difficulty:"Beginner",desc:"Outbound qualifying, new reservation, and initial deposit."},
+  {department:"Outbound Sales",day:10,focus:"Dining, Ent & Spa",difficulty:"Advanced",desc:"Outbound follow-up servicing, paid add-ons, and dining."}
 ];
 
 const namePairs = [
@@ -172,15 +172,14 @@ function updateDepartmentUI(){
     $("agency").value="5";
   }
   updateScenarioFocus();
+  updateGdprPreview();
 }
 
 function updateScenarioFocus(preferred,preferredDay){
   const dept=$("department").value;
   const days=Object.keys(scenarioCatalog[dept]||{}).map(Number).sort((a,b)=>a-b);
-  $("scenarioType").innerHTML=days.map(day=>{
-    const options=scenarioCatalog[dept]?.[day]||[];
-    return `<optgroup label="Day ${day}">${options.map(x=>`<option value="${escapeAttr(x.name)}" data-day="${day}">Day ${day} — ${escapeHtml(x.name)}</option>`).join("")}</optgroup>`;
-  }).join("");
+  const all=days.flatMap(day=>(scenarioCatalog[dept]?.[day]||[]).map(item=>({day,item})));
+  $("scenarioType").innerHTML=all.map(({day,item})=>`<option value="${escapeAttr(item.name)}" data-day="${day}">${escapeHtml(item.name)}</option>`).join("");
 
   const options=[...$("scenarioType").options];
   const match=preferred
@@ -198,6 +197,339 @@ function syncScenarioFocusSelection(){
   applyFocusDefaults();
 }
 
+const modificationLabels={
+  special_request:"Add / Update Special Request",
+  shore_excursion:"Add / Change Shore Excursion",
+  stateroom:"Change / Upgrade Stateroom",
+  add_guest:"Add Guest",
+  remove_guest:"Remove Guest",
+  fas:"Add / Remove Free at Sea",
+  travel_protection:"Add / Remove Travel Protection",
+  psc:"Add Prepaid Service Charges",
+  payment:"Make / Update Payment",
+  credit_coupon:"Apply FCC / CruiseNext / Coupon",
+  air_transfer:"Add / Change Air or Transfers",
+  hotel_cruisetour:"Add / Change Hotel or Cruisetour",
+  cancel_reinstate:"Cancel / Reinstate Reservation",
+  general:"General Reservation Update"
+};
+
+const gdprProfiles={
+  direct_guest:{
+    label:"Direct Guest",
+    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  travel_agent:{
+    label:"Travel Agent",
+    instruction:"Reservation Number is mandatory. If the Travel Agent cannot provide #2 but can provide 3 pieces from items 3–6, service the call/chat as a Travel Agency Guest.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "ABTA # or Agency ID or Phone #",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  travel_agency_guest:{
+    label:"Travel Agency Guest",
+    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  ta_group:{
+    label:"TA Group",
+    instruction:"Reservation Number is mandatory. If the Travel Agent cannot provide #2 but can provide 3 pieces from items 3–6, process the service/chat as a Travel Agency Guest.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "ABTA # or Agency ID or Phone #",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  friends_family:{
+    label:"Friends & Family / Team Member",
+    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  casino_guest:{
+    label:"Casino Guest",
+    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  pcc_guest:{
+    label:"PCC Guest",
+    instruction:"Reservation Number is mandatory. Complete GDPR verification before following the PCC servicing / transfer guidance.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  direct_group:{
+    label:"Direct Group",
+    instruction:"Reservation Number is mandatory. Complete GDPR verification before following Direct Group transfer guidance.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  },
+  charter_sixthman:{
+    label:"Charter / Sixthman",
+    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
+    requirements:[
+      "MANDATORY — Reservation Number",
+      "Guest Full Name",
+      "Ship & Full Sail Date",
+      "Agency Name",
+      "Date of Birth",
+      "First Line of Address"
+    ]
+  }
+};
+
+const directGroupRoutes={
+  direct_groups_sot:{label:"Direct Groups SOT",sot:"11185"},
+  direct_canadian:{label:"Direct Canadian Groups (CAD)",sot:"11185"},
+  latam:{label:"LATAM Direct Groups",sot:"11195"},
+  miami_outbound:{label:"Miami Outbound Direct Groups",sot:"11195"},
+  remote_outbound_pcc:{label:"Remote Outbound PCC Groups",sot:"11195"},
+  sawgrass_outbound:{label:"Sawgrass Outbound Direct Groups",sot:"11195"}
+};
+
+function gdprProfile(value){
+  return gdprProfiles[value]||null;
+}
+
+function directGroupRoute(value){
+  return directGroupRoutes[value]||directGroupRoutes.direct_groups_sot;
+}
+
+function pccActionText(d){
+  if(d.modificationType==="shore_excursion"){
+    return "PCC Guest handling: Shore Excursions may be serviced.";
+  }
+  if(d.modificationType==="cancel_reinstate"){
+    return "PCC Guest cancellation handling: advise the guest to contact the PCC directly. If the guest says they already attempted to contact the PCC and/or refuses transfer, follow standard cancellation procedures and document the reservation.";
+  }
+  return "PCC Guest handling: advise the caller that they have a PCC and attempt to transfer them to the PCC. If the PCC is unavailable or the guest refuses transfer, you may service reservation requests except cancellation requests.";
+}
+
+function directGroupActionText(d){
+  const route=directGroupRoute(d.directGroupMarket);
+  return `Direct Group handling: transfer the reservation to the PCC listed on the reservation or to the Direct Groups SOT Pilot #${route.sot}. Selected route: ${route.label}.`;
+}
+
+function gdprActionText(d){
+  if(d.gdprCallerType==="pcc_guest")return pccActionText(d);
+  if(d.gdprCallerType==="direct_group")return directGroupActionText(d);
+  return "";
+}
+
+function gdprScenarioHtml(d){
+  if(d.department!=="Guest Services"||d.reservationWorkflow!=="modify")return "";
+  const profile=gdprProfile(d.gdprCallerType);
+  if(!profile){
+    return `<section class="scenario-section gdpr-output-section"><div class="section-label">GDPR — REQUIRED</div><h3>Complete GDPR Verification First</h3><p>Caller type has not been selected. The trainer must identify the correct GDPR caller / reservation type before this scenario is assigned.</p></section>`;
+  }
+  const action=gdprActionText(d);
+  return `<section class="scenario-section gdpr-output-section">
+    <div class="section-label">GDPR — REQUIRED • GUEST SERVICES</div>
+    <h3>Complete GDPR Verification First</h3>
+    <p><strong>Caller / Reservation Type:</strong> ${escapeHtml(profile.label)}</p>
+    <p class="gdpr-instruction">${escapeHtml(profile.instruction)}</p>
+    <ol class="gdpr-requirement-list">${profile.requirements.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ol>
+    ${action?`<div class="gdpr-action-card"><strong>Required Handling</strong><span>${escapeHtml(action)}</span></div>`:""}
+  </section>`;
+}
+
+function updateGdprPreview(){
+  const gsModify=$("department").value==="Guest Services" && $("reservationWorkflow").value==="modify";
+  $("gdprPanel")?.classList.toggle("hidden-field",!gsModify);
+  if(!gsModify)return;
+
+  const caller=$("gdprCallerType")?.value||"";
+  const profile=gdprProfile(caller);
+  const directGroup=caller==="direct_group";
+  $("directGroupMarketField")?.classList.toggle("hidden-field",!directGroup);
+
+  const preview=$("gdprRequirementsPreview");
+  if(!preview)return;
+  if(!profile){
+    preview.innerHTML=`<div class="notice warning">Choose the caller / reservation type. GDPR verification is mandatory before servicing an existing Guest Services reservation.</div>`;
+    return;
+  }
+
+  const draft={
+    modificationType:$("modificationType")?.value||"general",
+    gdprCallerType:caller,
+    directGroupMarket:$("directGroupMarket")?.value||"direct_groups_sot"
+  };
+  const action=gdprActionText(draft);
+  preview.innerHTML=`
+    <div class="gdpr-preview-title">${escapeHtml(profile.label)} Verification</div>
+    <p>${escapeHtml(profile.instruction)}</p>
+    <ol>${profile.requirements.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ol>
+    ${action?`<div class="gdpr-preview-action"><strong>Required Handling</strong><span>${escapeHtml(action)}</span></div>`:""}`;
+}
+
+function modificationLabel(value){
+  return modificationLabels[value]||"General Reservation Update";
+}
+
+function inferModificationType(meta){
+  const t=`${meta?.name||""} ${meta?.objective||""}`.toLowerCase();
+  if(/cancel|reinstate/.test(t))return "cancel_reinstate";
+  if(/special request|ada|dietary/.test(t))return "special_request";
+  if(/hotel|cruisetour|land pkg/.test(t))return "hotel_cruisetour";
+  if(/air|transfer/.test(t))return "air_transfer";
+  if(/free at sea|price programs|fas/.test(t))return "fas";
+  if(/norwegian care|travel protection/.test(t))return "travel_protection";
+  if(/fcc|cruisenext|coupon|cruise first/.test(t))return "credit_coupon";
+  if(/payment/.test(t))return "payment";
+  return "general";
+}
+
+function modificationTaskText(d){
+  const target=d.modificationTarget?` for ${d.modificationTarget}`:"";
+  const request=d.modificationRequest?` ${d.modificationRequest}`:"";
+  const map={
+    special_request:`Add or update the requested special request${target} in the correct Seaweb location and enter any required reservation comments.`,
+    shore_excursion:`Add or change the requested Shore Excursion${target}; review availability, pricing, and any payment or cancellation requirements.`,
+    stateroom:`Review available inventory and complete the requested stateroom change or upgrade${target}. Reprice the reservation and explain any fare or promotion impact.`,
+    add_guest:`Add the requested guest${target}. Create or locate the guest profile, verify occupancy/capacity, reprice the reservation, and review any new amount due.`,
+    remove_guest:`Remove the requested guest${target}. Review occupancy, fare, promotion, cancellation-fee, and payment impacts before saving.`,
+    fas:`Add, remove, or update the requested Free at Sea selection${target}; verify eligibility, deadlines, pricing, and any service-charge impact.`,
+    travel_protection:`Add or remove travel protection${target}; verify timing, eligibility, price, and any refund/removal rules before saving.`,
+    psc:`Add prepaid service charges${target} and review the updated reservation total.`,
+    payment:`Review the reservation balance and complete the requested payment action${target} using the training payment information when required.`,
+    credit_coupon:`Apply or update the requested FCC / CruiseNext / coupon${target} in the correct status/order, then review the resulting pricing.`,
+    air_transfer:`Add or change the requested air or ground-transfer component${target}; review applicable timing, terms, pricing, and transfer details.`,
+    hotel_cruisetour:`Add or change the requested hotel, land package, or cruisetour${target}; review availability, timing, pricing, and related reservation details.`,
+    cancel_reinstate:`Complete the requested cancellation or reinstatement${target}; verify final-payment status, refund timing, and any fare/category/promotion changes.`,
+    general:`Complete the requested reservation update${target} and verify all resulting pricing, status, and deadline changes.`
+  };
+  return `${map[d.modificationType]||map.general}${request}`;
+}
+
+function updateModificationDefaults(){
+  if($("reservationWorkflow").value!=="modify")return;
+  const type=$("modificationType").value;
+
+  $("fasToggle").checked=type==="fas";
+  $("travelToggle").checked=type==="travel_protection";
+  $("pscToggle").checked=type==="psc";
+  $("commentToggle").checked=true;
+
+  const paymentDefaults={
+    payment:"Initial Deposit",
+    credit_coupon:"FCC / CruiseNext",
+    cancel_reinstate:"Refund / Reinstate"
+  };
+  if(paymentDefaults[type]) $("paymentAction").value=paymentDefaults[type];
+  else if(["special_request","shore_excursion","stateroom","add_guest","remove_guest","fas","travel_protection","psc","air_transfer","hotel_cruisetour","general"].includes(type)){
+    $("paymentAction").value="No Payment / Service Only";
+  }
+
+  refreshTrainingCardPanel();
+}
+
+function updateModificationTypeUI(applyDefaults=false){
+  const modify=$("reservationWorkflow").value==="modify";
+  const type=$("modificationType")?.value||"general";
+
+  $("modificationPanel").classList.toggle("hidden-field",!modify);
+  $("selectedSailingSummary").classList.toggle("workflow-hidden",modify);
+
+  const needsStateroom=modify && type==="stateroom";
+  const needsAddedGuest=modify && type==="add_guest";
+
+  ["categoryField","locationField","sideField"].forEach(id=>{
+    $(id)?.classList.toggle("workflow-hidden",modify&&!needsStateroom);
+  });
+  $("pricingField")?.classList.toggle("workflow-hidden",modify&&!needsStateroom);
+  $("guestCountField")?.classList.toggle("workflow-hidden",modify);
+  $("guest2Field")?.classList.toggle("workflow-hidden",modify);
+
+  $("guestStatusTaskControl")?.classList.toggle("workflow-hidden",modify);
+  if(modify){
+    $("latitudesToggle").checked=false;
+    $("latitudesNumberPanel").classList.add("hidden-field");
+  }
+
+  $("modificationGuestStatusField")?.classList.toggle("hidden-field",!needsAddedGuest);
+  const addedPast=needsAddedGuest && $("modificationGuestStatus")?.value==="past";
+  $("modificationLatitudesField")?.classList.toggle("hidden-field",!addedPast);
+
+  const target=$("modificationTarget");
+  if(target){
+    const placeholders={
+      special_request:"Guest or request being updated",
+      shore_excursion:"Shore Excursion being added or changed",
+      stateroom:"Optional: current stateroom / category",
+      add_guest:"Name of guest being added",
+      remove_guest:"Name of guest being removed",
+      fas:"Free at Sea selection being changed",
+      travel_protection:"Guest / protection change",
+      psc:"Guest(s) receiving prepaid service charges",
+      payment:"Payment amount or payment action",
+      credit_coupon:"FCC / CruiseNext / coupon being applied",
+      air_transfer:"Air / transfer component being changed",
+      hotel_cruisetour:"Hotel / cruisetour component being changed",
+      cancel_reinstate:"Cancellation or reinstatement request",
+      general:"Guest / item being changed"
+    };
+    target.placeholder=placeholders[type]||placeholders.general;
+  }
+
+  if(applyDefaults)updateModificationDefaults();
+  updateGdprPreview();
+}
+
+function updateWorkflowUI(applyDefaults=false){
+  const modify=$("reservationWorkflow").value==="modify";
+  $("guest1Field").querySelector(":scope > text")?.remove?.();
+  // Primary guest remains visible because it is the quickest way to identify
+  // the training reservation along with the reservation number.
+  updateModificationTypeUI(applyDefaults);
+  updateGdprPreview();
+}
 function paymentActionNeedsCard(){
   return ["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes($("paymentAction").value);
 }
@@ -310,7 +642,6 @@ function applyFocusDefaults(){
 
   $("difficulty").value=meta.difficulty||"Intermediate";
   $("paymentAction").value=meta.payment||"No Payment / Service Only";
-  if($("reservationWorkflow")) $("reservationWorkflow").value=meta.kind==="followup"?"modify":"new";
   $("commentToggle").checked=!!meta.commenting;
   $("confirmToggle").checked=true;
 
@@ -330,15 +661,22 @@ function applyFocusDefaults(){
     $("sidePref").value="Any";
   }
 
+  if($("reservationWorkflow")?.value==="modify" && $("modificationType")){
+    $("modificationType").value=inferModificationType(meta);
+    updateModificationTypeUI(true);
+  }else{
+    updateWorkflowUI(false);
+  }
+
   refreshTrainingCardPanel(meta.cardProfile);
   const level=trainingSupportLabel(+$("trainingDay").value);
-  $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • Day ${escapeHtml($("trainingDay").value)} • ${escapeHtml(meta.name)}</strong><span>${escapeHtml(meta.objective)}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
+  $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • ${escapeHtml(meta.name)}</strong><span>${escapeHtml(meta.objective)}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
 }
 
 function renderStarters(){
   $("starterTemplates").innerHTML=starters.map((s,i)=>`
     <div class="template-card">
-      <div class="meta"><span class="chip">${escapeHtml(s.department)}</span><span class="chip">Day ${s.day}</span></div>
+      <div class="meta"><span class="chip">${escapeHtml(s.department)}</span></div>
       <h4>${escapeHtml(s.focus)}</h4><p>${escapeHtml(s.desc)}</p>
       <button class="secondary" onclick="loadStarter(${i})">Use Quick Start</button>
     </div>`).join("");
@@ -355,6 +693,12 @@ window.loadStarter=(i)=>{
 
 $("department").addEventListener("change",updateDepartmentUI);
 $("scenarioType").addEventListener("change",syncScenarioFocusSelection);
+$("reservationWorkflow").addEventListener("change",()=>updateWorkflowUI(true));
+$("modificationType").addEventListener("change",()=>updateModificationTypeUI(true));
+$("modificationGuestStatus").addEventListener("change",()=>updateModificationTypeUI(false));
+$("modificationLatitudes").addEventListener("input",()=>{$("modificationLatitudes").value=$("modificationLatitudes").value.replace(/[^0-9]/g,"")});
+$("gdprCallerType").addEventListener("change",updateGdprPreview);
+$("directGroupMarket").addEventListener("change",updateGdprPreview);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
@@ -706,9 +1050,17 @@ function scenarioData(){
     department:$("department").value,
     trainingDay:+$("trainingDay").value,
     approach:$("scenarioApproach").value,
-    title:`${$("department").value} Day ${$("trainingDay").value} – ${$("scenarioType").value}`,
+    title:`${$("department").value} – ${$("scenarioType").value}`,
     type:$("scenarioType").value,
-    reservationWorkflow:$("reservationWorkflow")?.value||((meta.kind==="followup")?"modify":"new"),
+    reservationWorkflow:$("reservationWorkflow")?.value||"new",
+    existingReservationNumber:$("existingReservationNumber")?.value.trim()||"",
+    modificationType:$("modificationType")?.value||"general",
+    modificationTarget:$("modificationTarget")?.value.trim()||"",
+    modificationRequest:$("modificationRequest")?.value.trim()||"",
+    modificationGuestStatus:$("modificationGuestStatus")?.value||"new",
+    modificationLatitudes:$("modificationLatitudes")?.value.trim()||"",
+    gdprCallerType:$("gdprCallerType")?.value||"",
+    directGroupMarket:$("directGroupMarket")?.value||"direct_groups_sot",
     difficulty:$("difficulty").value,
     guestCount:+$("guestCount").value,
     agency:$("agency").value,
@@ -718,7 +1070,7 @@ function scenarioData(){
     pastGuestFlags:collectPastGuestFlags(),
     category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
-    latitudes:$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
+    latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired:!!meta.cardRequired || paymentActionNeedsCard(),
@@ -857,7 +1209,11 @@ function customerStoryHtml(d,meta,sailText,guestNames){
       : `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
   if(modifying){
-    return `<p>${names} contact Norwegian Cruise Line to modify an existing training reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    const reservation=d.existingReservationNumber?` <strong>${escapeHtml(d.existingReservationNumber)}</strong>`:"";
+    const target=d.modificationTarget?` The requested change involves <strong>${escapeHtml(d.modificationTarget)}</strong>.`:"";
+    const request=d.modificationRequest?` ${escapeHtml(d.modificationRequest)}`:"";
+    const gdpr=d.department==="Guest Services"&&d.gdprCallerType?` Before servicing the reservation, complete GDPR verification for the ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"selected caller type")}.`:"";
+    return `<p>${names} contact Norwegian Cruise Line about existing training reservation${reservation}. They want to <strong>${escapeHtml(modificationLabel(d.modificationType).toLowerCase())}</strong>.${target}${request}${gdpr}</p>`;
   }
   return `<p>${names} are planning ${escapeHtml(sailText)} and want to create a new reservation. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
 }
@@ -885,6 +1241,23 @@ function specialRequestSummary(d){
 }
 
 function atAGlanceHtml(d,meta){
+  if(d.reservationWorkflow==="modify"){
+    const guestAdd=d.modificationType==="add_guest"
+      ? `${d.modificationGuestStatus==="past"?"Past Guest":"New Guest"}${d.modificationGuestStatus==="past"&&d.modificationLatitudes?` • Latitudes # ${d.modificationLatitudes}`:""}`
+      : "";
+    const cards=[
+      ["Reservation",d.existingReservationNumber||"Use prior training reservation","Locate before making changes"],
+      ["Primary Guest",d.guest1||"Verify in reservation","Use existing reservation profile"],
+      ...(d.department==="Guest Services"?[["GDPR Caller Type",gdprProfile(d.gdprCallerType)?.label||"Select caller type","Verification required before servicing"]]:[]),
+      ["Modification",modificationLabel(d.modificationType),d.modificationTarget||"See requested change"],
+      ["Payment / Action",d.payment,"Verify any resulting amount due"],
+      ["Confirmation",d.confirmation?(d.email||"Send confirmation"):"Not required","Recap the completed change"],
+      ["Requested Detail",d.modificationRequest||"Follow the modification instructions","Document the outcome"]
+    ];
+    if(guestAdd)cards.splice(3,0,["Guest Being Added",guestAdd,d.modificationTarget||"Enter guest name"]);
+    return `<div class="glance-grid modification-glance">${cards.map(([label,strong,small])=>`<div class="glance-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(strong)}</strong><small>${escapeHtml(small)}</small></div>`).join("")}</div>`;
+  }
+
   const s=d.sailing;
   const sailing=s?`${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}`:"Trainer to provide/verify sailing";
   const stateroom=`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
@@ -902,7 +1275,6 @@ function atAGlanceHtml(d,meta){
     <div class="glance-card wide"><span>Special Requests / Notes</span><strong>${escapeHtml(specialRequestSummary(d))}</strong><small>${d.commenting?"Commenting Tool / reservation notes may be required":"Document only what the scenario requires"}</small></div>
   </div>`;
 }
-
 function latitudesScenarioHtml(d){
   if(!d.latitudes)return '';
   const mix=getGuestProfileMix(d);
@@ -919,7 +1291,27 @@ function fullTaskList(d,meta){
   const name=(d.type||"").toLowerCase();
   const tasks=[];
   if(d.reservationWorkflow==="modify"){
-    tasks.push("Locate the correct training reservation and complete required verification before making changes.");
+    if(d.department==="Guest Services"){
+      const profile=gdprProfile(d.gdprCallerType);
+      tasks.push(profile
+        ? `Complete GDPR verification for the ${profile.label} before servicing the reservation. Reservation Number is mandatory.`
+        : "Complete required Guest Services GDPR verification before servicing the reservation.");
+      const action=gdprActionText(d);
+      if(action)tasks.push(action);
+    }
+    tasks.push(`Locate training reservation ${d.existingReservationNumber||"(trainer-provided reservation)"} and complete required verification before making changes.`);
+    tasks.push(modificationTaskText(d));
+    if(d.modificationType==="add_guest" && d.modificationGuestStatus==="past"){
+      tasks.push(d.modificationLatitudes?`Use training Latitudes # ${d.modificationLatitudes} to locate the guest being added.`:"Locate the Past Guest profile and verify the Latitudes number before adding the guest.");
+    }
+    if(["stateroom","add_guest","remove_guest","fas","travel_protection","psc","payment","credit_coupon","air_transfer","hotel_cruisetour","cancel_reinstate"].includes(d.modificationType)){
+      tasks.push("Review all resulting pricing, payment, promotion, capacity, status, and deadline changes before saving.");
+    }
+    if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))tasks.push("Process the required payment using the provided training card.");
+    if(d.commenting)tasks.push("Enter the required reservation comments using the Commenting Tool.");
+    if(d.confirmation)tasks.push(`Send the updated confirmation to ${d.email||"training123@ncl.com"}.`);
+    tasks.push("Recap the completed modification and next steps with the guest before ending the interaction.");
+    return [...new Set(tasks)];
   }else{
     tasks.push("Search for and select a sailing that meets the guest's stated requirements, then begin a new reservation.");
   }
@@ -993,7 +1385,7 @@ function prerequisiteSkills(d,meta){
     "Basic stateroom-category awareness",
     "Advertised-pricing and reservation-status basics"
   ]:day===7?[
-    "Day 6 booking workflow",
+    "Core booking workflow",
     "Payment/deposit basics",
     "Reservation status and due-date review",
     "GDPR / verification for follow-up calls"
@@ -1063,6 +1455,61 @@ function trainerGuideHtml(d,meta,approachText,s){
   </section>`;
 }
 
+function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,guestInfoItems){
+  if(d.reservationWorkflow==="modify"){
+    const addedGuest=d.modificationType==="add_guest"
+      ? `<li><strong>Guest Being Added:</strong> ${escapeHtml(d.modificationTarget||"Trainer to provide")} • ${escapeHtml(d.modificationGuestStatus==="past"?"Past Guest":"New Guest")}${d.modificationGuestStatus==="past"&&d.modificationLatitudes?` • Latitudes # ${escapeHtml(d.modificationLatitudes)}`:""}</li>`
+      : "";
+    const stateroom=d.modificationType==="stateroom"
+      ? `<h4>Requested Stateroom Change</h4><p>${escapeHtml(d.category)}${d.location!=="Any"?`, ${escapeHtml(d.location)} location`:""}${d.side!=="Any"?`, ${escapeHtml(d.side)} side preference`:""}. Review actual inventory and reprice the reservation before confirming the change.</p>${pricing}`
+      : "";
+    return `<section class="scenario-section details-section modification-reference">
+      <div class="section-label">REFERENCE DETAILS</div>
+      <h3>Existing Reservation Modification</h3>
+      <ul class="detail-list">
+        <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
+        <li><strong>Reservation:</strong> ${escapeHtml(d.existingReservationNumber||"Use prior training reservation")}</li>
+        <li><strong>Primary Guest:</strong> ${escapeHtml(d.guest1||"Verify in reservation")}</li>
+        <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
+        <li><strong>Modification:</strong> ${escapeHtml(modificationLabel(d.modificationType))}</li>
+        ${d.department==="Guest Services"?`<li><strong>GDPR Caller Type:</strong> ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"Not selected")}</li>`:""}
+        ${d.gdprCallerType==="direct_group"?`<li><strong>Direct Group Route:</strong> ${escapeHtml(directGroupRoute(d.directGroupMarket).label)} • SOT #${escapeHtml(directGroupRoute(d.directGroupMarket).sot)}</li>`:""}
+        ${d.modificationTarget?`<li><strong>Guest / Item:</strong> ${escapeHtml(d.modificationTarget)}</li>`:""}
+        ${d.modificationRequest?`<li><strong>Requested Change:</strong> ${escapeHtml(d.modificationRequest)}</li>`:""}
+        ${addedGuest}
+      </ul>
+      ${stateroom}
+      <h4>Payment / Booking Action</h4>
+      <p>${escapeHtml(paymentInstruction)}</p>
+      ${addOns.length?`<h4>Additional Components</h4><p>${escapeHtml(addOns.join(" • "))}</p>`:""}
+    </section>`;
+  }
+
+  const s=d.sailing;
+  return `<section class="scenario-section details-section">
+      <div class="section-label">REFERENCE DETAILS</div>
+      <h3>Sailing / Reservation Details</h3>
+      <ul class="detail-list">
+        <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
+        <li><strong>Reservation Workflow:</strong> Create New Reservation</li>
+        <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
+        ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
+        <li><strong>Total Guests:</strong> ${d.guestCount}</li>
+      </ul>
+
+      <h4>Category & Stateroom</h4>
+      <p>${escapeHtml(d.category)}${d.location!=="Any"?`, ${escapeHtml(d.location)} location`:""}${d.side!=="Any"?`, ${escapeHtml(d.side)} side preference`:""}. Review actual available staterooms in Seaweb before selecting.</p>
+      ${pricing}
+
+      <h4>Guest Information</h4>
+      <ul class="detail-list">${guestInfoItems}</ul>
+
+      <h4>Payment / Booking Action</h4>
+      <p>${escapeHtml(paymentInstruction)}</p>
+      ${addOns.length?`<h4>Additional Components</h4><p>${escapeHtml(addOns.join(" • "))}</p>`:""}
+    </section>`;
+}
+
 function generateScenario(){
   const d=scenarioData();
   const meta=currentFocusMeta()||{};
@@ -1114,7 +1561,7 @@ function generateScenario(){
   const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:`Agency ${d.agency}`;
 
   const html=`
-    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">Day ${d.trainingDay}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
+    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
     <h2>Seaweb Scenario – ${escapeHtml(d.type)}</h2>
     <p class="scenario-intro">Complete this scenario independently using Seaweb. Use the <strong>Seaweb User Guide</strong> in <strong>NCLHelp</strong> whenever you need step-by-step guidance. When the exercise is complete, post the reservation number in the class chat.</p>
 
@@ -1123,6 +1570,8 @@ function generateScenario(){
       <h3>Customer Scenario</h3>
       ${customerStoryHtml(d,meta,sailText,guestNames)}
     </section>
+
+    ${gdprScenarioHtml(d)}
 
     <section class="scenario-section">
       <div class="section-label">GUEST REQUEST</div>
@@ -1140,30 +1589,7 @@ function generateScenario(){
 
     ${callFlowSupportHtml(d,meta)}
 
-    <section class="scenario-section details-section">
-      <div class="section-label">REFERENCE DETAILS</div>
-      <h3>Sailing / Reservation Details</h3>
-      <ul class="detail-list">
-        <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
-        <li><strong>Training Day:</strong> Day ${d.trainingDay}</li>
-        <li><strong>Reservation Workflow:</strong> ${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</li>
-        <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
-        ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
-        <li><strong>Total Guests:</strong> ${d.guestCount}</li>
-      </ul>
-
-      <h4>Category & Stateroom</h4>
-      <p>${escapeHtml(d.category)}${d.location!=="Any"?`, ${escapeHtml(d.location)} location`:""}${d.side!=="Any"?`, ${escapeHtml(d.side)} side preference`:""}. Review actual available staterooms in Seaweb before selecting.</p>
-      ${pricing}
-
-      <h4>Guest Information</h4>
-      <ul class="detail-list">${guestInfoItems}</ul>
-
-      <h4>Payment / Booking Action</h4>
-      <p>${escapeHtml(paymentInstruction)}</p>
-      ${addOns.length?`<h4>Additional Components</h4><p>${escapeHtml(addOns.join(" • "))}</p>`:""}
-    </section>
-
+    ${referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,guestInfoItems)}
     ${cardHtml}
 
     <section class="scenario-section end-call-section">
@@ -1197,7 +1623,7 @@ function runValidator(){
   const meta=currentFocusMeta()||{};
 
   if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
-  else add("passed","Department selected",`${d.department} • Day ${d.trainingDay} • ${d.type}`);
+  else add("passed","Department selected",`${d.department} • ${d.type}`);
   add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
   if(!d.guest1 && meta.kind!=="demo")add("error","Missing primary guest","Guest 1 is required for trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
@@ -1217,19 +1643,37 @@ function runValidator(){
     else add("passed","Outbound market agency selected",`${d.market}`);
   }
 
-  if(s){
-    add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
-    if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
-    if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
-    else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
-    if(s.ports?.length) add("info","Port-of-call review available","Confirm any scenario-specific port requirement after selecting the sailing rather than over-filtering the initial search.");
-  }else add("warning","No real sailing attached","Trainer must verify ship, itinerary and dates manually.");
+  if(d.reservationWorkflow==="modify"){
+    if(d.existingReservationNumber)add("passed","Existing reservation identified",d.existingReservationNumber);
+    else add("warning","Training reservation number not entered","Enter the previously created training reservation number or provide it to the trainee separately.");
 
-  if(d.pricing)add("info","Trainer-entered pricing","Pricing is not being treated as verified public data. Reconfirm in Seaweb before class.");
-  else add("passed","No fabricated pricing","The scenario instructs the trainee to quote the current Seaweb price.");
+    if(d.department==="Guest Services"){
+      const profile=gdprProfile(d.gdprCallerType);
+      if(!profile)add("error","GDPR caller type required","Guest Services modifications must identify the caller / reservation type so the correct GDPR verification can be completed.");
+      else add("passed","GDPR verification required",`${profile.label} • Reservation Number mandatory`);
+      if(d.gdprCallerType==="pcc_guest")add("info","PCC Guest handling included",pccActionText(d));
+      if(d.gdprCallerType==="direct_group")add("info","Direct Group transfer included",directGroupActionText(d));
+    }
 
-  if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
-  else add("passed","Category instruction is explicit",d.category);
+    add("passed","Modification selected",modificationLabel(d.modificationType));
+    if(d.modificationType==="add_guest" && d.modificationGuestStatus==="past" && !d.modificationLatitudes){
+      add("warning","Past Guest being added is missing Latitudes number","Enter the training Latitudes number or instruct the trainee to verify it in Seaweb.");
+    }
+  }else{
+    if(s){
+      add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
+      if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
+      if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
+      else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
+      if(s.ports?.length) add("info","Port-of-call review available","Confirm any scenario-specific port requirement after selecting the sailing rather than over-filtering the initial search.");
+    }else add("warning","No real sailing attached","Trainer must verify ship, itinerary and dates manually.");
+
+    if(d.pricing)add("info","Trainer-entered pricing","Pricing is not being treated as verified public data. Reconfirm in Seaweb before class.");
+    else add("passed","No fabricated pricing","The scenario instructs the trainee to quote the current Seaweb price.");
+
+    if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
+    else add("passed","Category instruction is explicit",d.category);
+  }
 
   if(/\bada\b|accessible/i.test(`${d.type} ${d.curriculumObjective}`)){
     if(d.category!=="ADA / Accessible")add("error","ADA category mismatch","This training focus requires an ADA / accessible stateroom category. Do not assign a standard Balcony/Oceanview/Inside category.");
@@ -1311,7 +1755,7 @@ function makeViewShareClone(includeTrainer=state.mode==="trainer"){
     <div>
       <span class="adaptive-export-kicker">SEAweb Training Scenario</span>
       <strong>${escapeHtml(d.type||"Scenario")}</strong>
-      <small>${escapeHtml(d.department||"")} • Day ${escapeHtml(String(d.trainingDay||""))}</small>
+      <small>${escapeHtml(d.department||"")} • ${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</small>
     </div>
     <span class="adaptive-export-mode">${includeTrainer?"TRAINER VIEW":"TRAINEE VIEW"}</span>`;
   clone.prepend(header);
@@ -1422,7 +1866,7 @@ function adaptiveExportFilename(ext){
   const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
   const focus=(d.type||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
   const view=state.mode==="trainer"?"Trainer":"Trainee";
-  return `${dept}-Day-${d.trainingDay||""}-${focus}-${view}.${ext}`;
+  return `${dept}-${focus}-${view}.${ext}`;
 }
 
 async function cropAdaptiveExportBlob(blob){
@@ -1649,7 +2093,7 @@ function onePageReferenceHtml(d){
 function onePageCallFlowHtml(d,meta){
   const n=(d.type||"").toLowerCase();
   const steps=[];
-  if(d.reservationWorkflow==="modify")steps.push("Locate the correct reservation and complete verification.");
+  if(d.reservationWorkflow==="modify"){if(d.department==="Guest Services")steps.push("Complete GDPR verification before servicing the reservation.");steps.push("Locate the correct reservation and complete verification.");}
   else steps.push("Qualify the request and build the correct sailing / stateroom option.");
   if(d.latitudes)steps.push("Follow each guest's Past Guest / New Guest status before saving profiles.");
   if(n.includes("special request")||n.includes("ada")||n.includes("multiple"))steps.push("Enter requests, links and comments in the correct Seaweb locations.");
@@ -1678,7 +2122,7 @@ function makeOnePageTraineeClone(){
   page.className="one-page-export";
   page.innerHTML=`
     <header class="one-page-header">
-      <div><span class="one-page-kicker">SEAweb Training Scenario</span><h1>${escapeHtml(d.type)}</h1><p>${escapeHtml(d.department)} • Day ${d.trainingDay} • ${escapeHtml(d.difficulty)} • ${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</p></div>
+      <div><span class="one-page-kicker">SEAweb Training Scenario</span><h1>${escapeHtml(d.type)}</h1><p>${escapeHtml(d.department)} • ${escapeHtml(d.difficulty)} • ${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</p></div>
       <div class="one-page-header-badge">TRAINEE</div>
     </header>
 
@@ -1727,7 +2171,7 @@ function makeOnePageTraineeClone(){
       </aside>
     </div>
 
-    <footer class="one-page-footer"><span>${escapeHtml(d.department)}</span><span>Day ${d.trainingDay} • ${escapeHtml(d.type)}</span><span>Training Use</span></footer>`;
+    <footer class="one-page-footer"><span>${escapeHtml(d.department)}</span><span>${escapeHtml(d.type)}</span><span>Training Use</span></footer>`;
   return page;
 }
 
@@ -1837,7 +2281,7 @@ function makeTeamsPageClones(){
     page.appendChild(body);
     const footer=document.createElement('div');
     footer.className='export-page-footer';
-    footer.innerHTML=`<span>${escapeHtml((state.currentScenario||{}).department||'Seaweb')}</span><span>${escapeHtml((state.currentScenario||{}).trainingDay?`Day ${(state.currentScenario||{}).trainingDay}`:'')}</span><span class="page-marker"></span>`;
+    footer.innerHTML=`<span>${escapeHtml((state.currentScenario||{}).department||'Seaweb')}</span><span>${escapeHtml((state.currentScenario||{}).type||'Scenario')}</span><span class="page-marker"></span>`;
     page.appendChild(footer);
     pages.push(page);
   });
@@ -2173,7 +2617,7 @@ function scenarioShareFilename(){
   const d=state.currentScenario||scenarioData();
   const dept=(d.department||'Seaweb').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const focus=(d.type||'Scenario').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
-  return `${dept}-Day-${d.trainingDay||''}-${focus}.png`;
+  return `${dept}-${focus}.png`;
 }
 
 async function downloadCardImage(){
@@ -2332,17 +2776,15 @@ function updateStats(){
 function renderLibrary(){
   const q=$("librarySearch").value.toLowerCase().trim();
   const deptFilter=$("libraryDepartmentFilter").value;
-  const dayFilter=$("libraryDayFilter").value;
   let items=saved().filter(x=>{
     if(deptFilter && x.department!==deptFilter)return false;
-    if(dayFilter && String(x.trainingDay)!==String(dayFilter))return false;
-    return !q||JSON.stringify([x.title,x.type,x.department,x.trainingDay,x.reservationWorkflow,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.modificationType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
       <div style="display:flex;justify-content:space-between;gap:12px">
         <div>
-          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span>${x.trainingDay?`<span class="chip">Day ${escapeHtml(String(x.trainingDay))}</span>`:""}<span class="chip">${escapeHtml(x.type)}</span><span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
+          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span><span class="chip">${escapeHtml(x.type)}</span><span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
           <h3>${escapeHtml(x.title)}</h3>
           <div class="muted">${escapeHtml(x.sailing?.ship||"No real sailing")} ${x.sailing?.title?"• "+escapeHtml(x.sailing.title):""}</div>
           <div class="muted" style="font-size:11px;margin-top:6px">Updated ${new Date(x.updatedAt).toLocaleString()}</div>
@@ -2359,7 +2801,6 @@ function renderLibrary(){
 }
 $("librarySearch").oninput=renderLibrary;
 $("libraryDepartmentFilter").onchange=renderLibrary;
-$("libraryDayFilter").onchange=renderLibrary;
 window.toggleFavorite=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.favorite=!x.favorite;setSaved(a);renderLibrary()};
 window.archiveSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.archived=!x.archived;setSaved(a);renderLibrary()};
 window.deleteSaved=(id)=>{if(!confirm("Delete this saved scenario?"))return;setSaved(saved().filter(x=>x.id!==id));renderLibrary()};
@@ -2373,6 +2814,16 @@ window.openSaved=(id)=>{
   updateDepartmentUI();
   updateScenarioFocus(x.type,String(x.trainingDay||6));
   $("reservationWorkflow").value=x.reservationWorkflow||((x.curriculumKind==="followup")?"modify":"new");
+  $("existingReservationNumber").value=x.existingReservationNumber||"";
+  $("modificationType").value=x.modificationType||"general";
+  $("modificationTarget").value=x.modificationTarget||"";
+  $("modificationRequest").value=x.modificationRequest||"";
+  $("modificationGuestStatus").value=x.modificationGuestStatus||"new";
+  $("modificationLatitudes").value=x.modificationLatitudes||"";
+  $("gdprCallerType").value=x.gdprCallerType||"";
+  $("directGroupMarket").value=x.directGroupMarket||"direct_groups_sot";
+  updateWorkflowUI(false);
+  updateGdprPreview();
   $("scenarioApproach").value=x.approach||"variation";
   $("difficulty").value=x.difficulty||"Intermediate";
   $("guestCount").value=String(x.guestCount||2);

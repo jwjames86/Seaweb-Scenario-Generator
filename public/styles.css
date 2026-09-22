@@ -414,35 +414,7 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 }
 
 
-/* V1.9.3 • Full scenario focus list */
-.scenario-focus-field{
-  grid-column:1/-1;
-}
-#scenarioType{
-  min-height:265px;
-  padding:6px;
-  line-height:1.35;
-}
-#scenarioType optgroup{
-  font-weight:800;
-  color:#00484F;
-  padding-top:5px;
-}
-#scenarioType option{
-  color:#172033;
-  font-weight:600;
-  padding:6px 9px;
-}
-#scenarioType option:checked{
-  background:#DCEFED;
-}
-.field-hint{
-  display:block;
-  font-size:10px;
-  line-height:1.4;
-  font-weight:500;
-  color:#667085;
-}
+/* V1.9.4 • Scenario Focus returned to standard dropdown */
 
 /* Explicit trainer / trainee printing from Share Card */
 @media print{
@@ -452,4 +424,123 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
     margin-top:20px!important;
     break-before:auto;
   }
+}
+
+
+/* V1.9.4 • Modification-focused workflow */
+.workflow-hidden{display:none!important}
+.modification-panel{
+  margin:16px 0 18px;
+  padding:15px;
+  border:1px solid #BCDAD7;
+  border-left:5px solid #68ACAA;
+  border-radius:10px;
+  background:#F1F8F7;
+}
+.modification-panel-head{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+  margin-bottom:13px;
+}
+.modification-panel-head>div{display:flex;flex-direction:column;gap:3px}
+.modification-panel-head strong{font-size:14px;color:#00484F}
+.modification-panel-head span:not(.status-badge){font-size:11px;line-height:1.45;color:#667085}
+.modification-request-field{grid-column:1/-1}
+.modification-glance .glance-card{min-height:78px}
+@media(max-width:680px){
+  .modification-request-field{grid-column:auto}
+}
+
+
+/* V1.9.5 • Guest Services GDPR verification */
+.gdpr-panel{
+  grid-column:1/-1;
+  margin:2px 0 4px;
+  padding:14px;
+  background:#FFFBE8;
+  border:1px solid #E7D486;
+  border-left:5px solid #D9B949;
+  border-radius:9px;
+}
+.gdpr-panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:12px;
+}
+.gdpr-panel-head>div{display:flex;flex-direction:column;gap:3px}
+.gdpr-panel-head strong{font-size:14px;color:#3E3320}
+.gdpr-panel-head span:not(.status-badge){font-size:11px;line-height:1.45;color:#6D634D}
+.gdpr-grid{margin-bottom:10px}
+.gdpr-requirements-preview{
+  background:#fff;
+  border:1px solid #E9E2CA;
+  border-radius:7px;
+  padding:12px 14px;
+}
+.gdpr-preview-title{
+  font-size:13px;
+  font-weight:850;
+  color:#101828;
+  margin-bottom:5px;
+}
+.gdpr-requirements-preview p{
+  margin:0 0 8px;
+  font-size:11px;
+  line-height:1.45;
+  color:#475467;
+}
+.gdpr-requirements-preview ol{
+  margin:0;
+  padding-left:21px;
+  columns:2;
+  column-gap:30px;
+}
+.gdpr-requirements-preview li{
+  break-inside:avoid;
+  font-size:11px;
+  line-height:1.5;
+  padding:1px 0;
+}
+.gdpr-preview-action{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin-top:10px;
+  padding:10px 11px;
+  background:#F0F7F6;
+  border-left:4px solid #68ACAA;
+  color:#00484F;
+}
+.gdpr-preview-action strong{font-size:11px}
+.gdpr-preview-action span{font-size:11px;line-height:1.45}
+.gdpr-output-section{
+  background:#FFFBE8;
+  border-left:5px solid #D9B949;
+  padding:14px 16px;
+}
+.gdpr-output-section h3{margin-top:0}
+.gdpr-instruction{margin:5px 0 9px!important}
+.gdpr-requirement-list{
+  columns:2;
+  column-gap:30px;
+  margin:0 0 9px;
+}
+.gdpr-requirement-list li{break-inside:avoid}
+.gdpr-action-card{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-top:10px;
+  padding:10px 12px;
+  background:#F0F7F6;
+  border-left:4px solid #68ACAA;
+}
+.gdpr-action-card strong{color:#00484F}
+.gdpr-action-card span{font-size:12px;line-height:1.45;color:#273248}
+@media(max-width:680px){
+  .gdpr-requirements-preview ol,.gdpr-requirement-list{columns:1}
 }

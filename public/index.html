@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.3" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.5" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.3 • Full Focus List + Reservation Workflow + View Printing</span>
+            <span class="pill">V1.9.5 • Guest Services GDPR + PCC / Direct Group Routing</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -66,7 +66,7 @@
           <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
         </div>
 
-        <div class="section-head"><div><h3>Department Quick Starts</h3><p>Jump directly into a Day 6–11 Guest Services or Outbound Sales training focus.</p></div></div>
+        <div class="section-head"><div><h3>Department Quick Starts</h3><p>Jump directly into a Guest Services or Outbound Sales training focus.</p></div></div>
         <div id="starterTemplates" class="card-grid"></div>
       </section>
 
@@ -150,13 +150,13 @@
 
       <section id="generator" class="page">
         <div class="section-head">
-          <div><h2>Scenario Generator</h2><p>Create a structured Day 6–11 exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
+          <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
 
         <div class="two-col">
           <div class="panel">
-            <div id="selectedSailingSummary" class="selected-sailing empty">No real sailing selected yet.</div>
+            <div id="selectedSailingSummary" class="selected-sailing empty new-reservation-only">No real sailing selected yet.</div>
 
             <div class="form-grid curriculum-grid">
               <label>Department
@@ -172,9 +172,8 @@
                 </select>
               </label>
               <input id="trainingDay" type="hidden" value="6" />
-              <label class="scenario-focus-field">Scenario Focus
-                <select id="scenarioType" size="12" aria-label="Scenario Focus — all training days"></select>
-                <span class="field-hint">All curriculum focuses are shown together. The training day is assigned automatically from the focus you select.</span>
+              <label>Scenario Focus
+                <select id="scenarioType" aria-label="Scenario Focus"></select>
               </label>
               <label>Scenario Approach
                 <select id="scenarioApproach">
@@ -188,7 +187,7 @@
                   <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Challenge</option>
                 </select>
               </label>
-              <label>Guests
+              <label id="guestCountField" class="new-reservation-detail">Guests
                 <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
               </label>
               <label id="marketAgencyField" class="hidden-field">Outbound Market / Currency
@@ -197,22 +196,22 @@
               <label>Agency
                 <input id="agency" value="5" readonly />
               </label>
-              <label>Guest 1
+              <label id="guest1Field">Primary Guest
                 <input id="guest1" value="Maxim De Winter" />
               </label>
-              <label>Guest 2
+              <label id="guest2Field" class="new-reservation-detail">Guest 2
                 <input id="guest2" value="Rebecca De Winter" />
               </label>
-              <label>Stateroom Category
+              <label id="categoryField" class="new-reservation-detail">Stateroom Category
                 <select id="category">
                   <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
                   <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
                 </select>
               </label>
-              <label>Location Preference
+              <label id="locationField" class="new-reservation-detail">Location Preference
                 <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
               </label>
-              <label>Side Preference
+              <label id="sideField" class="new-reservation-detail">Side Preference
                 <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
               </label>
               <label>Payment / Booking Action
@@ -221,12 +220,108 @@
                   <option>FCC / CruiseNext</option><option>Amenity Payment</option><option>Auto Final Payment discussion</option><option>Refund / Reinstate</option>
                 </select>
               </label>
-              <label>Advertised Pricing (optional)
+              <label id="pricingField" class="new-reservation-detail">Advertised Pricing (optional)
                 <input id="pricing" placeholder="$1,559 pp / $3,118 total" />
               </label>
               <label>Training Confirmation Email
                 <input id="confirmationEmail" value="training123@ncl.com" />
               </label>
+            </div>
+
+            <div id="modificationPanel" class="modification-panel hidden-field">
+              <div class="modification-panel-head">
+                <div>
+                  <strong>Existing Reservation Modification</strong>
+                  <span>Use a previously created training reservation. Only enter the details needed for the change being practiced.</span>
+                </div>
+                <span class="status-badge">MODIFY</span>
+              </div>
+
+              <div class="form-grid modification-grid">
+                <label>Training Reservation Number
+                  <input id="existingReservationNumber" placeholder="Enter the prior training reservation #" />
+                </label>
+
+                <div id="gdprPanel" class="gdpr-panel hidden-field">
+                  <div class="gdpr-panel-head">
+                    <div>
+                      <strong>GDPR Verification Required</strong>
+                      <span>Guest Services must complete GDPR verification before servicing any existing reservation.</span>
+                    </div>
+                    <span class="status-badge review">REQUIRED</span>
+                  </div>
+
+                  <div class="form-grid gdpr-grid">
+                    <label>Caller / Reservation Type
+                      <select id="gdprCallerType">
+                        <option value="">Choose caller type...</option>
+                        <option value="direct_guest">Direct Guest</option>
+                        <option value="travel_agent">Travel Agent</option>
+                        <option value="travel_agency_guest">Travel Agency Guest</option>
+                        <option value="ta_group">TA Group</option>
+                        <option value="friends_family">Friends & Family / Team Member</option>
+                        <option value="casino_guest">Casino Guest</option>
+                        <option value="pcc_guest">PCC Guest</option>
+                        <option value="direct_group">Direct Group</option>
+                        <option value="charter_sixthman">Charter / Sixthman</option>
+                      </select>
+                    </label>
+
+                    <label id="directGroupMarketField" class="hidden-field">Direct Group Type
+                      <select id="directGroupMarket">
+                        <option value="direct_groups_sot">Direct Groups SOT — #11185</option>
+                        <option value="direct_canadian">Direct Canadian Groups (CAD) — #11185</option>
+                        <option value="latam">LATAM Direct Groups — #11195</option>
+                        <option value="miami_outbound">Miami Outbound Direct Groups — #11195</option>
+                        <option value="remote_outbound_pcc">Remote Outbound PCC Groups — #11195</option>
+                        <option value="sawgrass_outbound">Sawgrass Outbound Direct Groups — #11195</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div id="gdprRequirementsPreview" class="gdpr-requirements-preview">
+                    Choose a caller type to display the required verification information.
+                  </div>
+                </div>
+
+                <label>What are we modifying?
+                  <select id="modificationType">
+                    <option value="special_request">Add / Update Special Request</option>
+                    <option value="shore_excursion">Add / Change Shore Excursion</option>
+                    <option value="stateroom">Change / Upgrade Stateroom</option>
+                    <option value="add_guest">Add Guest</option>
+                    <option value="remove_guest">Remove Guest</option>
+                    <option value="fas">Add / Remove Free at Sea</option>
+                    <option value="travel_protection">Add / Remove Travel Protection</option>
+                    <option value="psc">Add Prepaid Service Charges</option>
+                    <option value="payment">Make / Update Payment</option>
+                    <option value="credit_coupon">Apply FCC / CruiseNext / Coupon</option>
+                    <option value="air_transfer">Add / Change Air or Transfers</option>
+                    <option value="hotel_cruisetour">Add / Change Hotel or Cruisetour</option>
+                    <option value="cancel_reinstate">Cancel / Reinstate Reservation</option>
+                    <option value="general">General Reservation Update</option>
+                  </select>
+                </label>
+
+                <label id="modificationTargetField">Guest / Item Being Changed
+                  <input id="modificationTarget" placeholder="Example: Rebecca De Winter, stateroom, dining request..." />
+                </label>
+
+                <label id="modificationGuestStatusField" class="hidden-field">Guest Being Added
+                  <select id="modificationGuestStatus">
+                    <option value="new">New Guest</option>
+                    <option value="past">Past Guest</option>
+                  </select>
+                </label>
+
+                <label id="modificationLatitudesField" class="hidden-field">Latitudes Number
+                  <input id="modificationLatitudes" inputmode="numeric" maxlength="12" placeholder="Training Latitudes number" />
+                </label>
+
+                <label class="modification-request-field">Requested Change / Scenario Detail
+                  <textarea id="modificationRequest" rows="3" placeholder="Describe exactly what the guest wants changed on the existing reservation."></textarea>
+                </label>
+              </div>
             </div>
 
             <div id="curriculumNote" class="curriculum-note trainer-only"></div>
@@ -244,7 +339,7 @@
 
             <fieldset>
               <legend>Scenario Tasks</legend>
-              <label class="check"><input id="latitudesToggle" type="checkbox" checked /> Guest Status / Latitudes</label>
+              <label id="guestStatusTaskControl" class="check"><input id="latitudesToggle" type="checkbox" checked /> Guest Status / Latitudes</label>
               <label class="check"><input id="commentToggle" type="checkbox" /> Use Commenting Tool</label>
               <label class="check"><input id="confirmToggle" type="checkbox" checked /> Send Guest Confirmation</label>
               <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
@@ -341,7 +436,6 @@
         <div class="panel">
           <div class="library-filter-grid">
             <select id="libraryDepartmentFilter"><option value="">All Departments</option><option>Guest Services</option><option>Outbound Sales</option></select>
-            <select id="libraryDayFilter"><option value="">All Days</option><option value="6">Day 6</option><option value="7">Day 7</option><option value="8">Day 8</option><option value="9">Day 9</option><option value="10">Day 10</option><option value="11">Day 11</option></select>
             <input id="librarySearch" placeholder="Search title, skill, ship, destination..." />
           </div>
           <div class="notice warning">Browser-local scenarios are device/browser specific. Export a JSON backup for safekeeping.</div>
@@ -352,6 +446,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.3"></script>
+  <script src="/app.js?v=1.9.5"></script>
 </body>
 </html>
