@@ -303,3 +303,50 @@ Trainer clarification incorporated:
   - No sailing attached → **Warning to verify an eligible Pride of America sailing**
 - Trainer Guide includes this eligibility check as a required coaching point.
 - One-way Bundled Air pricing guidance remains available only after the eligibility guardrail.
+
+
+## V1.9.11 – Generic NCL Air Scenario Focus
+
+The curriculum focus has been future-proofed so it no longer treats Bundled Air / AIRPROM3 as the scenario itself.
+
+### Scenario Focus
+- **Bundled Air & Ground Transfers** / **Bundled Air / Ground Transfers** are now **NCL Air & Ground Transfers**.
+- The scenario focus is product-neutral so trainers can use the same exercise with the Air product that applies at the time.
+
+### NCL Air Program
+Bundled Air remains available under **NCL Air Program**:
+- Bundled Air / AIRPROM3 — Select Pride of America Sailings
+- Air Choice
+- Air Choice Plus
+- Independent Air — No Flights / Transfer Setup
+
+Selecting **NCL Air & Ground Transfers** automatically opens the Air panel, but the trainer must choose the applicable program instead of the generator assuming Bundled Air.
+
+The Validator flags an Air scenario if no Air Program has been selected.
+
+
+## V1.9.12 – Guest Services Agency / Caller Logic
+
+Guest Services booking-source logic now follows these training rules:
+
+- **Agency 5 = Direct Guest (US)**
+- **Agency 7 = Direct Guest (Canada)**
+- For a **Travel Agent booking**, enter the Travel Agent's **Agency ID or phone number** instead of Agency 5 / 7.
+
+### Generator behavior
+- Guest Services uses an editable **Agency / Booking Identifier** field.
+- Agency 5 / 7 automatically identify the booking as Direct Guest.
+- For Guest Services modifications, Agency 5 / 7 automatically set and lock the GDPR caller type to **Direct Guest**.
+- Travel Agent bookings use the Travel Agent's Agency ID / phone number and the Travel Agent / TA Group GDPR path.
+- Outbound Sales continues to use the Market / Currency agency selector and keeps the Agency field read-only.
+
+### Scenario wording
+- Agency 5 / 7 scenarios use direct-guest wording and never describe the caller as a Travel Advisor.
+- A non-5/7 Guest Services identifier is shown as **Travel Agent • Agency ID / Phone**.
+- Reference Details now label the value as **Booking Source**.
+
+### Validator
+- Agency 5 validates as Direct Guest (US).
+- Agency 7 validates as Direct Guest (Canada).
+- Travel Agent / TA Group scenarios require a Travel Agent Agency ID or phone number rather than Agency 5 / 7.
+- Mismatches between Agency value and GDPR caller type are flagged.
