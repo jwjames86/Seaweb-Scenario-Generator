@@ -1315,18 +1315,17 @@ function makeTeamsPageClones(){
 
   const labelOf=node=>node.querySelector?.('.section-label')?.textContent?.trim().toUpperCase()||'';
   const headingOf=node=>node.querySelector?.('h3,.share-expanded-heading')?.textContent?.trim().toUpperCase()||'';
-  const groups=[[],[],[],[]];
+  const clsHas=(node,name)=>node.classList?.contains?.(name);
 
+  const groups=[[],[],[],[]];
   contentNodes.forEach(node=>{
     const label=labelOf(node);
     const heading=headingOf(node);
-    const cls=node.classList||{contains:()=>false};
-
-    if(label==='YOUR CALL'||label==='GUEST REQUEST'||label==='PAST GUEST DETAILS'||cls.contains('latitudes-output-section')){
+    if(label==='YOUR CALL' || label==='GUEST REQUEST' || label==='PAST GUEST DETAILS' || clsHas(node,'latitudes-output-section')){
       groups[0].push(node);
-    }else if(label==='YOUR WORK'||heading.includes('CALL FLOW SUPPORT')){
+    }else if(label==='YOUR WORK' || heading.includes('CALL FLOW SUPPORT')){
       groups[1].push(node);
-    }else if(label==='REFERENCE DETAILS'||label==='TRAINING PAYMENT'||cls.contains('details-section')||cls.contains('payment-section')){
+    }else if(label==='REFERENCE DETAILS' || label==='TRAINING PAYMENT' || clsHas(node,'details-section') || clsHas(node,'payment-section')){
       groups[2].push(node);
     }else{
       groups[3].push(node);
@@ -1339,28 +1338,46 @@ function makeTeamsPageClones(){
     'Reservation Reference',
     'Final Check & Knowledge Review'
   ];
+  const subtitles=[
+    'Customer scenario, at-a-glance brief and past guest details',
+    'Task checklist and guided call-flow support',
+    'Reservation details, sailing reference and payment guidance',
+    'Required actions, recap support and knowledge review'
+  ];
 
   const pages=[];
   groups.forEach((nodes,groupIndex)=>{
     if(!nodes.length) return;
     const page=document.createElement('article');
-    page.className='shared-trainee-card teams-share-page';
+    page.className='shared-trainee-card teams-share-page export-letter-page';
     page.setAttribute('data-teams-page',String(pages.length+1));
 
-    const pageBar=document.createElement('div');
-    pageBar.className='teams-page-bar';
-    pageBar.innerHTML=`<strong>${escapeHtml(titles[groupIndex]||`Scenario Page ${pages.length+1}`)}</strong><span>Page ${pages.length+1}</span>`;
-    page.appendChild(pageBar);
+    const bar=document.createElement('div');
+    bar.className='teams-page-bar export-page-bar';
+    bar.innerHTML=`<div><strong>${escapeHtml(titles[groupIndex]||`Scenario Page ${pages.length+1}`)}</strong><small>${escapeHtml(subtitles[groupIndex]||'')}</small></div><span>Page ${pages.length+1}</span>`;
+    page.appendChild(bar);
 
-    headerNodes.forEach(n=>page.appendChild(n.cloneNode(true)));
-    nodes.forEach(n=>page.appendChild(n.cloneNode(true)));
+    const body=document.createElement('div');
+    body.className='export-page-body';
+    headerNodes.forEach(n=>body.appendChild(n.cloneNode(true)));
+    nodes.forEach(n=>body.appendChild(n.cloneNode(true)));
+    page.appendChild(body);
+
+    const footer=document.createElement('div');
+    footer.className='export-page-footer';
+    footer.innerHTML=`<span>${escapeHtml((state.currentScenario||{}).department||'Seaweb')}</span><span>${escapeHtml((state.currentScenario||{}).trainingDay?`Day ${(state.currentScenario||{}).trainingDay}`:'')}</span><span class="page-marker">Page ${pages.length+1}</span>`;
+    page.appendChild(footer);
     pages.push(page);
   });
 
   pages.forEach((page,i)=>{
-    const marker=page.querySelector('.teams-page-bar span');
-    if(marker) marker.textContent=`Page ${i+1} of ${pages.length}`;
+    const total=pages.length;
+    const top=page.querySelector('.export-page-bar span');
+    if(top) top.textContent=`Page ${i+1} of ${total}`;
+    const bottom=page.querySelector('.export-page-footer .page-marker');
+    if(bottom) bottom.textContent=`Page ${i+1} of ${total}`;
   });
+
   return pages;
 }
 
@@ -1519,18 +1536,17 @@ function pdfObjectFromParts(parts){
   return concatBytes(parts.map(part=>part instanceof Uint8Array?part:encoder.encode(String(part))));
 }
 
-function makeJpegPdf(pages,{margin=24}={}){
+function makeJpegPdf(pages,{margin=0}={}){
   const encoder=new TextEncoder();
   const objects=[null];
   objects[1]=encoder.encode('<< /Type /Catalog /Pages 2 0 R >>');
   objects[2]=encoder.encode('');
   const pageRefs=[];
 
-  pages.forEach(page=>{
-    const landscape=(page.width/page.height)>1.12;
-    const pageWidth=landscape?792:612;
-    const pageHeight=landscape?612:792;
+  const pageWidth=612;
+  const pageHeight=792;
 
+  pages.forEach(page=>{
     const imageObjNo=objects.length;
     objects.push(pdfObjectFromParts([
       `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`,
@@ -1637,7 +1653,7 @@ async function downloadTeamsPageSet(){
   const btn=$('downloadTeamsPagesBtn');
   const old=btn.innerHTML;
   btn.disabled=true;
-  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating larger readable images</small></span>`;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating 8.5 × 11 PNG pages</small></span>`;
   try{
     const blobs=await getTeamsPageBlobs();
     const files=blobs.map((blob,i)=>({name:teamsPageFilename(i+1,blobs.length),blob}));
@@ -1650,7 +1666,7 @@ async function downloadTeamsPageSet(){
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     closeShareMenu();
-    flash(`Downloaded ${files.length} Teams-optimized pages. Unzip and attach the PNGs together in Teams.`);
+    flash(`Downloaded ${files.length} letter-size PNG pages. Unzip and attach the PNGs together in Teams.`);
   }catch(err){
     alert(`Could not create the Teams page set: ${err.message}`);
   }finally{
@@ -1669,7 +1685,7 @@ async function downloadScenarioPdf(){
     const pageBlobs=await getTeamsPageBlobs();
     const pages=[];
     for(const blob of pageBlobs) pages.push(await blobToJpegDescriptor(blob,0.92));
-    const pdf=makeJpegPdf(pages,{margin:24});
+    const pdf=makeJpegPdf(pages,{margin:0});
     const url=URL.createObjectURL(pdf);
     const a=document.createElement('a');
     a.href=url;
@@ -1677,7 +1693,7 @@ async function downloadScenarioPdf(){
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     closeShareMenu();
-    flash(`PDF downloaded with ${pages.length} page${pages.length===1?'':'s'}. Great for Teams, email and printing.`);
+    flash(`PDF downloaded with ${pages.length} page${pages.length===1?'':'s'}. The PDF uses the exact same page design as the PNG export.`);
   }catch(err){
     alert(`Could not create the PDF: ${err.message}`);
   }finally{
