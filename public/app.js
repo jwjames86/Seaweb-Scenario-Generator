@@ -201,31 +201,89 @@ function collectLatitudesNumbers(){
   return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
 }
 
+function collectPastGuestFlags(){
+  const count=+$('guestCount').value||1;
+  return Array.from({length:count},(_,i)=>!!$(`pastGuest${i+1}`)?.checked);
+}
+
 function guestDisplayName(index){
   if(index===0)return $('guest1').value.trim()||'Guest 1';
   if(index===1)return $('guest2').value.trim()||'Guest 2';
   return `Guest ${index+1}`;
 }
 
-function renderLatitudesFields(values){
+function normalizeGuestStatusFlags(count,flags,values,hasExistingControls){
+  return Array.from({length:count},(_,i)=>{
+    if(Array.isArray(flags) && typeof flags[i]==='boolean') return flags[i];
+    if(Array.isArray(values) && values[i]) return true;
+    if(hasExistingControls) return !!$(`pastGuest${i+1}`)?.checked;
+    return !!$('latitudesToggle').checked;
+  });
+}
+
+function syncGuestStatusCard(card){
+  const past=card.querySelector('.past-guest-radio');
+  const inputWrap=card.querySelector('.latitudes-number-wrap');
+  const note=card.querySelector('.guest-status-note');
+  const input=card.querySelector('.latitude-number-input');
+  const isPast=!!past?.checked;
+  inputWrap?.classList.toggle('hidden-field',!isPast);
+  card.classList.toggle('is-past-guest',isPast);
+  card.classList.toggle('is-new-guest',!isPast);
+  if(note) note.textContent=isPast
+    ? 'Past Guest — enter the training Latitudes number.'
+    : 'New Guest — no Latitudes number is required.';
+  if(input && !isPast) input.value='';
+}
+
+function renderLatitudesFields(values,flags){
   const count=+$('guestCount').value||1;
-  const existing=Array.isArray(values)?values:collectLatitudesNumbers();
   const host=$('latitudesGuestFields');
   if(!host)return;
+  const hasExistingControls=!!host.querySelector('.guest-status-radio');
+  const existingValues=Array.isArray(values)?values:collectLatitudesNumbers();
+  const existingFlags=normalizeGuestStatusFlags(count,Array.isArray(flags)?flags:null,existingValues,hasExistingControls);
+
   host.innerHTML=Array.from({length:count},(_,i)=>{
     const guest=guestDisplayName(i);
-    const value=existing[i]||'';
-    return `<label><span>${escapeHtml(guest)}</span><input id="latitudeNumber${i+1}" class="latitude-number-input" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Latitudes number" value="${escapeAttr(value)}" /></label>`;
+    const value=existingValues[i]||'';
+    const isPast=!!existingFlags[i];
+    return `<div class="latitudes-guest-card ${isPast?'is-past-guest':'is-new-guest'}">
+      <div class="latitudes-guest-head"><strong>${escapeHtml(guest)}</strong><span>Guest ${i+1}</span></div>
+      <div class="guest-status-choice" role="group" aria-label="Guest ${i+1} status">
+        <label><input id="pastGuest${i+1}" class="guest-status-radio past-guest-radio" type="radio" name="guestStatus${i+1}" value="past" ${isPast?'checked':''} /> Past Guest</label>
+        <label><input id="newGuest${i+1}" class="guest-status-radio new-guest-radio" type="radio" name="guestStatus${i+1}" value="new" ${!isPast?'checked':''} /> New Guest</label>
+      </div>
+      <div class="guest-status-note">${isPast?'Past Guest — enter the training Latitudes number.':'New Guest — no Latitudes number is required.'}</div>
+      <label class="latitudes-number-wrap ${isPast?'':'hidden-field'}"><span>Latitudes number</span><input id="latitudeNumber${i+1}" class="latitude-number-input" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Latitudes number" value="${escapeAttr(value)}" /></label>
+    </div>`;
   }).join('');
+
+  host.querySelectorAll('.latitudes-guest-card').forEach(card=>{
+    card.querySelectorAll('.guest-status-radio').forEach(radio=>radio.addEventListener('change',()=>syncGuestStatusCard(card)));
+    syncGuestStatusCard(card);
+  });
   host.querySelectorAll('.latitude-number-input').forEach(input=>{
     input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'')});
   });
 }
 
-function refreshLatitudesPanel(values){
+function refreshLatitudesPanel(values,flags){
   const enabled=$('latitudesToggle').checked;
   $('latitudesNumberPanel').classList.toggle('hidden-field',!enabled);
-  if(enabled)renderLatitudesFields(values);
+  if(enabled)renderLatitudesFields(values,flags);
+}
+
+function getGuestProfileMix(d){
+  const count=+d.guestCount||1;
+  const numbers=Array.isArray(d.latitudesNumbers)?d.latitudesNumbers:[];
+  const flags=Array.from({length:count},(_,i)=>{
+    if(Array.isArray(d.pastGuestFlags) && typeof d.pastGuestFlags[i]==='boolean') return d.pastGuestFlags[i];
+    return !!numbers[i];
+  });
+  const pastCount=flags.filter(Boolean).length;
+  const newCount=count-pastCount;
+  return {count,numbers,flags,pastCount,newCount};
 }
 
 function applyFocusDefaults(){
@@ -639,6 +697,7 @@ function scenarioData(){
     market:$("department").value==="Outbound Sales"?selectedMarketLabel():"Agency 5",
     guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
     latitudesNumbers:collectLatitudesNumbers(),
+    pastGuestFlags:collectPastGuestFlags(),
     category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
     latitudes:$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
@@ -808,8 +867,12 @@ function atAGlanceHtml(d,meta){
   const s=d.sailing;
   const sailing=s?`${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}`:"Trainer to provide/verify sailing";
   const stateroom=`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
+  const mix=getGuestProfileMix(d);
+  const guestStatus=d.latitudes
+    ? `${mix.pastCount} Past Guest${mix.pastCount===1?'':'s'}${mix.newCount?` • ${mix.newCount} New Guest${mix.newCount===1?'':'s'}`:''}`
+    : 'Create or verify profiles';
   return `<div class="glance-grid">
-    <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${d.latitudes?`${(d.latitudesNumbers||[]).filter(Boolean).length} Latitudes number${(d.latitudesNumbers||[]).filter(Boolean).length===1?"":"s"} provided`:`Create or verify profiles`}</small></div>
+    <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${escapeHtml(guestStatus)}</small></div>
     <div class="glance-card"><span>Sailing</span><strong>${escapeHtml(sailing)}</strong><small>${s?.departure?`From ${escapeHtml(s.departure)}`:"Verify exact date/port in Seaweb"}</small></div>
     <div class="glance-card"><span>Stateroom</span><strong>${escapeHtml(stateroom)}</strong><small>Use actual available inventory</small></div>
     <div class="glance-card"><span>Promotions</span><strong>${escapeHtml(promotionSummary(d))}</strong><small>Verify current eligibility and deadlines</small></div>
@@ -821,13 +884,14 @@ function atAGlanceHtml(d,meta){
 
 function latitudesScenarioHtml(d){
   if(!d.latitudes)return '';
-  const nums=Array.isArray(d.latitudesNumbers)?d.latitudesNumbers:[];
+  const mix=getGuestProfileMix(d);
   const rows=Array.from({length:d.guestCount},(_,i)=>{
     const name=i===0?(d.guest1||'Guest 1'):i===1?(d.guest2||'Guest 2'):`Guest ${i+1}`;
-    const number=nums[i]||'';
-    return `<div class="latitudes-output-card"><span>Guest ${i+1}</span><strong>${escapeHtml(name)}</strong><small>Latitudes #: ${number?escapeHtml(number):'<em>Not entered — verify in Seaweb</em>'}</small></div>`;
+    const isPast=!!mix.flags[i];
+    const number=mix.numbers[i]||'';
+    return `<div class="latitudes-output-card ${isPast?'past':'new'}"><span>Guest ${i+1} • ${isPast?'PAST GUEST':'NEW GUEST'}</span><strong>${escapeHtml(name)}</strong><small>${isPast?(number?`Latitudes #: ${escapeHtml(number)}`:'Latitudes number not entered — verify in Seaweb'):'Create a new training guest profile in Seaweb.'}</small></div>`;
   }).join('');
-  return `<section class="scenario-section latitudes-output-section"><div class="section-label">PAST GUEST DETAILS</div><h3>Latitudes Numbers</h3><p class="latitudes-output-intro">Use these training Latitudes numbers to locate and verify the past-guest profiles in Seaweb.</p><div class="latitudes-output-grid">${rows}</div></section>`;
+  return `<section class="scenario-section latitudes-output-section"><div class="section-label">GUEST STATUS / LATITUDES</div><h3>Past & New Guests</h3><p class="latitudes-output-intro">Use the status shown for each traveler. Only guests marked Past Guest should be located by Latitudes number.</p><div class="latitudes-output-grid">${rows}</div></section>`;
 }
 
 function fullTaskList(d,meta){
@@ -842,7 +906,8 @@ function fullTaskList(d,meta){
   if(name.includes("ada")) tasks.push("Select a qualifying ADA / accessible stateroom; verify actual capacity and available location before promising a preference.");
   else if(!name.includes("price drop")&&!name.includes("cancel")&&!name.includes("reinstate")) tasks.push("Review available staterooms and select the best match for the guest's preferences.");
 
-  tasks.push(d.latitudes?((d.latitudesNumbers||[]).some(Boolean)?"Use the provided Latitudes number(s) to locate/verify the training guest profiles, then confirm legal names and dates of birth.":"Locate/verify the training guest profiles and confirm legal names and dates of birth."):"Create or verify all required guest profiles using the training details.");
+  const guestMix=getGuestProfileMix(d);
+  tasks.push(d.latitudes?(guestMix.pastCount&&guestMix.newCount?"Follow the individual guest statuses: locate each Past Guest using the provided training Latitudes number and create each New Guest profile, then confirm legal names and dates of birth.":guestMix.pastCount?"Locate and verify the Past Guest profile(s) using the provided training Latitudes number(s), then confirm legal names and dates of birth.":"Create the New Guest profile(s) shown in the scenario and confirm legal names and dates of birth."):"Create or verify all required guest profiles using the training details.");
 
   if(d.fas||name.includes("price programs"))tasks.push("Review and apply the applicable Free at Sea selections in the correct order.");
   if(d.psc)tasks.push("Add prepaid service charges where requested and verify the updated pricing.");
@@ -1016,7 +1081,14 @@ function generateScenario(){
       <p><strong>Card #:</strong> ${escapeHtml(d.card.number)}<br><strong>Expiration:</strong> ${escapeHtml(d.card.expiration)}<br><strong>CCV:</strong> ${escapeHtml(d.card.ccv)}<br><strong>Billing Address:</strong> ${escapeHtml(d.card.address)}</p>
     </div></section>`:"";
 
-  const extraGuests=d.guestCount>2?Array.from({length:d.guestCount-2},(_,i)=>`<li><strong>Guest ${i+3}:</strong> Create or locate an appropriate training guest profile and verify all required fields.</li>`).join(""):"";
+  const guestMix=getGuestProfileMix(d);
+  const guestLabel=i=>i===0?(d.guest1||"Guest 1"):i===1?(d.guest2||"Guest 2"):`Guest ${i+1}`;
+  const guestInfoItems=Array.from({length:d.guestCount},(_,i)=>{
+    const isPast=!!guestMix.flags[i];
+    const number=guestMix.numbers[i]||"";
+    const status=d.latitudes?(isPast?`Past Guest${number?` • Latitudes #: ${escapeHtml(number)}`:" • verify Latitudes number in Seaweb"}`:"New Guest • create a new training guest profile in Seaweb"):"Verify profile";
+    return `<li><strong>Guest ${i+1}:</strong> ${escapeHtml(guestLabel(i))} — ${status}</li>`;
+  }).join("");
   const tasks=traineeTaskList(d,meta);
   const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:`Agency ${d.agency}`;
 
@@ -1063,7 +1135,7 @@ function generateScenario(){
       ${pricing}
 
       <h4>Guest Information</h4>
-      <ul class="detail-list">${guestNames.map((g,i)=>`<li><strong>Guest ${i+1}:</strong> ${escapeHtml(g)}${d.latitudes?` — Latitudes #: ${escapeHtml((d.latitudesNumbers||[])[i]||"verify in Seaweb")}`:""}</li>`).join("")}${extraGuests}</ul>
+      <ul class="detail-list">${guestInfoItems}</ul>
 
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
@@ -1108,9 +1180,10 @@ function runValidator(){
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
   if(d.guestCount>1 && !d.guest2 && meta.kind!=="demo")add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
   if(d.latitudes){
-    const entered=(d.latitudesNumbers||[]).filter(Boolean).length;
-    if(!entered)add("warning","Latitudes numbers not entered","Past Guests / Latitudes is selected, but no training Latitudes numbers were entered.");
-    else add("passed","Latitudes numbers included",`${entered} training Latitudes number${entered===1?"":"s"} included in the trainee scenario.`);
+    const mix=getGuestProfileMix(d);
+    const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
+    if(missing.length)add("warning","Past Guest Latitudes number missing",`Guest ${missing.join(", Guest ")} ${missing.length===1?"is":"are"} marked Past Guest but missing a training Latitudes number.`);
+    else add("passed","Guest status configured",`${mix.pastCount} Past Guest${mix.pastCount===1?"":"s"} • ${mix.newCount} New Guest${mix.newCount===1?"":"s"}.`);
   }
 
   if(d.department==="Guest Services"){
@@ -1307,77 +1380,49 @@ function makeTeamsPageClones(){
   const full=makeTraineeShareClone();
   const headerNodes=[];
   const contentNodes=[];
-
   [...full.children].forEach((node,index)=>{
-    if(index<3) headerNodes.push(node.cloneNode(true));
+    if(index<3)headerNodes.push(node.cloneNode(true));
     else contentNodes.push(node.cloneNode(true));
   });
 
   const labelOf=node=>node.querySelector?.('.section-label')?.textContent?.trim().toUpperCase()||'';
   const headingOf=node=>node.querySelector?.('h3,.share-expanded-heading')?.textContent?.trim().toUpperCase()||'';
   const clsHas=(node,name)=>node.classList?.contains?.(name);
+  const groups=[[],[]];
 
-  const groups=[[],[],[],[]];
   contentNodes.forEach(node=>{
     const label=labelOf(node);
     const heading=headingOf(node);
-    if(label==='YOUR CALL' || label==='GUEST REQUEST' || label==='PAST GUEST DETAILS' || clsHas(node,'latitudes-output-section')){
-      groups[0].push(node);
-    }else if(label==='YOUR WORK' || heading.includes('CALL FLOW SUPPORT')){
-      groups[1].push(node);
-    }else if(label==='REFERENCE DETAILS' || label==='TRAINING PAYMENT' || clsHas(node,'details-section') || clsHas(node,'payment-section')){
-      groups[2].push(node);
-    }else{
-      groups[3].push(node);
-    }
+    const goesPage1 = label==='YOUR CALL' || label==='GUEST REQUEST' || label==='GUEST STATUS / LATITUDES' || label==='YOUR WORK' || heading.includes('CALL FLOW SUPPORT') || clsHas(node,'latitudes-output-section');
+    (goesPage1?groups[0]:groups[1]).push(node);
   });
 
-  const titles=[
-    'Guest Scenario & Request',
-    'Tasks & Call Flow',
-    'Reservation Reference',
-    'Final Check & Knowledge Review'
-  ];
-  const subtitles=[
-    'Customer scenario, at-a-glance brief and past guest details',
-    'Task checklist and guided call-flow support',
-    'Reservation details, sailing reference and payment guidance',
-    'Required actions, recap support and knowledge review'
-  ];
-
+  const titles=['Scenario & Trainee Workflow','Reservation Reference & Final Check'];
+  const subtitles=['Guest request, guest status, task checklist and call-flow support','Reservation details, payment guidance, closing actions and knowledge review'];
   const pages=[];
   groups.forEach((nodes,groupIndex)=>{
-    if(!nodes.length) return;
+    if(!nodes.length)return;
     const page=document.createElement('article');
-    page.className='shared-trainee-card teams-share-page export-letter-page';
-    page.setAttribute('data-teams-page',String(pages.length+1));
-
+    page.className='shared-trainee-card teams-share-page export-legal-page';
     const bar=document.createElement('div');
-    bar.className='teams-page-bar export-page-bar';
-    bar.innerHTML=`<div><strong>${escapeHtml(titles[groupIndex]||`Scenario Page ${pages.length+1}`)}</strong><small>${escapeHtml(subtitles[groupIndex]||'')}</small></div><span>Page ${pages.length+1}</span>`;
+    bar.className='export-page-bar';
+    bar.innerHTML=`<div><strong>${escapeHtml(titles[groupIndex])}</strong><small>${escapeHtml(subtitles[groupIndex])}</small></div><span>Page ${pages.length+1}</span>`;
     page.appendChild(bar);
-
     const body=document.createElement('div');
     body.className='export-page-body';
     headerNodes.forEach(n=>body.appendChild(n.cloneNode(true)));
     nodes.forEach(n=>body.appendChild(n.cloneNode(true)));
     page.appendChild(body);
-
     const footer=document.createElement('div');
     footer.className='export-page-footer';
-    footer.innerHTML=`<span>${escapeHtml((state.currentScenario||{}).department||'Seaweb')}</span><span>${escapeHtml((state.currentScenario||{}).trainingDay?`Day ${(state.currentScenario||{}).trainingDay}`:'')}</span><span class="page-marker">Page ${pages.length+1}</span>`;
+    footer.innerHTML=`<span>${escapeHtml((state.currentScenario||{}).department||'Seaweb')}</span><span>${escapeHtml((state.currentScenario||{}).trainingDay?`Day ${(state.currentScenario||{}).trainingDay}`:'')}</span><span class="page-marker"></span>`;
     page.appendChild(footer);
     pages.push(page);
   });
-
   pages.forEach((page,i)=>{
-    const total=pages.length;
-    const top=page.querySelector('.export-page-bar span');
-    if(top) top.textContent=`Page ${i+1} of ${total}`;
-    const bottom=page.querySelector('.export-page-footer .page-marker');
-    if(bottom) bottom.textContent=`Page ${i+1} of ${total}`;
+    page.querySelector('.export-page-bar span').textContent=`Page ${i+1} of ${pages.length}`;
+    page.querySelector('.page-marker').textContent=`Page ${i+1} of ${pages.length}`;
   });
-
   return pages;
 }
 
@@ -1544,7 +1589,7 @@ function makeJpegPdf(pages,{margin=0}={}){
   const pageRefs=[];
 
   const pageWidth=612;
-  const pageHeight=792;
+  const pageHeight=1008;
 
   pages.forEach(page=>{
     const imageObjNo=objects.length;
@@ -1653,7 +1698,7 @@ async function downloadTeamsPageSet(){
   const btn=$('downloadTeamsPagesBtn');
   const old=btn.innerHTML;
   btn.disabled=true;
-  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating 8.5 × 11 PNG pages</small></span>`;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating 8.5 × 14 full-page PNGs</small></span>`;
   try{
     const blobs=await getTeamsPageBlobs();
     const files=blobs.map((blob,i)=>({name:teamsPageFilename(i+1,blobs.length),blob}));
@@ -1684,7 +1729,7 @@ async function downloadScenarioPdf(){
   try{
     const pageBlobs=await getTeamsPageBlobs();
     const pages=[];
-    for(const blob of pageBlobs) pages.push(await blobToJpegDescriptor(blob,0.92));
+    for(const blob of pageBlobs) pages.push(await blobToJpegDescriptor(blob,0.99));
     const pdf=makeJpegPdf(pages,{margin:0});
     const url=URL.createObjectURL(pdf);
     const a=document.createElement('a');
@@ -1895,7 +1940,7 @@ window.openSaved=(id)=>{
   if([...$("paymentAction").options].some(o=>o.value===x.payment)) $("paymentAction").value=x.payment;
   $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
-  refreshLatitudesPanel(x.latitudesNumbers||[]);
+  refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;$("trainerNotes").value=x.trainerNotes||"";
   if(x.cardProfile && trainingCards[x.cardProfile]){$("trainingCardProfile").value=x.cardProfile;renderTrainingCard();}
   renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");

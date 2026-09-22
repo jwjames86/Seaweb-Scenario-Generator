@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.8.7" />
+  <link rel="stylesheet" href="/styles.css?v=1.8.9" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.8.7 • Sharing + PDF + Latitudes</span>
+            <span class="pill">V1.8.9 • Full-Page Legal Export + Mixed Guests</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -242,7 +242,7 @@
 
             <fieldset>
               <legend>Scenario Tasks</legend>
-              <label class="check"><input id="latitudesToggle" type="checkbox" checked /> Past Guests / Latitudes</label>
+              <label class="check"><input id="latitudesToggle" type="checkbox" checked /> Guest Status / Latitudes</label>
               <label class="check"><input id="commentToggle" type="checkbox" /> Use Commenting Tool</label>
               <label class="check"><input id="confirmToggle" type="checkbox" checked /> Send Guest Confirmation</label>
               <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
@@ -252,8 +252,8 @@
 
             <div id="latitudesNumberPanel" class="latitudes-number-panel hidden-field">
               <div class="latitudes-panel-head">
-                <div><strong>Past Guest / Latitudes Numbers</strong><span>Enter the training Latitudes number for each past guest. These numbers will appear on the trainee scenario.</span></div>
-                <span class="status-badge">PAST GUEST</span>
+                <div><strong>Guest Status / Latitudes</strong><span>Choose Past Guest or New Guest separately for each traveler. A Latitudes number is requested only for guests marked Past Guest.</span></div>
+                <span class="status-badge">MIXED GUEST TYPES</span>
               </div>
               <div id="latitudesGuestFields" class="latitudes-guest-fields"></div>
             </div>
@@ -279,11 +279,11 @@
                   <div id="shareScenarioMenu" class="share-menu" role="menu">
                     <button id="downloadScenarioPdfBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">PDF</span>
-                      <span><strong>Download PDF</strong><small>8.5 × 11 letter pages — same layout as the PNG export</small></span>
+                      <span><strong>Download PDF</strong><small>8.5 × 14 legal pages — same full-page layout as the PNG export</small></span>
                     </button>
                     <button id="downloadTeamsPagesBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▦</span>
-                      <span><strong>Download PNG Page Set</strong><small>8.5 × 11 letter PNG pages — same layout as the PDF export</small></span>
+                      <span><strong>Download PNG Page Set</strong><small>8.5 × 14 legal PNG pages — same full-page layout as the PDF export</small></span>
                     </button>
                     <button id="downloadCardImageBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">⇩</span>
@@ -345,6 +345,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.8.7"></script>
+  <script src="/app.js?v=1.8.9"></script>
 </body>
 </html>

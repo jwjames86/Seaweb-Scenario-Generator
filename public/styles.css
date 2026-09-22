@@ -337,8 +337,16 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .latitudes-panel-head strong{font-size:13px}
 .latitudes-panel-head span:not(.status-badge){font-size:11px;line-height:1.45;color:#667085}
 .latitudes-guest-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.latitudes-guest-fields label{display:flex;flex-direction:column;gap:6px;padding:10px;background:#fff;border:1px solid #D8E3E1;border-radius:4px}
-.latitudes-guest-fields label>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#344054}
+.latitudes-guest-card{display:flex;flex-direction:column;gap:10px;padding:12px;background:#fff;border:1px solid #D8E3E1;border-radius:8px}
+.latitudes-guest-card.is-past-guest{border-color:#9BCAC5;background:#F3F8F7}
+.latitudes-guest-card.is-new-guest{border-color:#E1D9CB;background:#FFFCF7}
+.latitudes-guest-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.latitudes-guest-head strong{font-size:13px;color:#101828}.latitudes-guest-head span{font-size:10px;color:#667085;text-transform:uppercase;letter-spacing:.08em}
+.guest-status-choice{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.guest-status-choice label{display:flex;align-items:center;gap:7px;padding:9px 10px;border:1px solid #D8E3E1;border-radius:6px;background:#fff;font-size:11px;font-weight:700;cursor:pointer}
+.guest-status-choice input{margin:0}
+.guest-status-note{font-size:11px;color:#667085;line-height:1.4}
+.latitudes-number-wrap{display:flex;flex-direction:column;gap:6px}.latitudes-number-wrap>span{font-size:11px;font-weight:700;color:#344054}
 .latitude-number-input{font-variant-numeric:tabular-nums}
 .latitudes-output-section{background:#F3F8F7;border-left:5px solid var(--teal);padding:18px 20px;border-radius:0 10px 10px 0}
 .latitudes-output-intro{margin:0 0 12px;color:#667085;font-size:12px}
@@ -346,7 +354,7 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .latitudes-output-card{background:#fff;border:1px solid #D1E3E0;border-radius:8px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}
 .latitudes-output-card>span{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#667085;font-weight:800}
 .latitudes-output-card>strong{font-size:12px;color:#101828}
-.latitudes-output-card>small{font-size:11px;color:#006099;font-weight:600}
+.latitudes-output-card>small{font-size:11px;color:#006099;font-weight:600;line-height:1.45}.latitudes-output-card.new>small{color:#667085}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
 @media(max-width:680px){.latitudes-guest-fields,.latitudes-output-grid{grid-template-columns:1fr}}
 
@@ -368,3 +376,5 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 
 
 /* V1.8.7 • Unified letter-size export layout for PNG + PDF */
+
+/* V1.8.9 • explicit mixed guest status + full-page legal exports */
