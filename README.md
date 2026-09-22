@@ -134,3 +134,62 @@ This hotfix addresses two regressions introduced in V1.9.1:
 - Saved scenarios preserve the selected workflow.
 - Added **Print Trainee View** and **Print Trainer View** inside Share Card.
 - The top Print button continues to print whichever view is currently active.
+
+
+## V1.9.4 – Modification Workflows + Focus Dropdown
+
+- Scenario Focus is a standard dropdown again.
+- Curriculum day remains internal for support logic, but is no longer displayed in the focus dropdown, scenario card, exports, filenames, library cards, or validator summary.
+- Existing-reservation scenarios now use a dedicated **Existing Reservation Modification** panel instead of requiring full sailing / new-booking details.
+- Modification types include:
+  - Add / Update Special Request
+  - Change / Upgrade Stateroom
+  - Add Guest
+  - Remove Guest
+  - Add / Remove Free at Sea
+  - Add / Remove Travel Protection
+  - Add Prepaid Service Charges
+  - Make / Update Payment
+  - Apply FCC / CruiseNext / Coupon
+  - Add / Change Air or Transfers
+  - Add / Change Hotel or Cruisetour
+  - Cancel / Reinstate Reservation
+  - General Reservation Update
+- Modify scenarios ask for the prior training reservation number, modification target, and requested change.
+- When adding a guest, the trainer can specify New Guest or Past Guest and provide a Latitudes number only when needed.
+- Sailing, stateroom preference, guest-count, and general guest-status controls are hidden when they are irrelevant to the selected modification.
+- Generated modification scenarios use a simplified at-a-glance brief, modification-specific task list, and compact reservation-reference section.
+
+
+## V1.9.5 – Guest Services GDPR + PCC / Direct Group Routing
+
+For **Guest Services modifications of an existing reservation**, GDPR verification is now always part of the scenario.
+
+### Caller / reservation types
+- Direct Guest
+- Travel Agent
+- Travel Agency Guest
+- TA Group
+- Friends & Family / Team Member
+- Casino Guest
+- PCC Guest
+- Direct Group
+- Charter / Sixthman
+
+The generator displays the applicable verification items from the provided GDPR job aids. Reservation Number is treated as mandatory.
+
+### Travel Agent / TA Group handling
+If the Travel Agent cannot provide the agency-identification item but can provide three pieces from the remaining verification items, the scenario instructs the trainee to service the interaction as a Travel Agency Guest.
+
+### PCC Guest handling
+- Shore Excursions may be serviced.
+- For other servicing requests, advise the guest that they have a PCC and attempt transfer.
+- If the PCC is unavailable or the guest refuses transfer, reservation requests may be serviced except cancellation.
+- For cancellation, advise the guest to contact the PCC directly. If the guest says they already attempted contact and/or refuses transfer, follow standard cancellation procedures and document the reservation.
+
+### Direct Group handling
+The scenario requires transfer to the PCC listed on the reservation or the Direct Groups SOT Pilot:
+- Direct Groups SOT / Direct Canadian Groups (CAD): **#11185**
+- LATAM Direct Groups / Miami Outbound Direct Groups / Remote Outbound PCC Groups / Sawgrass Outbound Direct Groups: **#11195**
+
+The GDPR requirement appears in the generator preview, trainee task list, scenario output, validator, exports, and saved scenarios.
