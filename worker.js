@@ -156,26 +156,34 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
 
 .teams-page-stack{width:1180px;margin:0 auto}
-.teams-page-stack .teams-share-page{width:1180px;margin:0;background:#fff}
+.teams-page-stack .teams-share-page,.export-letter-page{width:1180px;min-height:1528px;margin:0;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:30px 32px;display:flex;flex-direction:column;justify-content:flex-start}
+.export-page-body{flex:1 1 auto}
 .share-page-split-marker{width:1180px;height:18px;margin:0;background:#FF00FF}
-.teams-page-bar{display:flex;justify-content:space-between;align-items:center;margin:-4px 0 24px;padding:12px 15px;background:#00484F;color:#fff;border-radius:4px;font-size:16px}
-.teams-page-bar strong{font-size:18px;color:#fff}
-.teams-page-bar span{font-size:15px;color:#fff}
-.teams-page-stack p,.teams-page-stack li{font-size:17px;line-height:1.5}
-.teams-page-stack h2{font-size:31px}
-.teams-page-stack h3{font-size:23px}
-.teams-page-stack h4{font-size:18px}
-.teams-page-stack .scenario-intro{font-size:17px}
-.teams-page-stack .section-label{font-size:12px}
-.teams-page-stack .chip,.teams-page-stack .status-badge{font-size:14px;padding:6px 9px}
-.teams-page-stack .glance-card>span{font-size:12px}
-.teams-page-stack .glance-card>strong{font-size:17px}
-.teams-page-stack .glance-card>small{font-size:14px}
-.teams-page-stack .latitudes-output-card>span{font-size:11px}
-.teams-page-stack .latitudes-output-card>strong{font-size:16px}
-.teams-page-stack .latitudes-output-card>small{font-size:14px}
-.teams-page-stack .share-expanded-heading{font-size:19px}
-.teams-page-stack .support-list{columns:1}
+.export-page-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:0 0 18px;padding:14px 16px;background:#00484F;color:#fff;border-radius:6px}
+.export-page-bar div{display:flex;flex-direction:column;gap:5px}
+.export-page-bar strong{font-size:20px;color:#fff;line-height:1.2}
+.export-page-bar small{font-size:13px;color:#D4ECEB;line-height:1.35}
+.export-page-bar span{font-size:14px;color:#fff;font-weight:700;white-space:nowrap}
+.export-page-footer{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:12px;border-top:1px solid #D8D5CE;font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:1px}
+.teams-page-stack h2{font-size:29px;line-height:1.22;margin:8px 0 16px}
+.teams-page-stack h3{font-size:20px;line-height:1.28;margin:0 0 11px}
+.teams-page-stack h4{font-size:15px;margin:18px 0 8px}
+.teams-page-stack p,.teams-page-stack li{font-size:14px;line-height:1.5}
+.teams-page-stack .scenario-intro{font-size:14px;line-height:1.6;margin:0 0 20px}
+.teams-page-stack .section-label{font-size:10px;font-weight:700;letter-spacing:2px}
+.teams-page-stack .chip,.teams-page-stack .status-badge{font-size:11px;padding:5px 8px}
+.teams-page-stack .glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.teams-page-stack .glance-card{min-height:80px}
+.teams-page-stack .glance-card>span{font-size:10px}
+.teams-page-stack .glance-card>strong{font-size:13px;line-height:1.35}
+.teams-page-stack .glance-card>small{font-size:11px;line-height:1.35}
+.teams-page-stack .task-checklist li{padding:8px 0}
+.teams-page-stack .latitudes-output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.teams-page-stack .latitudes-output-card>span{font-size:9px}
+.teams-page-stack .latitudes-output-card>strong{font-size:12px}
+.teams-page-stack .latitudes-output-card>small{font-size:11px}
+.teams-page-stack .share-expanded-heading{font-size:14px}
+.teams-page-stack .support-list{columns:1;column-gap:0}
 
 .trainer-section{display:none!important}
 </style></head><body>${bodyHtml}</body></html>`;

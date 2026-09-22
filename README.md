@@ -60,3 +60,15 @@ Restores the missing `makeTeamsPageClones()` function that was accidentally remo
 ## V1.8.6 – Share Export Dependency Fix
 
 This hotfix restores all helper functions required by the Teams Page Set and PDF workflows: ZIP creation, filename generation, byte concatenation, and CRC handling. The cutoff/cropping fixes from V1.8.4/V1.8.5 remain in place.
+
+
+## V1.8.7 – Unified 8.5 x 11 export layout
+
+This update rebuilds the PDF and PNG exports so they use the same page design. Both exports now render from one shared letter-size layout that is styled to look much closer to the scenario card shown in the generator.
+
+### What changed
+- **PDF and PNG now use the same 8.5 x 11 page layout**.
+- **Download Teams Page Set** has been reframed as a **PNG page set**: each page is a letter-size PNG.
+- Each page is rendered as a fixed portrait sheet, so the export fills the page instead of appearing as a long or inconsistently cropped image.
+- The export styling was adjusted to more closely match the in-generator scenario view.
+- The PDF now embeds those same portrait page images, so the PDF and PNG versions look nearly identical.
