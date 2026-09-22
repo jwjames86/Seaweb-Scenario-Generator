@@ -353,3 +353,6 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 /* V1.8.1 • Teams page-set sharing */
 .share-menu button#downloadTeamsPagesBtn{background:#eef8f6;border:1px solid #c6dfdc}
 .share-menu button#downloadTeamsPagesBtn:hover{background:#dcefeb}
+
+
+/* V1.8.3 • Share Card PDF option */

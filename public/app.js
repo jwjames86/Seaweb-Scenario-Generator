@@ -1273,16 +1273,21 @@ async function renderShareHtmlToPng(html,mode="full"){
   const response=await fetch("/api/share-card",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({html,mode})
+    body:JSON.stringify({html})
   });
 
   if(!response.ok){
-    let message="Could not render the card image.";
+    let message=`Image renderer returned HTTP ${response.status}.`;
     try{
       const data=await response.json();
       if(data?.error) message=data.error;
       if(data?.detail) message+=` ${data.detail}`;
-    }catch(_){}
+    }catch(_){
+      try{
+        const text=await response.text();
+        if(text) message+=` ${text.slice(0,220)}`;
+      }catch(__){}
+    }
     throw new Error(message);
   }
 
@@ -1296,6 +1301,167 @@ async function renderShareCardToPng(){
   return renderShareHtmlToPng(clone.outerHTML,"full");
 }
 
+
+
+function makeSharePageWrapper(pages){
+  const wrapper=document.createElement('div');
+  wrapper.className='teams-page-stack';
+  wrapper.style.width='900px';
+  wrapper.style.maxWidth='900px';
+  wrapper.style.margin='0 auto';
+  pages.forEach((page,index)=>{
+    page.style.width='900px';
+    page.style.maxWidth='900px';
+    page.style.margin='0';
+    wrapper.appendChild(page);
+    if(index<pages.length-1){
+      const spacer=document.createElement('div');
+      spacer.className='teams-page-stack-gap';
+      spacer.style.height='20px';
+      wrapper.appendChild(spacer);
+    }
+  });
+  return wrapper;
+}
+
+async function measurePageHeights(pages){
+  const host=makeOffscreenShareHost();
+  host.style.width='1220px';
+  const wrapper=makeSharePageWrapper(pages.map(page=>page.cloneNode(true)));
+  host.appendChild(wrapper);
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const heights=[...wrapper.querySelectorAll('.teams-share-page')].map(page=>Math.ceil(page.getBoundingClientRect().height));
+  host.remove();
+  return heights;
+}
+
+async function renderTeamsPageSetArtifacts(){
+  const pages=makeTeamsPageClones();
+  const heights=await measurePageHeights(pages);
+  const wrapper=makeSharePageWrapper(pages.map(page=>page.cloneNode(true)));
+  const fullBlob=await renderShareHtmlToPng(wrapper.outerHTML,'full');
+  const x=160;
+  const yStart=20;
+  const width=900;
+  const gap=20;
+  return {fullBlob,heights,x,yStart,width,gap};
+}
+
+async function loadImageFromBlob(blob){
+  return await new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not read the rendered image.'))};
+    img.src=url;
+  });
+}
+
+async function cropImageBlob(sourceBlob,x,y,width,height,type='image/png',quality){
+  const img=await loadImageFromBlob(sourceBlob);
+  const scale=(img.naturalWidth||img.width)/1220;
+  const sx=Math.max(0,Math.round(x*scale));
+  const sy=Math.max(0,Math.round(y*scale));
+  const sw=Math.max(1,Math.round(width*scale));
+  const sh=Math.max(1,Math.round(height*scale));
+  const canvas=document.createElement('canvas');
+  canvas.width=sw;
+  canvas.height=sh;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,sw,sh);
+  ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+  return await new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create the cropped page image.')),type,quality);
+  });
+}
+
+async function splitRenderedStackIntoPageBlobs(artifact){
+  const out=[];
+  let y=artifact.yStart;
+  for(let i=0;i<artifact.heights.length;i++){
+    const blob=await cropImageBlob(artifact.fullBlob,artifact.x,y,artifact.width,artifact.heights[i],'image/png');
+    out.push(blob);
+    y+=artifact.heights[i]+artifact.gap;
+  }
+  return out;
+}
+
+function scenarioPdfFilename(){
+  return scenarioShareFilename().replace(/\.png$/i,'.pdf');
+}
+
+async function blobToJpegDescriptor(blob,quality=0.9){
+  const img=await loadImageFromBlob(blob);
+  const canvas=document.createElement('canvas');
+  canvas.width=img.naturalWidth||img.width;
+  canvas.height=img.naturalHeight||img.height;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0);
+  const jpegBlob=await new Promise((resolve,reject)=>{
+    canvas.toBlob(b=>b?resolve(b):reject(new Error('Could not prepare a PDF page.')),'image/jpeg',quality);
+  });
+  const bytes=new Uint8Array(await jpegBlob.arrayBuffer());
+  return {bytes,width:canvas.width,height:canvas.height};
+}
+
+function pdfObjectFromParts(parts){
+  const encoder=new TextEncoder();
+  return concatBytes(parts.map(part=>part instanceof Uint8Array?part:encoder.encode(String(part))));
+}
+
+function makeJpegPdf(pages,{pageWidth=612,pageHeight=792,margin=24}={}){
+  const encoder=new TextEncoder();
+  const objects=[null];
+  objects[1]=encoder.encode('<< /Type /Catalog /Pages 2 0 R >>');
+  objects[2]=encoder.encode('');
+  const pageRefs=[];
+
+  pages.forEach(page=>{
+    const imageObjNo=objects.length;
+    objects.push(pdfObjectFromParts([
+      `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`,
+      page.bytes,
+      `\nendstream`
+    ]));
+
+    const maxW=pageWidth-(margin*2);
+    const maxH=pageHeight-(margin*2);
+    const scale=Math.min(maxW/page.width,maxH/page.height);
+    const drawW=Math.round(page.width*scale*1000)/1000;
+    const drawH=Math.round(page.height*scale*1000)/1000;
+    const x=Math.round(((pageWidth-drawW)/2)*1000)/1000;
+    const y=Math.round(((pageHeight-drawH)/2)*1000)/1000;
+    const stream=`q\n${drawW} 0 0 ${drawH} ${x} ${y} cm\n/Im1 Do\nQ`;
+    const contentObjNo=objects.length;
+    objects.push(encoder.encode(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`));
+
+    const pageObjNo=objects.length;
+    objects.push(encoder.encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im1 ${imageObjNo} 0 R >> >> /Contents ${contentObjNo} 0 R >>`));
+    pageRefs.push(`${pageObjNo} 0 R`);
+  });
+
+  objects[2]=encoder.encode(`<< /Type /Pages /Kids [ ${pageRefs.join(' ')} ] /Count ${pageRefs.length} >>`);
+  let offset=0;
+  const chunks=[encoder.encode('%PDF-1.4\n%ÿÿÿÿ\n')];
+  offset=chunks[0].length;
+  const offsets=[0];
+  for(let i=1;i<objects.length;i++){
+    offsets[i]=offset;
+    const objHeader=encoder.encode(`${i} 0 obj\n`);
+    const objFooter=encoder.encode('\nendobj\n');
+    chunks.push(objHeader,objects[i],objFooter);
+    offset+=objHeader.length+objects[i].length+objFooter.length;
+  }
+  const xrefStart=offset;
+  let xref=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<objects.length;i++) xref+=`${String(offsets[i]).padStart(10,'0')} 00000 n \n`;
+  const trailer=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  chunks.push(encoder.encode(xref),encoder.encode(trailer));
+  return new Blob(chunks,{type:'application/pdf'});
+}
 
 function makeTeamsPageClones(){
   const full=makeTraineeShareClone();
@@ -1412,12 +1578,9 @@ async function downloadTeamsPageSet(){
   btn.disabled=true;
   btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating larger readable images</small></span>`;
   try{
-    const pages=makeTeamsPageClones();
-    const files=[];
-    for(let i=0;i<pages.length;i++){
-      const blob=await renderShareHtmlToPng(pages[i].outerHTML,'teams-page');
-      files.push({name:teamsPageFilename(i+1,pages.length),blob});
-    }
+    const artifact=await renderTeamsPageSetArtifacts();
+    const blobs=await splitRenderedStackIntoPageBlobs(artifact);
+    const files=blobs.map((blob,i)=>({name:teamsPageFilename(i+1,blobs.length),blob}));
     const zip=await makeStoredZip(files);
     const url=URL.createObjectURL(zip);
     const a=document.createElement('a');
@@ -1430,6 +1593,34 @@ async function downloadTeamsPageSet(){
     flash(`Downloaded ${files.length} Teams-optimized pages. Unzip and attach the PNGs together in Teams.`);
   }catch(err){
     alert(`Could not create the Teams page set: ${err.message}`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
+}
+
+async function downloadScenarioPdf(){
+  if(!ensureScenarioReady())return;
+  const btn=$('downloadScenarioPdfBtn');
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PDF…</strong><small>Creating a trainee-friendly multipage PDF</small></span>`;
+  try{
+    const artifact=await renderTeamsPageSetArtifacts();
+    const pageBlobs=await splitRenderedStackIntoPageBlobs(artifact);
+    const pages=[];
+    for(const blob of pageBlobs) pages.push(await blobToJpegDescriptor(blob,0.92));
+    const pdf=makeJpegPdf(pages,{pageWidth:612,pageHeight:792,margin:24});
+    const url=URL.createObjectURL(pdf);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=scenarioPdfFilename();
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash(`PDF downloaded with ${pages.length} page${pages.length===1?'':'s'}. Great for Teams, email and printing.`);
+  }catch(err){
+    alert(`Could not create the PDF: ${err.message}`);
   }finally{
     btn.disabled=false;
     btn.innerHTML=old;
@@ -1460,7 +1651,7 @@ async function downloadCardImage(){
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1500);
     closeShareMenu();
-    flash('PNG downloaded. Attach it in Teams so trainees can click it open for a larger preview.');
+    flash('PNG downloaded. For Teams and email, the new Download PDF option is usually the easiest format to read.');
   }catch(err){
     alert(`Could not download the card image: ${err.message}`);
   }finally{
@@ -1540,6 +1731,7 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("downloadScenarioPdfBtn").onclick=downloadScenarioPdf;
 $("downloadCardImageBtn").onclick=downloadCardImage;
 $("downloadTeamsPagesBtn").onclick=downloadTeamsPageSet;
 $("copyCardImageBtn").onclick=copyCardAsImage;
