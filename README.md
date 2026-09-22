@@ -350,3 +350,25 @@ Guest Services booking-source logic now follows these training rules:
 - Agency 7 validates as Direct Guest (Canada).
 - Travel Agent / TA Group scenarios require a Travel Agent Agency ID or phone number rather than Agency 5 / 7.
 - Mismatches between Agency value and GDPR caller type are flagged.
+
+
+## V1.9.13 – New Reservation Caller Type
+
+Guest Services new-reservation scenarios now have an explicit **Caller Type** selector:
+
+- Direct Guest — US
+- Direct Guest — Canada
+- Travel Agent
+
+### Caller Type controls booking source and wording
+- Direct Guest — US automatically sets and locks **Agency 5**.
+- Direct Guest — Canada automatically sets and locks **Agency 7**.
+- Travel Agent unlocks the Agency / Booking Identifier field and requires the Travel Agent's **Agency ID or phone number**.
+
+The Customer Scenario, At a Glance, Reference Details, and Validator use Caller Type as the source of truth.
+
+### NCL Air correction
+**NCL Air & Ground Transfers** is now caller-neutral. It no longer carries a Travel Agent-only curriculum objective. Direct Guest scenarios use direct-guest wording, while Travel Agent scenarios use travel-advisor wording.
+
+### TA-specific focus
+Choosing **Agencies: TA Booking** automatically switches Caller Type to Travel Agent. The Validator flags that focus if paired with a Direct Guest caller.
