@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.12" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.13" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.12 • Guest Services Agency / Caller Logic</span>
+            <span class="pill">V1.9.13 • New Reservation Caller Type</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -190,7 +190,7 @@
           <div class="instructions-body">
             <ul>
               <li>Choose the Department, Reservation Workflow, Scenario Focus, difficulty, and scenario approach.</li>
-              <li>For <strong>Create New Reservation</strong>, select guest/stateroom details and optionally attach a real sailing from the Search tab. In Guest Services, Agency <strong>5</strong> means Direct Guest (US), Agency <strong>7</strong> means Direct Guest (Canada), and Travel Agent bookings should use the Travel Agent’s Agency ID or phone number.</li>
+              <li>For <strong>Create New Reservation</strong>, choose the <strong>Caller Type</strong> first. Direct Guest — US automatically uses Agency 5, Direct Guest — Canada uses Agency 7, and Travel Agent requires the Travel Agent’s Agency ID or phone number. Scenario wording follows the selected caller type.</li>
               <li>For <strong>Modify Existing Reservation</strong>, enter the prior training reservation number and choose exactly what is being changed. Guest Services modifications require GDPR setup.</li>
               <li>For Air scenarios, select <strong>Include Air / Transfers</strong>, choose the Air product, and choose Round Trip or One Way. The applicable training terms and transfer reminder will appear automatically.</li>
               <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
@@ -216,6 +216,14 @@
                   <option value="new">Create New Reservation</option>
                   <option value="modify">Modify Existing Reservation</option>
                 </select>
+              </label>
+              <label id="newCallerTypeField">Caller Type
+                <select id="newCallerType">
+                  <option value="direct_us">Direct Guest — US</option>
+                  <option value="direct_ca">Direct Guest — Canada</option>
+                  <option value="travel_agent">Travel Agent</option>
+                </select>
+                <span id="newCallerTypeHint" class="field-hint">Caller Type controls the scenario wording and Guest Services Agency / Booking Identifier.</span>
               </label>
               <input id="trainingDay" type="hidden" value="6" />
               <label>Scenario Focus
@@ -580,6 +588,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.12"></script>
+  <script src="/app.js?v=1.9.13"></script>
 </body>
 </html>

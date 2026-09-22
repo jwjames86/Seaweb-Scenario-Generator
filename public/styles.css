@@ -927,3 +927,12 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
   line-height:1.4;
   color:#667085;
 }
+
+
+/* V1.9.13 • New-reservation Caller Type */
+#newCallerTypeField .field-hint{
+  margin-top:5px;
+  font-size:9px;
+  line-height:1.4;
+  color:#667085;
+}

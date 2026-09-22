@@ -248,7 +248,7 @@ const scenarioCatalog = {
     10: [
       {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
       {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
-      {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent reservation with NCL Air and ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
+      {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an NCL Air reservation with ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
       {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
@@ -361,6 +361,18 @@ function currentTrainingCard(){
   };
 }
 
+function newReservationCallerInfo(value){
+  const caller=value||"direct_us";
+  if(caller==="direct_ca")return {type:"direct_ca",label:"Direct Guest — Canada",agency:"7"};
+  if(caller==="travel_agent")return {type:"travel_agent",label:"Travel Agent",agency:""};
+  return {type:"direct_us",label:"Direct Guest — US",agency:"5"};
+}
+
+function newReservationCallerLabel(d){
+  if(d.department!=="Guest Services")return "Outbound Guest";
+  return newReservationCallerInfo(d.newCallerType).label;
+}
+
 function guestServicesAgencyInfo(value){
   const agency=String(value||"").trim();
   if(agency==="5")return {type:"direct_us",caller:"direct_guest",label:"Direct Guest — US",display:"Agency 5 • Direct Guest (US)"};
@@ -375,22 +387,49 @@ function guestServicesAgencyDisplay(value){
 
 function syncAgencyCallerLogic(){
   const dept=$("department")?.value;
+  const workflow=$("reservationWorkflow")?.value||"new";
   const outbound=dept==="Outbound Sales";
   const agency=$("agency");
+  const newCallerField=$("newCallerTypeField");
+  const newCaller=$("newCallerType");
   if(!agency)return;
+
+  newCallerField?.classList.toggle("workflow-hidden",outbound||workflow!=="new");
 
   if(outbound){
     agency.readOnly=true;
     agency.value=$("marketAgency")?.value||marketAgencies[0][1];
     $("agencyHint").textContent="Outbound agency is set by the selected Market / Currency.";
     $("agencyField")?.classList.add("agency-locked");
+  }else if(workflow==="new"){
+    const caller=newReservationCallerInfo(newCaller?.value||"direct_us");
+
+    if(caller.type==="direct_us"){
+      agency.value="5";
+      agency.readOnly=true;
+      $("agencyHint").textContent="Direct Guest — US automatically uses Agency 5.";
+      $("newCallerTypeHint").textContent="Direct Guest — US: scenario wording uses a direct guest caller and Agency 5.";
+      $("agencyField")?.classList.add("agency-locked");
+    }else if(caller.type==="direct_ca"){
+      agency.value="7";
+      agency.readOnly=true;
+      $("agencyHint").textContent="Direct Guest — Canada automatically uses Agency 7.";
+      $("newCallerTypeHint").textContent="Direct Guest — Canada: scenario wording uses a Canadian direct guest caller and Agency 7.";
+      $("agencyField")?.classList.add("agency-locked");
+    }else{
+      if(["5","7"].includes(agency.value.trim()))agency.value="";
+      agency.readOnly=false;
+      $("agencyHint").textContent="Travel Agent booking: enter the Travel Agent's Agency ID or phone number.";
+      $("newCallerTypeHint").textContent="Travel Agent: scenario wording uses a Travel Advisor caller. Enter the Travel Agent's Agency ID or phone number below.";
+      $("agencyField")?.classList.remove("agency-locked");
+    }
   }else{
     agency.readOnly=false;
     $("agencyHint").textContent="Agency 5 = Direct Guest (US) • Agency 7 = Direct Guest (Canada) • Travel Agent booking = enter the Travel Agent's Agency ID or phone number.";
     $("agencyField")?.classList.remove("agency-locked");
   }
 
-  if(dept==="Guest Services" && $("reservationWorkflow")?.value==="modify"){
+  if(dept==="Guest Services" && workflow==="modify"){
     const info=guestServicesAgencyInfo(agency.value);
     const caller=$("gdprCallerType");
     const hint=$("gdprCallerHint");
@@ -418,8 +457,6 @@ function updateDepartmentUI(){
   $("marketAgencyField").classList.toggle("hidden-field",!outbound);
   if(outbound){
     $("agency").value=$("marketAgency").value||marketAgencies[0][1];
-  }else if(!$("agency").value || $("agency").readOnly){
-    $("agency").value="5";
   }
   syncAgencyCallerLogic();
   updateScenarioFocus();
@@ -883,6 +920,10 @@ function applyFocusDefaults(){
 
   $("difficulty").value=meta.difficulty||"Intermediate";
   $("paymentAction").value=meta.payment||"No Payment / Service Only";
+  if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && meta.name==="Agencies: TA Booking"){
+    $("newCallerType").value="travel_agent";
+    syncAgencyCallerLogic();
+  }
   $("commentToggle").checked=!!meta.commenting;
   $("confirmToggle").checked=true;
 
@@ -946,6 +987,7 @@ $("airOneWayDirection").addEventListener("change",updateAirProgramPreview);
 $("gdprCallerType").addEventListener("change",updateGdprPreview);
 $("directGroupMarket").addEventListener("change",updateGdprPreview);
 $("agency").addEventListener("input",syncAgencyCallerLogic);
+$("newCallerType").addEventListener("change",syncAgencyCallerLogic);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("resetTrainingCardBtn").addEventListener("click",renderTrainingCard);
@@ -1303,6 +1345,7 @@ function scenarioData(){
     title:`${$("department").value} – ${$("scenarioType").value}`,
     type:$("scenarioType").value,
     reservationWorkflow:$("reservationWorkflow")?.value||"new",
+    newCallerType:$("department").value==="Guest Services"&&$("reservationWorkflow").value==="new"?$("newCallerType").value:"",
     existingReservationNumber:$("existingReservationNumber")?.value.trim()||"",
     modificationType:$("modificationType")?.value||"general",
     modificationTarget:$("modificationTarget")?.value.trim()||"",
@@ -1314,8 +1357,12 @@ function scenarioData(){
     difficulty:$("difficulty").value,
     guestCount:+$("guestCount").value,
     agency:$("agency").value.trim(),
-    bookingSource:$("department").value==="Guest Services"?guestServicesAgencyInfo($("agency").value).type:"outbound_market",
-    market:$("department").value==="Outbound Sales"?selectedMarketLabel():guestServicesAgencyInfo($("agency").value).label,
+    bookingSource:$("department").value==="Guest Services"
+      ? ($("reservationWorkflow").value==="new"?newReservationCallerInfo($("newCallerType").value).type:guestServicesAgencyInfo($("agency").value).type)
+      :"outbound_market",
+    market:$("department").value==="Outbound Sales"
+      ? selectedMarketLabel()
+      : ($("reservationWorkflow").value==="new"?newReservationCallerInfo($("newCallerType").value).label:guestServicesAgencyInfo($("agency").value).label),
     guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
     latitudesNumbers:collectLatitudesNumbers(),
     pastGuestFlags:collectPastGuestFlags(),
@@ -1443,8 +1490,10 @@ function focusStoryDetail(d,meta){
   if(n.includes("ada")) return "Accessibility is an important part of this vacation. They need an accessible stateroom and have additional dietary or special-request needs that must be documented in the correct place.";
   if(n.includes("infant")||n.includes("guests 3-8")||n.includes("singles")) return "The party size or guest mix requires extra attention to occupancy, guest profiles, deposits, promotions, and stateroom capacity.";
   if(n.includes("multiple")) return "The vacation involves more than one stateroom or reservation. The guests want the bookings coordinated and the rooms kept together whenever availability allows.";
-  if(n.includes("ta booking")) return "A travel advisor is arranging the vacation on the guest's behalf and expects the reservation to be built using the applicable agency and promotional workflow.";
-  if(n.includes("bundled air")) return "The caller needs the cruise reservation to include air and/or ground transportation, so the applicable air terms and transfer details must be reviewed carefully.";
+  if(n.includes("ta booking")) return d.newCallerType==="travel_agent"
+    ? "The travel advisor is arranging the vacation on the guest's behalf and expects the reservation to be built using the applicable agency and promotional workflow."
+    : "The caller wants the reservation created using the appropriate booking-source and promotional workflow.";
+  if(n.includes("ncl air")||n.includes("bundled air")) return "The caller needs the cruise reservation to include air and/or ground transportation, so the applicable NCL Air Program, air terms, and transfer details must be reviewed carefully.";
   if(n.includes("cancel")||n.includes("reinstate")) return "The guest is calling about canceling or restoring an existing reservation and needs clear guidance about status, refunds, and any changes that may result.";
   if(n.includes("price drop")) return "Use this trainer-led case to demonstrate how to evaluate and process a price-drop request using the approved workflow.";
   if(n.includes("cruisetour")||n.includes("land pkg")) return "The guest or travel advisor wants to add a land package or cruisetour to an existing reservation and needs the available options reviewed.";
@@ -1502,17 +1551,14 @@ function customerStoryHtml(d,meta,sailText,guestNames){
   const names=companion?`<strong>${escapeHtml(primary)}</strong> and <strong>${escapeHtml(companion)}</strong>`:`<strong>${escapeHtml(primary)}</strong>`;
 
   if(d.department==="Guest Services"){
-    const source=guestServicesAgencyInfo(d.agency);
-    if(source.type==="direct_us" || source.type==="direct_ca"){
-      return `<p>${names} are calling directly to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    const caller=newReservationCallerInfo(d.newCallerType);
+    if(caller.type==="direct_ca"){
+      return `<p>${names} are calling Norwegian Cruise Line directly from Canada to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
-    if(source.type==="travel_agent"){
-      return `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    if(caller.type==="travel_agent"){
+      return `<p>A travel advisor is calling Norwegian Cruise Line on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
-  }
-
-  if(meta.kind==="ta"){
-    return `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    return `<p>${names} are calling Norwegian Cruise Line directly to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
 
   return `<p>${names} are planning ${escapeHtml(sailText)} and want to create a new reservation. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
@@ -1566,6 +1612,7 @@ function atAGlanceHtml(d,meta){
     : 'Create or verify profiles';
   return `<div class="glance-grid">
     <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${escapeHtml(guestStatus)}</small></div>
+    ${d.department==="Guest Services"?`<div class="glance-card"><span>Caller Type</span><strong>${escapeHtml(newReservationCallerLabel(d))}</strong><small>${escapeHtml(d.market||guestServicesAgencyDisplay(d.agency))}</small></div>`:""}
     <div class="glance-card"><span>Sailing</span><strong>${escapeHtml(sailing)}</strong><small>${s?.departure?`From ${escapeHtml(s.departure)}`:"Verify exact date/port in Seaweb"}</small></div>
     <div class="glance-card"><span>Stateroom</span><strong>${escapeHtml(stateroom)}</strong><small>Use actual available inventory</small></div>
     <div class="glance-card"><span>Promotions</span><strong>${escapeHtml(promotionSummary(d))}</strong><small>Verify current eligibility and deadlines</small></div>
@@ -1858,6 +1905,7 @@ function resetScenarioForm(){
 
   $("department").value="Guest Services";
   $("reservationWorkflow").value="new";
+  $("newCallerType").value="direct_us";
   $("trainingDay").value="6";
   $("scenarioApproach").value="variation";
   $("difficulty").value="Beginner";
@@ -1968,7 +2016,13 @@ function generateScenario(){
     return `<li><strong>Guest ${i+1}:</strong> ${escapeHtml(guestLabel(i))} — ${status}</li>`;
   }).join("");
   const tasks=traineeTaskList(d,meta);
-  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:guestServicesAgencyDisplay(d.agency);
+  const agencyDisplay=d.department==="Outbound Sales"
+    ? `${d.market} | Agency ${d.agency}`
+    : (d.reservationWorkflow==="new"
+        ? (d.newCallerType==="travel_agent"
+            ? `Travel Agent • Agency ID / Phone: ${d.agency||"Not entered"}`
+            : `${newReservationCallerLabel(d)} • Agency ${d.agency}`)
+        : guestServicesAgencyDisplay(d.agency));
 
   const html=`
     <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
@@ -2049,22 +2103,40 @@ function runValidator(){
   }
 
   if(d.department==="Guest Services"){
-    const source=guestServicesAgencyInfo(d.agency);
-    if(source.type==="unknown"){
-      add("error","Agency / booking identifier missing","Use Agency 5 for a US Direct Guest, Agency 7 for a Canadian Direct Guest, or enter the Travel Agent's Agency ID / phone number.");
-    }else if(source.type==="direct_us"){
-      add("passed","Guest Services booking source","Agency 5 • Direct Guest (US)");
-      if(d.reservationWorkflow==="modify" && d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 5 is always a Direct Guest. Use the Direct Guest GDPR requirements.");
-    }else if(source.type==="direct_ca"){
-      add("passed","Guest Services booking source","Agency 7 • Direct Guest (Canada)");
-      if(d.reservationWorkflow==="modify" && d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 7 is always a Direct Guest from Canada. Use the Direct Guest GDPR requirements.");
-    }else{
-      add("passed","Guest Services Travel Agent identifier",`Agency ID / Phone: ${d.agency}`);
-      if(d.reservationWorkflow==="modify" && ["travel_agent","ta_group"].includes(d.gdprCallerType)){
-        add("passed","Travel Agent caller setup","Travel Agent booking uses an Agency ID / phone number and the Travel Agent GDPR path.");
+    if(d.reservationWorkflow==="new"){
+      const caller=newReservationCallerInfo(d.newCallerType);
+      if(caller.type==="direct_us"){
+        if(String(d.agency)!=="5")add("error","Direct Guest agency mismatch","Direct Guest — US must use Agency 5.");
+        else add("passed","Caller / booking source","Direct Guest — US • Agency 5");
+      }else if(caller.type==="direct_ca"){
+        if(String(d.agency)!=="7")add("error","Direct Guest agency mismatch","Direct Guest — Canada must use Agency 7.");
+        else add("passed","Caller / booking source","Direct Guest — Canada • Agency 7");
+      }else{
+        if(!d.agency)add("error","Travel Agent identifier missing","Enter the Travel Agent's Agency ID or phone number.");
+        else if(["5","7"].includes(String(d.agency)))add("error","Travel Agent identifier invalid","Agency 5 and Agency 7 are Direct Guest bookings. Enter the Travel Agent's Agency ID or phone number.");
+        else add("passed","Caller / booking source",`Travel Agent • Agency ID / Phone: ${d.agency}`);
       }
-      if(d.reservationWorkflow==="modify" && d.gdprCallerType==="direct_guest"){
-        add("error","Agency / caller mismatch","Direct Guest bookings should use Agency 5 (US) or Agency 7 (Canada), not a Travel Agent identifier.");
+      if(d.type==="Agencies: TA Booking" && caller.type!=="travel_agent"){
+        add("error","Caller type does not match scenario focus","Agencies: TA Booking requires Caller Type = Travel Agent.");
+      }
+    }else{
+      const source=guestServicesAgencyInfo(d.agency);
+      if(source.type==="unknown"){
+        add("error","Agency / booking identifier missing","Use Agency 5 for a US Direct Guest, Agency 7 for a Canadian Direct Guest, or enter the Travel Agent's Agency ID / phone number.");
+      }else if(source.type==="direct_us"){
+        add("passed","Guest Services booking source","Agency 5 • Direct Guest (US)");
+        if(d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 5 is always a Direct Guest. Use the Direct Guest GDPR requirements.");
+      }else if(source.type==="direct_ca"){
+        add("passed","Guest Services booking source","Agency 7 • Direct Guest (Canada)");
+        if(d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 7 is always a Direct Guest from Canada. Use the Direct Guest GDPR requirements.");
+      }else{
+        add("passed","Guest Services Travel Agent identifier",`Agency ID / Phone: ${d.agency}`);
+        if(["travel_agent","ta_group"].includes(d.gdprCallerType)){
+          add("passed","Travel Agent caller setup","Travel Agent booking uses an Agency ID / phone number and the Travel Agent GDPR path.");
+        }
+        if(d.gdprCallerType==="direct_guest"){
+          add("error","Agency / caller mismatch","Direct Guest bookings should use Agency 5 (US) or Agency 7 (Canada), not a Travel Agent identifier.");
+        }
       }
     }
   }else if(d.department==="Outbound Sales"){
@@ -3230,7 +3302,7 @@ function renderLibrary(){
   const deptFilter=$("libraryDepartmentFilter").value;
   let items=saved().filter(x=>{
     if(deptFilter && x.department!==deptFilter)return false;
-    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.newCallerType,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
@@ -3266,6 +3338,9 @@ window.openSaved=(id)=>{
   updateDepartmentUI();
   updateScenarioFocus(x.type,String(x.trainingDay||6));
   $("reservationWorkflow").value=x.reservationWorkflow||((x.curriculumKind==="followup")?"modify":"new");
+  $("newCallerType").value=x.newCallerType||(
+    String(x.agency)==="7"?"direct_ca":(["5",""].includes(String(x.agency||""))?"direct_us":"travel_agent")
+  );
   $("existingReservationNumber").value=x.existingReservationNumber||"";
   $("modificationType").value=x.modificationType||"general";
   $("modificationTarget").value=x.modificationTarget||"";
