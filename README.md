@@ -81,3 +81,19 @@ This update rebuilds the PDF and PNG exports so they use the same page design. B
 - Renders exports at approximately **240 pixels per inch** for sharper PNG and PDF output.
 - Adds explicit **Past Guest / New Guest radio choices for each guest**. Only Past Guests display or require a Latitudes number.
 - Saves/restores per-guest status in the scenario library and includes it in trainee output and validation.
+
+
+## V1.9.0 – One-Page Trainee Export
+
+V1.9.0 adds two export styles instead of forcing every trainee scenario into the same multi-page layout.
+
+### Recommended trainee export
+- **One-Page Trainee PDF** — one 8.5 × 14 legal-size page designed for Teams, email, printing, and classroom use.
+- **One-Page Trainee PNG** — the same layout as the PDF in a single image.
+- The one-page layout keeps the customer scenario, At a Glance, Past/New Guest status, required tasks, key booking details, compact call-flow guidance, required training payment data, and the final call check.
+- Trainer-only coaching and the expanded knowledge review remain out of the one-page handout.
+
+### Full-detail export
+- **Full Detail PDF** and **Full Detail PNG Page Set** preserve the expanded trainee version when the trainer wants every reference section included.
+
+The mixed Past Guest / New Guest controls and per-guest Latitudes behavior from V1.8.9 are preserved.
