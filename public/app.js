@@ -1303,6 +1303,67 @@ async function renderShareCardToPng(){
 
 
 
+function makeTeamsPageClones(){
+  const full=makeTraineeShareClone();
+  const headerNodes=[];
+  const contentNodes=[];
+
+  [...full.children].forEach((node,index)=>{
+    if(index<3) headerNodes.push(node.cloneNode(true));
+    else contentNodes.push(node.cloneNode(true));
+  });
+
+  const labelOf=node=>node.querySelector?.('.section-label')?.textContent?.trim().toUpperCase()||'';
+  const headingOf=node=>node.querySelector?.('h3,.share-expanded-heading')?.textContent?.trim().toUpperCase()||'';
+  const groups=[[],[],[],[]];
+
+  contentNodes.forEach(node=>{
+    const label=labelOf(node);
+    const heading=headingOf(node);
+    const cls=node.classList||{contains:()=>false};
+
+    if(label==='YOUR CALL'||label==='GUEST REQUEST'||label==='PAST GUEST DETAILS'||cls.contains('latitudes-output-section')){
+      groups[0].push(node);
+    }else if(label==='YOUR WORK'||heading.includes('CALL FLOW SUPPORT')){
+      groups[1].push(node);
+    }else if(label==='REFERENCE DETAILS'||label==='TRAINING PAYMENT'||cls.contains('details-section')||cls.contains('payment-section')){
+      groups[2].push(node);
+    }else{
+      groups[3].push(node);
+    }
+  });
+
+  const titles=[
+    'Guest Scenario & Request',
+    'Tasks & Call Flow',
+    'Reservation Reference',
+    'Final Check & Knowledge Review'
+  ];
+
+  const pages=[];
+  groups.forEach((nodes,groupIndex)=>{
+    if(!nodes.length) return;
+    const page=document.createElement('article');
+    page.className='shared-trainee-card teams-share-page';
+    page.setAttribute('data-teams-page',String(pages.length+1));
+
+    const pageBar=document.createElement('div');
+    pageBar.className='teams-page-bar';
+    pageBar.innerHTML=`<strong>${escapeHtml(titles[groupIndex]||`Scenario Page ${pages.length+1}`)}</strong><span>Page ${pages.length+1}</span>`;
+    page.appendChild(pageBar);
+
+    headerNodes.forEach(n=>page.appendChild(n.cloneNode(true)));
+    nodes.forEach(n=>page.appendChild(n.cloneNode(true)));
+    pages.push(page);
+  });
+
+  pages.forEach((page,i)=>{
+    const marker=page.querySelector('.teams-page-bar span');
+    if(marker) marker.textContent=`Page ${i+1} of ${pages.length}`;
+  });
+  return pages;
+}
+
 function makeSharePageWrapper(pages){
   const wrapper=document.createElement('div');
   wrapper.className='teams-page-stack';
