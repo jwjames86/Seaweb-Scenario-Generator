@@ -22,10 +22,133 @@ export default {
       return response;
     }
 
+    if (url.pathname === "/api/share-card") {
+      return handleShareCard(request, env);
+    }
+
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("Not found", { status: 404 });
   }
 };
+
+async function handleShareCard(request, env) {
+  if (request.method !== "POST") {
+    return json({ error: "Share-card rendering requires POST." }, 405);
+  }
+  if (!env.BROWSER || typeof env.BROWSER.quickAction !== "function") {
+    return json({ error: "Browser rendering is not available." }, 503);
+  }
+
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "Invalid share-card request." }, 400);
+  }
+
+  const raw = String(payload?.html || "");
+  if (!raw || raw.length > 250000) {
+    return json({ error: "The scenario card is empty or too large to render." }, 400);
+  }
+
+  const safeBody = sanitizeShareHtml(raw);
+  const page = shareCardDocument(safeBody);
+
+  try {
+    const shot = await env.BROWSER.quickAction("screenshot", {
+      html: page,
+      viewport: { width: 940, height: 1400 },
+      screenshotOptions: { fullPage: true, type: "png" }
+    });
+
+    if (!shot.ok) {
+      const detail = await shot.text().catch(() => "");
+      return json({
+        error: "The share-card image renderer could not create the PNG.",
+        detail: detail.slice(0, 300)
+      }, 502);
+    }
+
+    return new Response(shot.body, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "no-store",
+        "Content-Disposition": 'inline; filename="seaweb-training-scenario.png"'
+      }
+    });
+  } catch (e) {
+    return json({
+      error: "The share-card image renderer failed.",
+      detail: String(e?.message || e).slice(0, 300)
+    }, 502);
+  }
+}
+
+function sanitizeShareHtml(raw) {
+  let html = String(raw || "");
+  html = html
+    .replace(/<\s*(script|style|link|meta|base|iframe|object|embed|form|img|video|audio|source|canvas|svg)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, "")
+    .replace(/<\s*(script|style|link|meta|base|iframe|object|embed|form|img|video|audio|source|canvas|svg)\b[^>]*\/?>/gi, "")
+    .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
+    .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
+    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
+    .replace(/\s(?:src|href|srcset|style)\s*=\s*"[^"]*"/gi, "")
+    .replace(/\s(?:src|href|srcset|style)\s*=\s*'[^']*'/gi, "")
+    .replace(/\s(?:src|href|srcset|style)\s*=\s*[^\s>]+/gi, "");
+  return html;
+}
+
+function shareCardDocument(bodyHtml) {
+  return `<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#EBE7DF}
+body{padding:20px;font-family:Arial,Helvetica,sans-serif;color:#101828}
+.shared-trainee-card,.scenario-paper{width:900px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:32px;color:#101828}
+h2{font-size:25px;line-height:1.25;margin:8px 0 18px;color:#101010}
+h3{font-size:18px;margin:0 0 12px;color:#101828}
+h4{font-size:14px;margin:20px 0 8px;color:#101828}
+p,li{font-size:13px;line-height:1.55;color:#273248}
+.scenario-meta-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.chip,.status-badge{display:inline-block;background:#F1EEE7;border:1px solid #D7D0C6;border-radius:3px;padding:5px 8px;font-size:11px;color:#454949}
+.support-chip{background:#EDF6F5;color:#00484F;border-color:#C6DFDC}
+.support-level{font-size:11px;color:#006099;font-weight:700;margin-top:2px}
+.scenario-intro{font-size:14px;line-height:1.65;color:#344054;margin:0 0 24px}
+.scenario-section{margin:24px 0}
+.section-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#00484F;margin-bottom:6px}
+.call-section{background:#EBE7DF;border-left:5px solid #68ACAA;padding:18px 20px}
+.call-section p{margin:0;line-height:1.7}
+.glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.glance-card{background:#fff;border:1px solid #D9D4CA;border-radius:9px;padding:13px;min-height:88px}
+.glance-card.wide{grid-column:1/-1}
+.glance-card>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667085;font-weight:700}
+.glance-card>strong{display:block;font-size:13px;line-height:1.4;color:#101828;margin:4px 0}
+.glance-card>small{display:block;font-size:11px;line-height:1.35;color:#667085}
+.task-checklist{list-style:none;padding:0;margin:0}
+.task-checklist li{display:flex;gap:10px;line-height:1.5;padding:9px 0;border-bottom:1px solid #ECE8E0}
+.task-checklist li:last-child{border-bottom:0}
+.check-box{display:block;width:16px;height:16px;border:1.5px solid #006099;border-radius:3px;flex:0 0 16px;margin-top:2px}
+.details-section{border-top:1px solid #DED9CF;padding-top:22px}
+.detail-list{padding-left:22px}.detail-list li{margin:5px 0;line-height:1.45}
+.instruction-strip{background:#EDF6F5;border-left:4px solid #68ACAA;padding:12px 14px;margin:12px 0 18px}
+.instruction-strip strong{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px}
+.instruction-strip span{display:block;font-size:13px;line-height:1.5;margin-top:4px}
+.payment-section{background:#FFFBef;border:1px solid #E6CD88;border-radius:10px;padding:16px 18px}
+.scenario-payment-card{border:1px solid #E6CD88;background:#FFFCF5;border-radius:8px;padding:14px}
+.training-only-label{font-size:10px;font-weight:700;letter-spacing:1px;color:#9A6700}
+.end-call-section{background:#F7F3EC;border-radius:10px;padding:18px 20px}
+.closing-card{margin-top:14px;border-top:1px solid #DDD5C6;padding-top:13px}
+.closing-card strong,.closing-card span{display:block;margin:4px 0}
+.share-expanded-section{border:1px solid #D7D2C8;border-radius:10px;margin:22px 0;background:#fff;overflow:hidden}
+.share-expanded-heading{padding:13px 16px;font-size:14px;font-weight:700;background:#F7F3EC;color:#101828}
+.support-body{padding:14px 18px 16px}
+.support-list{columns:2;column-gap:28px;padding-left:22px}.support-list li{margin:0 0 8px}
+.independent-callout{padding:14px 16px;background:#F7F3EC;border-left:4px solid #E6CD88}
+.trainer-section{display:none!important}
+</style></head><body>${bodyHtml}</body></html>`;
+}
 
 async function handleSailings(request, reqUrl, env) {
   const manual = reqUrl.searchParams.get("url");
