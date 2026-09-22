@@ -99,7 +99,7 @@ const airPrograms = {
 };
 
 function airProgramMeta(value){
-  return airPrograms[value]||airPrograms.bundled;
+  return airPrograms[value]||null;
 }
 
 function bundledAirEligibility(d){
@@ -125,8 +125,9 @@ function defaultAirProgramForMeta(meta){
   if(text.includes("air choice plus"))return "air_choice_plus";
   if(text.includes("air choice"))return "air_choice";
   if(text.includes("independent air"))return "independent_no_flights";
-  if(text.includes("bundled air")||text.includes("air deviation"))return "bundled";
-  return "bundled";
+  if(text.includes("bundled air")||text.includes("airprom3"))return "bundled";
+  if(text.includes("air deviation"))return "bundled";
+  return "";
 }
 
 function isAirFocus(meta){
@@ -149,6 +150,13 @@ function updateAirProgramPreview(){
   const meta=airProgramMeta(program);
   const trip=$("airTripType").value;
   $("airOneWayDirectionField").classList.toggle("hidden-field",trip!=="one_way");
+
+  if(!meta){
+    $("airTransferHint").className="air-transfer-hint neutral";
+    $("airTransferHint").innerHTML="<strong>Select an Air Program</strong><span>Choose the NCL Air Program that applies to this scenario. Bundled Air / AIRPROM3 remains available here as an option for eligible select Pride of America sailings.</span>";
+    $("airProgramPreview").innerHTML='<div class="air-preview-title">Choose an NCL Air Program</div><p class="air-empty-copy">Program-specific terms will appear here after you make a selection.</p>';
+    return;
+  }
 
   const hint=$("airTransferHint");
   hint.className=`air-transfer-hint ${meta.nclAir?"important":"neutral"}`;
@@ -187,6 +195,13 @@ function syncAirPanelFromScenario(applyDefault=false){
 function airScenarioHtml(d){
   if(!d.airEnabled)return "";
   const meta=airProgramMeta(d.airProgram);
+  if(!meta){
+    return `<section class="scenario-section air-output-section">
+      <div class="section-label">AIR PROGRAM</div>
+      <h3>NCL Air Program Required</h3>
+      <div class="air-scenario-callout"><strong>Trainer action:</strong><span>Select the applicable NCL Air Program before assigning this scenario.</span></div>
+    </section>`;
+  }
   const gateway=d.airGateway?`<p><strong>Gateway / Airport(s):</strong> ${escapeHtml(d.airGateway)}</p>`:"";
   const bundledEligibility=d.airProgram==="bundled"
     ? `<div class="air-scenario-callout air-eligibility-callout"><strong>Bundled Air eligibility:</strong><span>${escapeHtml(bundledAirEligibility(d).message)}</span></div>`
@@ -233,7 +248,7 @@ const scenarioCatalog = {
     10: [
       {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
       {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
-      {name:"Bundled Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent reservation with bundled air and ground-transfer requirements, review air terms, document special requests, process payment, and send the correct confirmation."}
+      {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent reservation with NCL Air and ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
       {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
@@ -264,12 +279,12 @@ const scenarioCatalog = {
     10: [
       {name:"Dining, Ent & Spa",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing reservation, add FAS dining/internet/shore excursions and Essentials TP as appropriate, collect required payment, make dining reservations, and notate changes."},
       {name:"Amenities",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Add paid onboard amenities, complete the card message fields, collect payment, notate the reservation, and send the amenity invoice."},
-      {name:"Bundled Air / Ground Transfers",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"new",objective:"Build a reservation with bundled air and ground transfers, review air terms, apply CruiseNext, add special requests/celebration details, and document the booking."},
+      {name:"NCL Air & Ground Transfers",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"new",objective:"Build a reservation with NCL Air and ground transfers, select the appropriate Air Program, review applicable air terms, apply CruiseNext, add special requests/celebration details, and document the booking."},
       {name:"Air Deviations",payment:"Amenity Payment",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service bundled air with deviation requests, review applicable terms/fees, update the reservation, collect any required payment, and document the change."},
       {name:"Cancellations / Reinstatements",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Cancel a reservation after verification, explain refund timing and card refund details, then practice reinstatement and identify any fare/category/stateroom/promotion changes."}
     ],
     11: [
-      {name:"Hotel",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Follow up on the Bundled Air/Ground Transfer reservation and add a two-night pre-cruise hotel in the Land tab, then recap and notate the change."},
+      {name:"Hotel",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Follow up on the NCL Air/Ground Transfer reservation and add a two-night pre-cruise hotel in the Land tab, then recap and notate the change."},
       {name:"Cruisetours",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create a pre-cruisetour reservation with FAS/PPSRVCHG, Norwegian Care, bundled air and special requests, take necessary payment, and send confirmation."},
       {name:"Air Choice",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardSesame",commenting:true,difficulty:"Advanced",kind:"new",objective:"Practice Interactive Air/Air Choice, remove or adjust transfers, explain flexible-air terms, handle CruiseNext/deposit questions, take required payment, and document the reservation."}
     ]
@@ -346,15 +361,67 @@ function currentTrainingCard(){
   };
 }
 
+function guestServicesAgencyInfo(value){
+  const agency=String(value||"").trim();
+  if(agency==="5")return {type:"direct_us",caller:"direct_guest",label:"Direct Guest — US",display:"Agency 5 • Direct Guest (US)"};
+  if(agency==="7")return {type:"direct_ca",caller:"direct_guest",label:"Direct Guest — Canada",display:"Agency 7 • Direct Guest (Canada)"};
+  if(agency)return {type:"travel_agent",caller:"travel_agent",label:"Travel Agent Booking",display:`Travel Agent • Agency ID / Phone: ${agency}`};
+  return {type:"unknown",caller:"",label:"Booking Source Not Set",display:"Agency / booking identifier not entered"};
+}
+
+function guestServicesAgencyDisplay(value){
+  return guestServicesAgencyInfo(value).display;
+}
+
+function syncAgencyCallerLogic(){
+  const dept=$("department")?.value;
+  const outbound=dept==="Outbound Sales";
+  const agency=$("agency");
+  if(!agency)return;
+
+  if(outbound){
+    agency.readOnly=true;
+    agency.value=$("marketAgency")?.value||marketAgencies[0][1];
+    $("agencyHint").textContent="Outbound agency is set by the selected Market / Currency.";
+    $("agencyField")?.classList.add("agency-locked");
+  }else{
+    agency.readOnly=false;
+    $("agencyHint").textContent="Agency 5 = Direct Guest (US) • Agency 7 = Direct Guest (Canada) • Travel Agent booking = enter the Travel Agent's Agency ID or phone number.";
+    $("agencyField")?.classList.remove("agency-locked");
+  }
+
+  if(dept==="Guest Services" && $("reservationWorkflow")?.value==="modify"){
+    const info=guestServicesAgencyInfo(agency.value);
+    const caller=$("gdprCallerType");
+    const hint=$("gdprCallerHint");
+
+    if(info.type==="direct_us" || info.type==="direct_ca"){
+      caller.value="direct_guest";
+      caller.disabled=true;
+      if(hint)hint.textContent=`${info.label}: GDPR caller type is automatically Direct Guest.`;
+    }else{
+      caller.disabled=false;
+      if(caller.value==="direct_guest")caller.value="";
+      if(hint)hint.textContent="Travel Agent booking: enter the Travel Agent's Agency ID or phone number above and select Travel Agent. PCC, Direct Group, Casino, and other caller types can still be selected when applicable.";
+    }
+  }else{
+    $("gdprCallerType").disabled=false;
+    if($("gdprCallerHint"))$("gdprCallerHint").textContent="";
+  }
+
+  updateGdprPreview();
+}
+
 function updateDepartmentUI(){
   const dept=$("department").value;
   const outbound=dept==="Outbound Sales";
   $("marketAgencyField").classList.toggle("hidden-field",!outbound);
   if(outbound){
     $("agency").value=$("marketAgency").value||marketAgencies[0][1];
-  }else{
+  }else if(!$("agency").value || $("agency").readOnly){
     $("agency").value="5";
   }
+  syncAgencyCallerLogic();
   updateScenarioFocus();
   updateGdprPreview();
 }
@@ -701,6 +768,7 @@ function updateWorkflowUI(applyDefaults=false){
     $("guest2").value="";
   }
   updateModificationTypeUI(applyDefaults);
+  syncAgencyCallerLogic();
   updateGdprPreview();
 }
 function paymentActionNeedsCard(){
@@ -877,6 +945,7 @@ $("airTripType").addEventListener("change",updateAirProgramPreview);
 $("airOneWayDirection").addEventListener("change",updateAirProgramPreview);
 $("gdprCallerType").addEventListener("change",updateGdprPreview);
 $("directGroupMarket").addEventListener("change",updateGdprPreview);
+$("agency").addEventListener("input",syncAgencyCallerLogic);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("resetTrainingCardBtn").addEventListener("click",renderTrainingCard);
@@ -1244,8 +1313,9 @@ function scenarioData(){
     directGroupMarket:$("directGroupMarket")?.value||"direct_groups_sot",
     difficulty:$("difficulty").value,
     guestCount:+$("guestCount").value,
-    agency:$("agency").value,
-    market:$("department").value==="Outbound Sales"?selectedMarketLabel():"Agency 5",
+    agency:$("agency").value.trim(),
+    bookingSource:$("department").value==="Guest Services"?guestServicesAgencyInfo($("agency").value).type:"outbound_market",
+    market:$("department").value==="Outbound Sales"?selectedMarketLabel():guestServicesAgencyInfo($("agency").value).label,
     guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
     latitudesNumbers:collectLatitudesNumbers(),
     pastGuestFlags:collectPastGuestFlags(),
@@ -1254,7 +1324,7 @@ function scenarioData(){
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     airEnabled:$("airToggle")?.checked||false,
-    airProgram:$("airProgram")?.value||"bundled",
+    airProgram:$("airProgram")?.value||"",
     airTripType:$("airTripType")?.value||"round_trip",
     airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",
     airGateway:$("airGateway")?.value.trim()||"",
@@ -1292,9 +1362,10 @@ function focusConsiderations(d){
   if(name.includes("ta booking")||d.curriculumKind==="ta") items.push("What information must the travel agent provide before pricing or creating a reservation?","Where is commission displayed and what servicing restrictions apply to a travel-agent booking?");
   if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
-    items.push(`Confirm the selected ${airMeta.label} terms, ${airTripLabel(d)} itinerary, payment/deposit timing, and transfer handling.`);
+    if(!airMeta)items.push("Select the applicable NCL Air Program before releasing the scenario.");
+    else items.push(`Confirm the selected ${airMeta.label} terms, ${airTripLabel(d)} itinerary, payment/deposit timing, and transfer handling.`);
     if(d.airProgram==="bundled")items.push("Verify that the selected sailing is one of the select Pride of America sailings eligible for Bundled Air / AIRPROM3.");
-    if(airMeta.nclAir)items.push("Verify the trainee removes the pre-cruise transfer because the NCL Air arrival is at least one day prior.");
+    if(airMeta?.nclAir)items.push("Verify the trainee removes the pre-cruise transfer because the NCL Air arrival is at least one day prior.");
   }else if(name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable land terms, deposit requirements, confirmation timing, and transfer details.");
   if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
   if(name.includes("amenities")||name.includes("dining")) items.push("Is payment due immediately for the selected add-on?","Which confirmation or amenity invoice must be sent after the transaction?");
@@ -1401,8 +1472,13 @@ function customerStoryHtml(d,meta,sailText,guestNames){
       ? ` Before servicing the reservation, complete GDPR verification for the ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"selected caller type")}.`
       :"";
 
+    const source=d.department==="Guest Services"?guestServicesAgencyInfo(d.agency):null;
     let callerLead="A guest contacts Norwegian Cruise Line";
-    if(d.gdprCallerType==="travel_agent"||d.gdprCallerType==="ta_group"){
+    if(source?.type==="direct_us"){
+      callerLead="A direct guest contacts Norwegian Cruise Line";
+    }else if(source?.type==="direct_ca"){
+      callerLead="A direct guest from Canada contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="travel_agent"||d.gdprCallerType==="ta_group"){
       callerLead="A travel advisor contacts Norwegian Cruise Line";
     }else if(d.gdprCallerType==="travel_agency_guest"){
       callerLead="A travel agency guest contacts Norwegian Cruise Line";
@@ -1424,6 +1500,16 @@ function customerStoryHtml(d,meta,sailText,guestNames){
   const primary=guestNames[0]||"The guest";
   const companion=guestNames[1]||"";
   const names=companion?`<strong>${escapeHtml(primary)}</strong> and <strong>${escapeHtml(companion)}</strong>`:`<strong>${escapeHtml(primary)}</strong>`;
+
+  if(d.department==="Guest Services"){
+    const source=guestServicesAgencyInfo(d.agency);
+    if(source.type==="direct_us" || source.type==="direct_ca"){
+      return `<p>${names} are calling directly to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    }
+    if(source.type==="travel_agent"){
+      return `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    }
+  }
 
   if(meta.kind==="ta"){
     return `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
@@ -1516,8 +1602,12 @@ function fullTaskList(d,meta){
     tasks.push(modificationTaskText(d));
     if(d.airEnabled){
       const airMeta=airProgramMeta(d.airProgram);
-      tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
-      if(airMeta.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's hotel and ground-transportation responsibility.");
+      if(!airMeta){
+        tasks.push("Select the applicable NCL Air Program before completing the Air workflow.");
+      }else{
+        tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
+      }
+      if(airMeta?.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's hotel and ground-transportation responsibility.");
       if(d.airProgram==="bundled"){
         tasks.push("Confirm the selected sailing is an eligible Pride of America sailing before applying Bundled Air / AIRPROM3.");
         if(d.airTripType==="one_way")tasks.push("For one-way Bundled Air, use 50% of the applicable promotional air pricing for the selected gateway.");
@@ -1553,8 +1643,9 @@ function fullTaskList(d,meta){
   if(name.includes("multiple"))tasks.push("Link related reservations with TWITH when required and verify room relationship/authorized-person notes.");
   if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
-    tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
-    if(airMeta.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's responsibility for the pre-cruise hotel and related ground transportation.");
+    if(!airMeta)tasks.push("Select the applicable NCL Air Program before completing the Air workflow.");
+    else tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
+    if(airMeta?.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's responsibility for the pre-cruise hotel and related ground transportation.");
     if(d.airProgram==="bundled"){
         tasks.push("Confirm the selected sailing is an eligible Pride of America sailing before applying Bundled Air / AIRPROM3.");
         if(d.airTripType==="one_way")tasks.push("For one-way Bundled Air, use 50% of the applicable promotional air pricing for the selected gateway.");
@@ -1651,9 +1742,11 @@ function commonMistakes(d,meta){
   if(n.includes("multiple"))items.unshift("Forgetting TWITH/linked-reservation steps or Authorized Person notation.");
   if(n.includes("norwegian"))items.unshift("Giving a travel-protection deadline without checking final-payment timing.");
   if(d.airEnabled){
-    items.unshift(`Using the wrong terms for ${airProgramMeta(d.airProgram).label} or missing the selected ${airTripLabel(d)} itinerary.`);
+    const airMeta=airProgramMeta(d.airProgram);
+    if(!airMeta)items.unshift("Not selecting the applicable NCL Air Program before assigning the scenario.");
+    else items.unshift(`Using the wrong terms for ${airMeta.label} or missing the selected ${airTripLabel(d)} itinerary.`);
     if(d.airProgram==="bundled")items.unshift("Using Bundled Air / AIRPROM3 on a sailing that has not been verified as an eligible Pride of America sailing.");
-    if(airProgramMeta(d.airProgram).nclAir)items.unshift("Leaving a pre-cruise transfer on an NCL Air reservation even though the flight is scheduled to arrive one day before embarkation.");
+    if(airMeta?.nclAir)items.unshift("Leaving a pre-cruise transfer on an NCL Air reservation even though the flight is scheduled to arrive one day before embarkation.");
   }
   if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
   return [...new Set(items)];
@@ -1708,7 +1801,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
         <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
         <li><strong>Reservation:</strong> ${escapeHtml(d.existingReservationNumber||"Use prior training reservation")}</li>
         <li><strong>Guest Name(s):</strong> Use the guest name(s) already on the existing training reservation</li>
-        <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
+        <li><strong>Booking Source:</strong> ${escapeHtml(agencyDisplay)}</li>
         <li><strong>Modification:</strong> ${escapeHtml(modificationLabel(d.modificationType))}</li>
         ${d.department==="Guest Services"?`<li><strong>GDPR Caller Type:</strong> ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"Not selected")}</li>`:""}
         ${d.gdprCallerType==="direct_group"?`<li><strong>Direct Group Route:</strong> ${escapeHtml(directGroupRoute(d.directGroupMarket).label)} • SOT #${escapeHtml(directGroupRoute(d.directGroupMarket).sot)}</li>`:""}
@@ -1717,7 +1810,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
         ${addedGuest}
       </ul>
       ${stateroom}
-      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram).label)} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
+      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram)?.label||"Select NCL Air Program")} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
       ${addOns.length?`<h4>Additional Components</h4><p>${escapeHtml(addOns.join(" • "))}</p>`:""}
@@ -1731,7 +1824,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
       <ul class="detail-list">
         <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
         <li><strong>Reservation Workflow:</strong> Create New Reservation</li>
-        <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
+        <li><strong>Booking Source:</strong> ${escapeHtml(agencyDisplay)}</li>
         ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
         <li><strong>Total Guests:</strong> ${d.guestCount}</li>
       </ul>
@@ -1743,7 +1836,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
       <h4>Guest Information</h4>
       <ul class="detail-list">${guestInfoItems}</ul>
 
-      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram).label)} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
+      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram)?.label||"Select NCL Air Program")} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
 
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
@@ -1795,7 +1888,7 @@ function resetScenarioForm(){
   $("travelToggle").checked=false;
   $("pscToggle").checked=false;
   $("airToggle").checked=false;
-  $("airProgram").value="bundled";
+  $("airProgram").value="";
   $("airTripType").value="round_trip";
   $("airOneWayDirection").value="to_cruise";
   $("airGateway").value="";
@@ -1875,7 +1968,7 @@ function generateScenario(){
     return `<li><strong>Guest ${i+1}:</strong> ${escapeHtml(guestLabel(i))} — ${status}</li>`;
   }).join("");
   const tasks=traineeTaskList(d,meta);
-  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:`Agency ${d.agency}`;
+  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:guestServicesAgencyDisplay(d.agency);
 
   const html=`
     <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
@@ -1956,8 +2049,24 @@ function runValidator(){
   }
 
   if(d.department==="Guest Services"){
-    if(String(d.agency)!=="5")add("error","Guest Services agency mismatch","Current Guest Services scenarios use Agency 5.");
-    else add("passed","Guest Services agency","Agency 5 is selected.");
+    const source=guestServicesAgencyInfo(d.agency);
+    if(source.type==="unknown"){
+      add("error","Agency / booking identifier missing","Use Agency 5 for a US Direct Guest, Agency 7 for a Canadian Direct Guest, or enter the Travel Agent's Agency ID / phone number.");
+    }else if(source.type==="direct_us"){
+      add("passed","Guest Services booking source","Agency 5 • Direct Guest (US)");
+      if(d.reservationWorkflow==="modify" && d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 5 is always a Direct Guest. Use the Direct Guest GDPR requirements.");
+    }else if(source.type==="direct_ca"){
+      add("passed","Guest Services booking source","Agency 7 • Direct Guest (Canada)");
+      if(d.reservationWorkflow==="modify" && d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 7 is always a Direct Guest from Canada. Use the Direct Guest GDPR requirements.");
+    }else{
+      add("passed","Guest Services Travel Agent identifier",`Agency ID / Phone: ${d.agency}`);
+      if(d.reservationWorkflow==="modify" && ["travel_agent","ta_group"].includes(d.gdprCallerType)){
+        add("passed","Travel Agent caller setup","Travel Agent booking uses an Agency ID / phone number and the Travel Agent GDPR path.");
+      }
+      if(d.reservationWorkflow==="modify" && d.gdprCallerType==="direct_guest"){
+        add("error","Agency / caller mismatch","Direct Guest bookings should use Agency 5 (US) or Agency 7 (Canada), not a Travel Agent identifier.");
+      }
+    }
   }else if(d.department==="Outbound Sales"){
     if(!d.agency)add("error","Outbound agency missing","Choose the market/currency agency before assigning the scenario.");
     else add("passed","Outbound market agency selected",`${d.market}`);
@@ -1971,6 +2080,9 @@ function runValidator(){
       const profile=gdprProfile(d.gdprCallerType);
       if(!profile)add("error","GDPR caller type required","Guest Services modifications must identify the caller / reservation type so the correct GDPR verification can be completed.");
       else add("passed","GDPR verification required",`${profile.label} • Ask primary items first • Reservation Number always mandatory${["travel_agent","ta_group"].includes(d.gdprCallerType)?" • Agency identifier mandatory for Travel Agent path":""}`);
+      if(["travel_agent","ta_group"].includes(d.gdprCallerType) && ["5","7"].includes(String(d.agency).trim())){
+        add("error","Travel Agent identifier required","Agency 5 and Agency 7 are Direct Guest bookings. Enter the Travel Agent's Agency ID or phone number for a Travel Agent / TA Group scenario.");
+      }
       if(d.gdprCallerType==="pcc_guest")add("info","PCC Guest handling included",pccActionText(d));
       if(d.gdprCallerType==="direct_group")add("info","Direct Group transfer included",directGroupActionText(d));
     }
@@ -1997,8 +2109,12 @@ function runValidator(){
 
   if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
-    add("passed","Air program selected",`${airMeta.label} • ${airTripLabel(d)}`);
-    if(airMeta.nclAir)add("info","Pre-cruise transfer reminder","Remove the pre-cruise transfer because NCL Air guests are scheduled to arrive at least one day before embarkation. Review hotel and related ground-transportation responsibility.");
+    if(!airMeta){
+      add("error","NCL Air Program not selected","Choose the applicable NCL Air Program before assigning the scenario.");
+    }else{
+      add("passed","Air program selected",`${airMeta.label} • ${airTripLabel(d)}`);
+      if(airMeta.nclAir)add("info","Pre-cruise transfer reminder","Remove the pre-cruise transfer because NCL Air guests are scheduled to arrive at least one day before embarkation. Review hotel and related ground-transportation responsibility.");
+    }
     if(d.airProgram==="bundled"){
       const eligibility=bundledAirEligibility(d);
       if(eligibility.status==="ineligible")add("error","Bundled Air sailing is not eligible",eligibility.message);
@@ -3174,7 +3290,7 @@ window.openSaved=(id)=>{
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;
   $("airToggle").checked=!!x.airEnabled;
-  $("airProgram").value=x.airProgram||"bundled";
+  $("airProgram").value=x.airProgram||"";
   $("airTripType").value=x.airTripType||"round_trip";
   $("airOneWayDirection").value=x.airOneWayDirection||"to_cruise";
   $("airGateway").value=x.airGateway||"";
@@ -3188,6 +3304,7 @@ window.openSaved=(id)=>{
     $("trainingCardCcv").value=x.card.ccv||"";
     $("trainingCardAddress").value=x.card.address||"";
   }
+  syncAgencyCallerLogic();
   renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
 };
 $("exportBtn").onclick=()=>{
