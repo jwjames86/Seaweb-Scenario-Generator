@@ -214,3 +214,33 @@ The generator and exported scenario now visually separate:
 2. **IF NEEDED — ADDITIONAL VERIFICATION** items
 
 Mandatory items are clearly labeled.
+
+
+## V1.9.7 – Trainer Instructions, New Scenario Reset, and Editable Payment
+
+### Start New Scenario
+Scenario Generator now includes **Start New Scenario**. It clears:
+- current generated scenario
+- selected sailing
+- guest names and Latitudes selections
+- existing reservation / modification details
+- GDPR selections
+- pricing, confirmation email and trainer notes
+- task checkboxes
+- payment action and edited training-card information
+- validator results
+
+The trainer returns to a clean draft and chooses a new Scenario Focus before generating.
+
+### Trainer instructions
+- Dashboard includes an expanded **Trainer Instructions — How to Use the Seaweb Scenario Generator** walkthrough.
+- Real Sailing Search, Scenario Generator, Scenario Validator and Saved Scenario Library each have their own collapsible **How to Use This Tab** instructions.
+- Instruction panels are trainer-only and are hidden in Trainee View.
+
+### Editable training credit-card information
+When a scenario requires payment:
+- Choose a predefined Training Card Profile as a starting point.
+- Edit Card Number, Expiration, CCV and Billing Address directly.
+- **Reset to Profile** restores the original profile values.
+- Generated scenarios use the edited values and clearly label them **TRAINING / TEST DATA ONLY**.
+- Saved scenarios restore the edited payment values.
