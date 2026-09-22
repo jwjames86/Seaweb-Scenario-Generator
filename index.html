@@ -4,13 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Seaweb Scenario Generator</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=1.8.8" />
 </head>
 <body>
   <header class="topbar">
-    <div>
-      <div class="eyebrow">NORWEGIAN CRUISE LINE • TRAINING PROTOTYPE</div>
+    <div class="brand-lockup">
+      <img src="/ncl-brand-lockup.png" alt="Norwegian Cruise Line — It’s Different Out Here" />
+    </div>
+    <div class="topbar-copy">
+      <div class="eyebrow">TRAINING &amp; DEVELOPMENT • SEAweb</div>
       <h1>Seaweb Scenario Generator</h1>
+      <p>Build, validate and reuse realistic training scenarios.</p>
+      <div class="brand-accent-bars" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
     <div class="mode-switch" role="group" aria-label="View mode">
       <button id="trainerModeBtn" class="active">Trainer View</button>
@@ -26,8 +34,8 @@
       <button class="nav" data-page="validator">Scenario Validator</button>
       <button class="nav" data-page="library">Saved Scenario Library</button>
       <div class="sidebar-note">
-        <strong>V1 Storage</strong>
-        <span>Saved scenarios stay in this browser unless exported.</span>
+        <strong>Local Scenario Storage</strong>
+        <span>Saved scenarios stay in this browser unless exported. Regenerate older scenarios to use the V1.6 trainee layout.</span>
       </div>
     </aside>
 
@@ -35,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1 • No Sign-In Required</span>
+            <span class="pill">V1.8.8 • Legal Export + Mixed Guest Status</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -58,7 +66,7 @@
           <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
         </div>
 
-        <div class="section-head"><div><h3>Starter Templates</h3><p>Use as a starting point, then connect to a real sailing.</p></div></div>
+        <div class="section-head"><div><h3>Department Quick Starts</h3><p>Jump directly into a Day 6–11 Guest Services or Outbound Sales training focus.</p></div></div>
         <div id="starterTemplates" class="card-grid"></div>
       </section>
 
@@ -100,10 +108,25 @@
               <label class="anchor-card"><input type="radio" name="searchAnchor" value="departure" /> Embarkation Port</label>
               <label class="anchor-card"><input type="radio" name="searchAnchor" value="ship" /> Ship</label>
             </div>
-            <label id="anchorFieldLabel">Destination
-              <input id="searchAnchorValue" placeholder="Example: Caribbean" list="anchorSuggestions" autocomplete="off" />
-            </label>
-            <datalist id="anchorSuggestions"></datalist>
+
+            <div class="smart-field">
+              <label id="anchorFieldTitle" for="searchAnchorValue">Destination</label>
+              <div class="smart-select" id="anchorSelect">
+                <button type="button" id="anchorSelectTrigger" class="smart-select-trigger" aria-haspopup="listbox" aria-expanded="false">
+                  <span id="anchorSelectIcon" class="smart-select-leading" aria-hidden="true"></span>
+                  <span id="anchorSelectText" class="smart-select-text">Select or type a destination…</span>
+                  <span class="smart-select-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div id="anchorSelectMenu" class="smart-select-menu" role="dialog" aria-label="Search options">
+                  <div class="smart-select-search">
+                    <span class="search-glyph" aria-hidden="true">⌕</span>
+                    <input id="searchAnchorValue" autocomplete="off" placeholder="Search destinations…" aria-controls="anchorOptions" />
+                  </div>
+                  <div id="anchorOptions" class="smart-select-options" role="listbox"></div>
+                  <div class="smart-select-footer"><span id="anchorOptionCount"></span><span>Type to filter • Enter to select</span></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="actions">
@@ -127,7 +150,7 @@
 
       <section id="generator" class="page">
         <div class="section-head">
-          <div><h2>Scenario Generator</h2><p>Create a structured training exercise from a real sailing or trainer-entered details.</p></div>
+          <div><h2>Scenario Generator</h2><p>Create a structured Day 6–11 exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
 
@@ -135,17 +158,27 @@
           <div class="panel">
             <div id="selectedSailingSummary" class="selected-sailing empty">No real sailing selected yet.</div>
 
-            <div class="form-grid">
-              <label>Scenario Type
-                <select id="scenarioType">
-                  <option>Basic Reservation</option>
-                  <option>Payments</option>
-                  <option>FCC / CruiseNext & Coupons</option>
-                  <option>Special Request</option>
-                  <option>Existing Reservation</option>
-                  <option>Modification</option>
-                  <option>Cancellation</option>
-                  <option>Upgrade</option>
+            <div class="form-grid curriculum-grid">
+              <label>Department
+                <select id="department">
+                  <option value="Guest Services">Guest Services</option>
+                  <option value="Outbound Sales">Outbound Sales</option>
+                </select>
+              </label>
+              <label>Training Day
+                <select id="trainingDay">
+                  <option value="6">Day 6</option><option value="7">Day 7</option><option value="8">Day 8</option>
+                  <option value="9">Day 9</option><option value="10">Day 10</option><option value="11">Day 11</option>
+                </select>
+              </label>
+              <label>Scenario Focus
+                <select id="scenarioType"></select>
+              </label>
+              <label>Scenario Approach
+                <select id="scenarioApproach">
+                  <option value="variation">Generate Variation</option>
+                  <option value="current">Current Training Focus</option>
+                  <option value="new">New Scenario Based on Skill</option>
                 </select>
               </label>
               <label>Difficulty
@@ -154,10 +187,13 @@
                 </select>
               </label>
               <label>Guests
-                <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option></select>
+                <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+              </label>
+              <label id="marketAgencyField" class="hidden-field">Outbound Market / Currency
+                <select id="marketAgency"></select>
               </label>
               <label>Agency
-                <input id="agency" value="5" />
+                <input id="agency" value="5" readonly />
               </label>
               <label>Guest 1
                 <input id="guest1" value="Maxim De Winter" />
@@ -168,19 +204,19 @@
               <label>Stateroom Category
                 <select id="category">
                   <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
-                  <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Random</option>
+                  <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
                 </select>
               </label>
               <label>Location Preference
-                <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option></select>
+                <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
               </label>
               <label>Side Preference
                 <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
               </label>
-              <label>Payment Action
+              <label>Payment / Booking Action
                 <select id="paymentAction">
-                  <option selected>Offer / Hold only</option><option>Minimum Deposit</option><option>Full Payment</option>
-                  <option>FCC / CruiseNext</option><option>Auto Final Payment discussion</option>
+                  <option>No Payment / Service Only</option><option selected>Offer / Hold only</option><option>Minimum Deposit</option><option>Initial Deposit</option><option>Full Payment</option>
+                  <option>FCC / CruiseNext</option><option>Amenity Payment</option><option>Auto Final Payment discussion</option><option>Refund / Reinstate</option>
                 </select>
               </label>
               <label>Advertised Pricing (optional)
@@ -189,6 +225,19 @@
               <label>Training Confirmation Email
                 <input id="confirmationEmail" value="training123@ncl.com" />
               </label>
+            </div>
+
+            <div id="curriculumNote" class="curriculum-note trainer-only"></div>
+
+            <div id="trainingCardPanel" class="payment-training-panel hidden-field">
+              <div class="payment-panel-head">
+                <div><strong>Training Credit Card Information</strong><span>Shown because this scenario requires a card payment.</span></div>
+                <span class="status-badge review">TRAINING / TEST DATA ONLY</span>
+              </div>
+              <label>Training Card Profile
+                <select id="trainingCardProfile"></select>
+              </label>
+              <div id="trainingCardPreview" class="training-card-preview"></div>
             </div>
 
             <fieldset>
@@ -200,6 +249,14 @@
               <label class="check"><input id="travelToggle" type="checkbox" /> Travel Protection discussion</label>
               <label class="check"><input id="pscToggle" type="checkbox" /> Prepaid Service Charges discussion</label>
             </fieldset>
+
+            <div id="latitudesNumberPanel" class="latitudes-number-panel hidden-field">
+              <div class="latitudes-panel-head">
+                <div><strong>Guest Status / Latitudes</strong><span>Choose which guests are past guests and which are new guests. Enter Latitudes numbers only for the guests marked as past guests.</span></div>
+                <span class="status-badge">MIXED GUEST TYPES OK</span>
+              </div>
+              <div id="latitudesGuestFields" class="latitudes-guest-fields"></div>
+            </div>
 
             <label>Trainer Notes
               <textarea id="trainerNotes" rows="4" placeholder="Internal trainer notes / answer-key reminders"></textarea>
@@ -214,8 +271,38 @@
           <div class="panel output-panel">
             <div class="output-toolbar">
               <span id="scenarioStatus" class="status-badge neutral">Draft</span>
-              <div>
-                <button id="copyScenarioBtn" class="tiny">Copy</button>
+              <div class="output-actions">
+                <div class="share-control" id="shareControl">
+                  <button id="shareScenarioBtn" class="tiny share-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
+                    Share Card <span aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="shareScenarioMenu" class="share-menu" role="menu">
+                    <button id="downloadScenarioPdfBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">PDF</span>
+                      <span><strong>Download PDF</strong><small>8.5 × 14 legal pages — same layout as the PNG export</small></span>
+                    </button>
+                    <button id="downloadTeamsPagesBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">▦</span>
+                      <span><strong>Download PNG Page Set</strong><small>8.5 × 14 legal PNG pages — same layout as the PDF export</small></span>
+                    </button>
+                    <button id="downloadCardImageBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">⇩</span>
+                      <span><strong>Download Full PNG</strong><small>One complete long image — best for email or saving as one file</small></span>
+                    </button>
+                    <button id="copyCardImageBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">▣</span>
+                      <span><strong>Copy as Image</strong><small>Quick paste for email or chat — preserves the look</small></span>
+                    </button>
+                    <button id="copyCardFormattedBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">A</span>
+                      <span><strong>Copy Editable</strong><small>Formatted text that recipients can select and copy</small></span>
+                    </button>
+                    <button id="copyScenarioBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">¶</span>
+                      <span><strong>Copy Plain Text</strong><small>Simple fallback with no card styling</small></span>
+                    </button>
+                  </div>
+                </div>
                 <button id="printScenarioBtn" class="tiny">Print</button>
                 <button id="saveScenarioBtn" class="tiny primary">Save</button>
               </div>
@@ -245,7 +332,11 @@
           </div>
         </div>
         <div class="panel">
-          <input id="librarySearch" placeholder="Search title, ship, destination, type..." />
+          <div class="library-filter-grid">
+            <select id="libraryDepartmentFilter"><option value="">All Departments</option><option>Guest Services</option><option>Outbound Sales</option></select>
+            <select id="libraryDayFilter"><option value="">All Days</option><option value="6">Day 6</option><option value="7">Day 7</option><option value="8">Day 8</option><option value="9">Day 9</option><option value="10">Day 10</option><option value="11">Day 11</option></select>
+            <input id="librarySearch" placeholder="Search title, skill, ship, destination..." />
+          </div>
           <div class="notice warning">Browser-local scenarios are device/browser specific. Export a JSON backup for safekeeping.</div>
         </div>
         <div id="libraryList" class="result-list"></div>
@@ -254,6 +345,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js"></script>
+  <script src="/app.js?v=1.8.8"></script>
 </body>
 </html>
