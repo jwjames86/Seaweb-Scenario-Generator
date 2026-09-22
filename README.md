@@ -121,3 +121,16 @@ This hotfix addresses two regressions introduced in V1.9.1:
 - Restores compact toolbar spacing so Share Card, Print and Save stay grouped together.
 - Replaces fixed viewport cropping with **actual rendered-card boundary detection**. The PNG and PDF now crop at the true bottom of the Trainer/Trainee scenario instead of retaining unused Browser Run viewport space.
 - Both Trainer and Trainee exports use the same tight content-fit behavior.
+
+
+## V1.9.3 – Full Focus List, Reservation Workflow, and View Printing
+
+- Removed the visible **Training Day** dropdown. Training day is now assigned automatically from the selected curriculum focus.
+- **Scenario Focus** now shows the full department curriculum in one grouped list, organized by Day 6–11.
+- Added **Reservation Workflow** with:
+  - Create New Reservation
+  - Modify Existing Reservation
+- The selected workflow changes the customer story, trainee task list, call-flow support, expected completion state, reference details, and validator output.
+- Saved scenarios preserve the selected workflow.
+- Added **Print Trainee View** and **Print Trainer View** inside Share Card.
+- The top Print button continues to print whichever view is currently active.
