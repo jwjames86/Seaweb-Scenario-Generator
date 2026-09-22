@@ -50,3 +50,8 @@ This hotfix fixes the cut-off pages seen in the Teams Page Set and PDF export.
 - PDF pages automatically choose **portrait or landscape** orientation per page to maximize readability.
 - Teams Page Set and PDF reuse the same cached rendered pages during the current scenario, reducing Cloudflare Browser Run requests and helping avoid rate-limit errors.
 - Copy as Image and Download Full PNG remain unchanged.
+
+
+## V1.8.5 – Teams / PDF Runtime Fix
+
+Restores the missing `makeTeamsPageClones()` function that was accidentally removed in V1.8.4. The V1.8.4 full-width and page-boundary fixes remain in place. This resolves the `makeTeamsPageClones is not defined` error for both **Download Teams Page Set** and **Download PDF**.
