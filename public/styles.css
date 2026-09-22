@@ -388,3 +388,27 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 
 
 /* V1.9.1 • Adaptive content-fit export. PDF/PNG height follows rendered content. */
+
+
+/* V1.9.2 • Restore right-side generator preview and compact toolbar */
+.two-col{
+  grid-template-columns:minmax(0,.98fr) minmax(0,1.02fr);
+  align-items:start;
+}
+.output-panel{
+  min-width:0;
+}
+.output-toolbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.output-actions{
+  margin-left:auto;
+  flex-wrap:nowrap;
+}
+@media(max-width:1050px){
+  .two-col{grid-template-columns:1fr}
+  .output-actions{flex-wrap:wrap}
+}

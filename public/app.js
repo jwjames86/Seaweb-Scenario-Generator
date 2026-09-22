@@ -1407,29 +1407,80 @@ async function cropAdaptiveExportBlob(blob){
   const width=img.naturalWidth||img.width;
   const height=img.naturalHeight||img.height;
 
-  // Worker document uses 20px body padding. Crop it away so the export ends
-  // exactly at the rendered content instead of carrying blank outer space.
-  const margin=20;
-  const sx=Math.min(margin,width-1);
-  const sy=Math.min(margin,height-1);
-  const sw=Math.max(1,width-(margin*2));
-  const sh=Math.max(1,height-(margin*2));
-
   const canvas=document.createElement("canvas");
-  canvas.width=sw;
-  canvas.height=sh;
-  const ctx=canvas.getContext("2d");
-  ctx.fillStyle="#ffffff";
-  ctx.fillRect(0,0,sw,sh);
-  ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+  canvas.width=width;
+  canvas.height=height;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  ctx.drawImage(img,0,0);
+
+  // Browser Run screenshots the full viewport even when the scenario is shorter.
+  // The page outside the export card uses the NCL sand background (#EBE7DF).
+  // Detect the real white export-card bounds and crop away that unused viewport.
+  const data=ctx.getImageData(0,0,width,height).data;
+  const sand=[235,231,223];
+  const differsFromSand=(x,y)=>{
+    const i=(y*width+x)*4;
+    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
+    if(a<220)return false;
+    return Math.abs(r-sand[0])+Math.abs(g-sand[1])+Math.abs(b-sand[2])>18;
+  };
+
+  // The export occupies nearly the full viewport width. Scan several columns so
+  // colored/white scenario content reliably identifies the top and bottom bounds.
+  const sampleXs=[
+    Math.max(0,Math.round(width*0.12)),
+    Math.max(0,Math.round(width*0.35)),
+    Math.max(0,Math.round(width*0.50)),
+    Math.max(0,Math.round(width*0.65)),
+    Math.max(0,Math.round(width*0.88))
+  ];
+
+  let top=0;
+  let bottom=height-1;
+
+  outerTop:
+  for(let y=0;y<height;y++){
+    for(const x of sampleXs){
+      if(differsFromSand(x,y)){top=y;break outerTop;}
+    }
+  }
+
+  outerBottom:
+  for(let y=height-1;y>=top;y--){
+    for(const x of sampleXs){
+      if(differsFromSand(x,y)){bottom=y;break outerBottom;}
+    }
+  }
+
+  // The body uses 20px horizontal padding. Remove it too so the resulting PNG
+  // is all scenario and no artificial surrounding canvas.
+  const left=20;
+  const right=Math.max(left+1,width-20);
+  const pad=2;
+  top=Math.max(0,top-pad);
+  bottom=Math.min(height-1,bottom+pad);
+
+  const cropWidth=Math.max(1,right-left);
+  const cropHeight=Math.max(1,bottom-top+1);
+
+  const out=document.createElement("canvas");
+  out.width=cropWidth;
+  out.height=cropHeight;
+  const octx=out.getContext("2d");
+  octx.fillStyle="#ffffff";
+  octx.fillRect(0,0,cropWidth,cropHeight);
+  octx.drawImage(canvas,left,top,cropWidth,cropHeight,0,0,cropWidth,cropHeight);
 
   return await new Promise((resolve,reject)=>{
-    canvas.toBlob(b=>b?resolve(b):reject(new Error("Could not prepare the content-fit export.")),"image/png");
+    out.toBlob(
+      b=>b?resolve(b):reject(new Error("Could not prepare the tightly cropped export.")),
+      "image/png"
+    );
   });
 }
 
 async function getAdaptiveCurrentViewPng(){
-  const key=`${currentSharePageCacheKey()}|adaptive-v191`;
+  const key=`${currentSharePageCacheKey()}|adaptive-v192`;
   const mode=state.mode;
   if(adaptiveExportCache.key===key && adaptiveExportCache.mode===mode && adaptiveExportCache.blob){
     return adaptiveExportCache.blob;
