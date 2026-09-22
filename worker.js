@@ -57,7 +57,7 @@ async function handleShareCard(request, env) {
   try {
     const shot = await env.BROWSER.quickAction("screenshot", {
       html: page,
-      viewport: { width: 940, height: 1400 },
+      viewport: { width: 1220, height: 1400 },
       screenshotOptions: { fullPage: true, type: "png" }
     });
 
@@ -106,7 +106,7 @@ function shareCardDocument(bodyHtml) {
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#EBE7DF}
 body{padding:20px;font-family:Arial,Helvetica,sans-serif;color:#101828}
-.shared-trainee-card,.scenario-paper{width:900px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:32px;color:#101828}
+.shared-trainee-card,.scenario-paper{width:1180px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:32px;color:#101828}
 h2{font-size:25px;line-height:1.25;margin:8px 0 18px;color:#101010}
 h3{font-size:18px;margin:0 0 12px;color:#101828}
 h4{font-size:14px;margin:20px 0 8px;color:#101828}
@@ -146,6 +146,14 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .support-body{padding:14px 18px 16px}
 .support-list{columns:2;column-gap:28px;padding-left:22px}.support-list li{margin:0 0 8px}
 .independent-callout{padding:14px 16px;background:#F7F3EC;border-left:4px solid #E6CD88}
+.latitudes-output-section{background:#F3F8F7;border-left:5px solid #68ACAA;padding:18px 20px;border-radius:0 10px 10px 0}
+.latitudes-output-intro{margin:0 0 12px;color:#667085;font-size:12px}
+.latitudes-output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.latitudes-output-card{background:#fff;border:1px solid #D1E3E0;border-radius:8px;padding:11px 12px}
+.latitudes-output-card>span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:#667085;font-weight:700}
+.latitudes-output-card>strong{display:block;font-size:12px;color:#101828;margin:3px 0}
+.latitudes-output-card>small{display:block;font-size:11px;color:#006099;font-weight:600}
+.latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
 .trainer-section{display:none!important}
 </style></head><body>${bodyHtml}</body></html>`;
 }
