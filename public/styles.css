@@ -41,7 +41,7 @@ footer{padding:18px 28px;text-align:center;color:#667085;font-size:12px;border-t
 .trainee-mode .trainer-only{display:none!important}.trainee-mode #validator{display:none!important}.trainee-mode .sidebar .nav[data-page="validator"]{display:none}.trainee-mode .scenario-paper .trainer-section{display:none}
 @media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--line)}.sidebar-note{display:none}.two-col,.hero{grid-template-columns:1fr}.output-panel{position:static}.card-grid{grid-template-columns:repeat(2,1fr)}.search-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.topbar{padding:18px;align-items:flex-start;flex-direction:column}.content{padding:18px}.form-grid,.search-grid,.stat-grid,.card-grid{grid-template-columns:1fr}.hero{padding:22px}.hero h2{font-size:28px}.sidebar{padding:10px}.nav{white-space:nowrap}.inline-form{flex-direction:column}}
-@media print{.topbar,.sidebar,footer,.output-toolbar,.section-head,.panel:not(.output-panel){display:none!important}.shell{display:block}.content{padding:0}.page{display:none!important}#generator.page{display:block!important}.two-col{display:block}.two-col>.panel:first-child{display:none}.output-panel{border:0;box-shadow:none;padding:0}.scenario-paper{border:0;padding:0}.trainer-section{display:none!important}}
+@media print{.topbar,.sidebar,footer,.output-toolbar,.section-head,.panel:not(.output-panel){display:none!important}.shell{display:block}.content{padding:0}.page{display:none!important}#generator.page{display:block!important}.two-col{display:block}.two-col>.panel:first-child{display:none}.output-panel{border:0;box-shadow:none;padding:0}.scenario-paper{border:0;padding:0}body:not(.print-trainer) .trainer-section{display:none!important}body.print-trainer .trainer-section{display:block!important}}
 
 /* Seaweb-style broad itinerary search */
 .seaweb-search-panel{border-top:4px solid #8dd7f0}
@@ -411,4 +411,45 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:1050px){
   .two-col{grid-template-columns:1fr}
   .output-actions{flex-wrap:wrap}
+}
+
+
+/* V1.9.3 • Full scenario focus list */
+.scenario-focus-field{
+  grid-column:1/-1;
+}
+#scenarioType{
+  min-height:265px;
+  padding:6px;
+  line-height:1.35;
+}
+#scenarioType optgroup{
+  font-weight:800;
+  color:#00484F;
+  padding-top:5px;
+}
+#scenarioType option{
+  color:#172033;
+  font-weight:600;
+  padding:6px 9px;
+}
+#scenarioType option:checked{
+  background:#DCEFED;
+}
+.field-hint{
+  display:block;
+  font-size:10px;
+  line-height:1.4;
+  font-weight:500;
+  color:#667085;
+}
+
+/* Explicit trainer / trainee printing from Share Card */
+@media print{
+  body.print-trainee .trainer-section{display:none!important}
+  body.print-trainer .trainer-section{display:block!important}
+  body.print-trainer .trainer-guide{
+    margin-top:20px!important;
+    break-before:auto;
+  }
 }

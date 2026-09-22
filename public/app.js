@@ -139,7 +139,9 @@ $("previewTraineeBtn").onclick=()=>{setMode("trainee");go("generator")};
 
 function currentFocusMeta(){
   const dept=$("department")?.value||"Guest Services";
-  const day=$("trainingDay")?.value||"6";
+  const selected=$("scenarioType")?.selectedOptions?.[0];
+  const day=selected?.dataset?.day||$("trainingDay")?.value||"6";
+  if($("trainingDay")) $("trainingDay").value=String(day);
   return (scenarioCatalog[dept]?.[day]||[]).find(x=>x.name===$("scenarioType")?.value) || null;
 }
 
@@ -172,12 +174,27 @@ function updateDepartmentUI(){
   updateScenarioFocus();
 }
 
-function updateScenarioFocus(preferred){
+function updateScenarioFocus(preferred,preferredDay){
   const dept=$("department").value;
-  const day=$("trainingDay").value;
-  const options=scenarioCatalog[dept]?.[day]||[];
-  $("scenarioType").innerHTML=options.map(x=>`<option value="${escapeAttr(x.name)}">${escapeHtml(x.name)}</option>`).join("");
-  if(preferred && options.some(x=>x.name===preferred)) $("scenarioType").value=preferred;
+  const days=Object.keys(scenarioCatalog[dept]||{}).map(Number).sort((a,b)=>a-b);
+  $("scenarioType").innerHTML=days.map(day=>{
+    const options=scenarioCatalog[dept]?.[day]||[];
+    return `<optgroup label="Day ${day}">${options.map(x=>`<option value="${escapeAttr(x.name)}" data-day="${day}">Day ${day} — ${escapeHtml(x.name)}</option>`).join("")}</optgroup>`;
+  }).join("");
+
+  const options=[...$("scenarioType").options];
+  const match=preferred
+    ? options.find(o=>o.value===preferred && (!preferredDay || o.dataset.day===String(preferredDay)))
+      || options.find(o=>o.value===preferred)
+    : options[0];
+
+  if(match) match.selected=true;
+  syncScenarioFocusSelection();
+}
+
+function syncScenarioFocusSelection(){
+  const selected=$("scenarioType")?.selectedOptions?.[0];
+  if(selected?.dataset?.day) $("trainingDay").value=String(selected.dataset.day);
   applyFocusDefaults();
 }
 
@@ -293,6 +310,7 @@ function applyFocusDefaults(){
 
   $("difficulty").value=meta.difficulty||"Intermediate";
   $("paymentAction").value=meta.payment||"No Payment / Service Only";
+  if($("reservationWorkflow")) $("reservationWorkflow").value=meta.kind==="followup"?"modify":"new";
   $("commentToggle").checked=!!meta.commenting;
   $("confirmToggle").checked=true;
 
@@ -330,14 +348,13 @@ window.loadStarter=(i)=>{
   $("department").value=s.department;
   $("trainingDay").value=String(s.day);
   updateDepartmentUI();
-  updateScenarioFocus(s.focus);
+  updateScenarioFocus(s.focus,String(s.day));
   $("difficulty").value=s.difficulty;
   go("generator");
 };
 
 $("department").addEventListener("change",updateDepartmentUI);
-$("trainingDay").addEventListener("change",()=>updateScenarioFocus());
-$("scenarioType").addEventListener("change",applyFocusDefaults);
+$("scenarioType").addEventListener("change",syncScenarioFocusSelection);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
@@ -691,6 +708,7 @@ function scenarioData(){
     approach:$("scenarioApproach").value,
     title:`${$("department").value} Day ${$("trainingDay").value} – ${$("scenarioType").value}`,
     type:$("scenarioType").value,
+    reservationWorkflow:$("reservationWorkflow")?.value||((meta.kind==="followup")?"modify":"new"),
     difficulty:$("difficulty").value,
     guestCount:+$("guestCount").value,
     agency:$("agency").value,
@@ -772,12 +790,12 @@ function outboundQualificationItems(day){
 
 function callFlowSupportHtml(d,meta){
   const day=+d.trainingDay;
-  const isNew=["outbound-new","new","ta"].includes(meta.kind);
+  const isNew=d.reservationWorkflow==="new";
   const fullOutbound=d.department==="Outbound Sales" && isNew;
   const items=fullOutbound?outboundQualificationItems(day):(
     day<=7?[
       "Confirm the guest's reason for calling and what outcome they want today.",
-      meta.kind==="followup"?"Locate the reservation and complete the required verification before making changes.":"Identify the sailing, stateroom, and guest details needed to build the reservation.",
+      d.reservationWorkflow==="modify"?"Locate the reservation and complete the required verification before making changes.":"Identify the sailing, stateroom, and guest details needed to build the reservation.",
       "Review status, pricing, due dates, promotions, and any deadlines before saving.",
       "Complete required notes/confirmation and recap the next step."
     ]:day<=9?[
@@ -832,13 +850,16 @@ function customerStoryHtml(d,meta,sailText,guestNames){
     return `<p>This is a <strong>trainer-led demonstration</strong>. Use the selected or trainer-provided reservation/sailing to demonstrate the ${escapeHtml(d.type)} workflow.</p>`;
   }
   const names=companion?`<strong>${escapeHtml(primary)}</strong> and <strong>${escapeHtml(companion)}</strong>`:`<strong>${escapeHtml(primary)}</strong>`;
-  if(meta.kind==="followup"){
-    return `<p>${names} contact Norwegian Cruise Line about an existing training reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
-  }
+  const modifying=d.reservationWorkflow==="modify";
   if(meta.kind==="ta"){
-    return `<p>A travel advisor is calling on behalf of ${names} regarding ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    return modifying
+      ? `<p>A travel advisor is calling on behalf of ${names} to modify an existing training reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`
+      : `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
-  return `<p>${names} are planning ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+  if(modifying){
+    return `<p>${names} contact Norwegian Cruise Line to modify an existing training reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+  }
+  return `<p>${names} are planning ${escapeHtml(sailText)} and want to create a new reservation. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
 }
 
 function promotionSummary(d){
@@ -897,10 +918,10 @@ function latitudesScenarioHtml(d){
 function fullTaskList(d,meta){
   const name=(d.type||"").toLowerCase();
   const tasks=[];
-  if(meta.kind==="followup"||["Refund / Reinstate","No Payment / Service Only"].includes(d.payment)){
+  if(d.reservationWorkflow==="modify"){
     tasks.push("Locate the correct training reservation and complete required verification before making changes.");
   }else{
-    tasks.push("Search for and select a sailing that meets the guest's stated requirements.");
+    tasks.push("Search for and select a sailing that meets the guest's stated requirements, then begin a new reservation.");
   }
 
   if(name.includes("ada")) tasks.push("Select a qualifying ADA / accessible stateroom; verify actual capacity and available location before promising a preference.");
@@ -1013,7 +1034,7 @@ function expectedCompletionState(d,meta){
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
   if(d.payment==="FCC / CruiseNext")return "Use Offer/status sequencing while applying credits/coupons; verify the final saved status after the exercise.";
   if(d.payment==="Refund / Reinstate")return "Cancellation step: canceled. Reinstate step: active/booked again if reinstatement succeeds; verify any fare/category/promotion changes.";
-  if(meta.kind==="followup")return "Existing reservation remains active unless the requested servicing action changes its status.";
+  if(d.reservationWorkflow==="modify")return "Existing reservation remains active unless the requested servicing action changes its status.";
   if(meta.kind==="demo")return "Trainer-defined demonstration state.";
   return "Verify the expected final reservation status in Seaweb before marking the exercise complete.";
 }
@@ -1093,7 +1114,7 @@ function generateScenario(){
   const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:`Agency ${d.agency}`;
 
   const html=`
-    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">Day ${d.trainingDay}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
+    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">Day ${d.trainingDay}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
     <h2>Seaweb Scenario – ${escapeHtml(d.type)}</h2>
     <p class="scenario-intro">Complete this scenario independently using Seaweb. Use the <strong>Seaweb User Guide</strong> in <strong>NCLHelp</strong> whenever you need step-by-step guidance. When the exercise is complete, post the reservation number in the class chat.</p>
 
@@ -1125,6 +1146,7 @@ function generateScenario(){
       <ul class="detail-list">
         <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
         <li><strong>Training Day:</strong> Day ${d.trainingDay}</li>
+        <li><strong>Reservation Workflow:</strong> ${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</li>
         <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
         ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
         <li><strong>Total Guests:</strong> ${d.guestCount}</li>
@@ -1176,6 +1198,7 @@ function runValidator(){
 
   if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
   else add("passed","Department selected",`${d.department} • Day ${d.trainingDay} • ${d.type}`);
+  add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
   if(!d.guest1 && meta.kind!=="demo")add("error","Missing primary guest","Guest 1 is required for trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
   if(d.guestCount>1 && !d.guest2 && meta.kind!=="demo")add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
@@ -1626,7 +1649,7 @@ function onePageReferenceHtml(d){
 function onePageCallFlowHtml(d,meta){
   const n=(d.type||"").toLowerCase();
   const steps=[];
-  if(meta.kind==="followup"||["Refund / Reinstate","No Payment / Service Only"].includes(d.payment))steps.push("Locate the correct reservation and complete verification.");
+  if(d.reservationWorkflow==="modify")steps.push("Locate the correct reservation and complete verification.");
   else steps.push("Qualify the request and build the correct sailing / stateroom option.");
   if(d.latitudes)steps.push("Follow each guest's Past Guest / New Guest status before saving profiles.");
   if(n.includes("special request")||n.includes("ada")||n.includes("multiple"))steps.push("Enter requests, links and comments in the correct Seaweb locations.");
@@ -2264,9 +2287,31 @@ $("copyScenarioBtn").onclick=async()=>{
   const clone=makeViewShareClone(state.mode==="trainer");
   await navigator.clipboard.writeText(clone.innerText);
   closeShareMenu();
-  flash("Plain-text trainee scenario copied.");
+  flash(`${state.mode==="trainer"?"Trainer":"Trainee"} view copied as plain text.`);
 };
-$("printScenarioBtn").onclick=()=>window.print();
+
+function printScenarioView(mode){
+  if(!ensureScenarioReady())return;
+  document.body.classList.remove("print-trainer","print-trainee");
+  document.body.classList.add(mode==="trainer"?"print-trainer":"print-trainee");
+  closeShareMenu();
+
+  let cleaned=false;
+  const cleanup=()=>{
+    if(cleaned)return;
+    cleaned=true;
+    document.body.classList.remove("print-trainer","print-trainee");
+  };
+  window.addEventListener("afterprint",cleanup,{once:true});
+  setTimeout(()=>{
+    window.print();
+    setTimeout(cleanup,1000);
+  },40);
+}
+
+$("printTraineeViewBtn").onclick=()=>printScenarioView("trainee");
+$("printTrainerViewBtn").onclick=()=>printScenarioView("trainer");
+$("printScenarioBtn").onclick=()=>printScenarioView(state.mode);
 
 function saved(){try{return JSON.parse(localStorage.getItem("seawebScenarios")||"[]")}catch{return[]}}
 function setSaved(items){localStorage.setItem("seawebScenarios",JSON.stringify(items));updateStats()}
@@ -2291,7 +2336,7 @@ function renderLibrary(){
   let items=saved().filter(x=>{
     if(deptFilter && x.department!==deptFilter)return false;
     if(dayFilter && String(x.trainingDay)!==String(dayFilter))return false;
-    return !q||JSON.stringify([x.title,x.type,x.department,x.trainingDay,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+    return !q||JSON.stringify([x.title,x.type,x.department,x.trainingDay,x.reservationWorkflow,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
@@ -2326,7 +2371,8 @@ window.openSaved=(id)=>{
   $("trainingDay").value=String(x.trainingDay||6);
   if($("department").value==="Outbound Sales" && x.agency) $("marketAgency").value=String(x.agency);
   updateDepartmentUI();
-  updateScenarioFocus(x.type);
+  updateScenarioFocus(x.type,String(x.trainingDay||6));
+  $("reservationWorkflow").value=x.reservationWorkflow||((x.curriculumKind==="followup")?"modify":"new");
   $("scenarioApproach").value=x.approach||"variation";
   $("difficulty").value=x.difficulty||"Intermediate";
   $("guestCount").value=String(x.guestCount||2);
