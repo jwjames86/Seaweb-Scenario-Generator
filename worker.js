@@ -47,17 +47,18 @@ async function handleShareCard(request, env) {
   }
 
   const raw = String(payload?.html || "");
+  const mode = payload?.mode === "teams-page" ? "teams-page" : "full";
   if (!raw || raw.length > 250000) {
     return json({ error: "The scenario card is empty or too large to render." }, 400);
   }
 
   const safeBody = sanitizeShareHtml(raw);
-  const page = shareCardDocument(safeBody);
+  const page = shareCardDocument(safeBody, mode);
 
   try {
     const shot = await env.BROWSER.quickAction("screenshot", {
       html: page,
-      viewport: { width: 1220, height: 1400 },
+      viewport: mode === "teams-page" ? { width: 1420, height: 1180 } : { width: 1220, height: 1400 },
       screenshotOptions: { fullPage: true, type: "png" }
     });
 
@@ -99,18 +100,19 @@ function sanitizeShareHtml(raw) {
   return html;
 }
 
-function shareCardDocument(bodyHtml) {
+function shareCardDocument(bodyHtml, mode="full") {
+  const teamsPage = mode === "teams-page";
   return `<!doctype html>
 <html><head><meta charset="utf-8">
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#EBE7DF}
-body{padding:20px;font-family:Arial,Helvetica,sans-serif;color:#101828}
-.shared-trainee-card,.scenario-paper{width:1180px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:32px;color:#101828}
-h2{font-size:25px;line-height:1.25;margin:8px 0 18px;color:#101010}
-h3{font-size:18px;margin:0 0 12px;color:#101828}
-h4{font-size:14px;margin:20px 0 8px;color:#101828}
-p,li{font-size:13px;line-height:1.55;color:#273248}
+body{padding:${teamsPage?"18px":"20px"};font-family:Arial,Helvetica,sans-serif;color:#101828}
+.shared-trainee-card,.scenario-paper{width:${teamsPage?"1380px":"1180px"};margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:${teamsPage?"42px 48px":"32px"};color:#101828}
+h2{font-size:${teamsPage?"34px":"25px"};line-height:1.25;margin:8px 0 18px;color:#101010}
+h3{font-size:${teamsPage?"25px":"18px"};margin:0 0 12px;color:#101828}
+h4{font-size:${teamsPage?"20px":"14px"};margin:20px 0 8px;color:#101828}
+p,li{font-size:${teamsPage?"18px":"13px"};line-height:1.55;color:#273248}
 .scenario-meta-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .chip,.status-badge{display:inline-block;background:#F1EEE7;border:1px solid #D7D0C6;border-radius:3px;padding:5px 8px;font-size:11px;color:#454949}
 .support-chip{background:#EDF6F5;color:#00484F;border-color:#C6DFDC}
@@ -154,6 +156,9 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .latitudes-output-card>strong{display:block;font-size:12px;color:#101828;margin:3px 0}
 .latitudes-output-card>small{display:block;font-size:11px;color:#006099;font-weight:600}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
+.teams-page-bar{display:flex;justify-content:space-between;align-items:center;margin:-10px 0 24px;padding:12px 15px;background:#00484F;color:#fff;border-radius:4px;font-size:${teamsPage?"17px":"12px"}}
+.teams-page-bar strong{font-size:${teamsPage?"19px":"13px"};color:#fff}.teams-page-bar span{color:#fff}
+${teamsPage?`.chip,.status-badge{font-size:15px;padding:7px 10px}.scenario-intro{font-size:18px}.section-label{font-size:13px}.glance-card>span{font-size:13px}.glance-card>strong{font-size:18px}.glance-card>small{font-size:15px}.glance-card{min-height:112px;padding:17px}.task-checklist li{font-size:18px}.check-box{width:20px;height:20px;flex-basis:20px}.instruction-strip strong{font-size:15px}.instruction-strip span{font-size:18px}.latitudes-output-card>span{font-size:12px}.latitudes-output-card>strong{font-size:17px}.latitudes-output-card>small{font-size:16px}.support-list{columns:1}.support-intro{font-size:16px}.share-expanded-heading{font-size:20px}`:""}
 .trainer-section{display:none!important}
 </style></head><body>${bodyHtml}</body></html>`;
 }
