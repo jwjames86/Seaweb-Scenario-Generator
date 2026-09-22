@@ -244,3 +244,16 @@ When a scenario requires payment:
 - **Reset to Profile** restores the original profile values.
 - Generated scenarios use the edited values and clearly label them **TRAINING / TEST DATA ONLY**.
 - Saved scenarios restore the edited payment values.
+
+
+## V1.9.8 – Generic Existing-Reservation Guest Wording
+
+Existing-reservation scenarios no longer use the fictional guest names from new-booking exercises.
+
+- When **Modify Existing Reservation** is selected, Guest 1 / Guest 2 inputs are hidden.
+- Any new-booking guest names are cleared when switching into a modification workflow.
+- The customer story uses neutral wording such as **“A guest contacts Norwegian Cruise Line about an existing training reservation.”**
+- When the GDPR caller type is more specific, the scenario uses appropriate wording such as Travel Advisor, PCC Guest, Casino Guest, or Direct Group caller.
+- The scenario explicitly instructs trainees to **use the guest name(s) already on their existing training reservation**.
+- At a Glance and Reference Details no longer display a generated Primary Guest name for modification scenarios.
+- Names can still be supplied when the actual modification specifically requires one, such as **Add Guest** or **Remove Guest**, through the Guest / Item Being Changed field.
