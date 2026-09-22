@@ -193,3 +193,24 @@ The scenario requires transfer to the PCC listed on the reservation or the Direc
 - LATAM Direct Groups / Miami Outbound Direct Groups / Remote Outbound PCC Groups / Sawgrass Outbound Direct Groups: **#11195**
 
 The GDPR requirement appears in the generator preview, trainee task list, scenario output, validator, exports, and saved scenarios.
+
+
+## V1.9.6 – GDPR Ask-First Verification Logic
+
+The GDPR workflow now follows the order shown in the provided job aids:
+
+- Items shown as primary verification items must be **asked first**.
+- **Reservation Number is always mandatory**.
+- If one of the other primary verification items cannot be obtained, use the additional / fallback verification questions until the required verification threshold is met.
+- For **Travel Agent / TA Group** callers, the agency identifier — **ABTA #, Agency ID, or Phone #** — is required to continue under the Travel Agent verification path.
+- If a Travel Agent cannot provide the agency identifier, the scenario directs the trainee to use the **Travel Agency Guest** path once 3 pieces are obtained from:
+  - Guest Full Name
+  - Ship & Full Sail Date
+  - Date of Birth
+  - First Line of Address
+
+The generator and exported scenario now visually separate:
+1. **ASK FIRST** verification items
+2. **IF NEEDED — ADDITIONAL VERIFICATION** items
+
+Mandatory items are clearly labeled.
