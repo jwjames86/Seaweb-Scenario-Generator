@@ -1306,45 +1306,35 @@ async function renderShareCardToPng(){
 function makeSharePageWrapper(pages){
   const wrapper=document.createElement('div');
   wrapper.className='teams-page-stack';
-  wrapper.style.width='900px';
-  wrapper.style.maxWidth='900px';
-  wrapper.style.margin='0 auto';
   pages.forEach((page,index)=>{
-    page.style.width='900px';
-    page.style.maxWidth='900px';
-    page.style.margin='0';
     wrapper.appendChild(page);
     if(index<pages.length-1){
-      const spacer=document.createElement('div');
-      spacer.className='teams-page-stack-gap';
-      spacer.style.height='20px';
-      wrapper.appendChild(spacer);
+      const marker=document.createElement('div');
+      marker.className='share-page-split-marker';
+      marker.setAttribute('aria-hidden','true');
+      wrapper.appendChild(marker);
     }
   });
   return wrapper;
 }
 
-async function measurePageHeights(pages){
-  const host=makeOffscreenShareHost();
-  host.style.width='1220px';
-  const wrapper=makeSharePageWrapper(pages.map(page=>page.cloneNode(true)));
-  host.appendChild(wrapper);
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  const heights=[...wrapper.querySelectorAll('.teams-share-page')].map(page=>Math.ceil(page.getBoundingClientRect().height));
-  host.remove();
-  return heights;
+let sharePageCache={key:null,blobs:null};
+
+function currentSharePageCacheKey(){
+  const scenario=state.currentScenario||{};
+  return [
+    scenario.id||'draft',
+    scenario.updatedAt||'',
+    $("scenarioOutput")?.innerHTML?.length||0,
+    $("scenarioOutput")?.innerText?.length||0
+  ].join('|');
 }
 
 async function renderTeamsPageSetArtifacts(){
   const pages=makeTeamsPageClones();
-  const heights=await measurePageHeights(pages);
   const wrapper=makeSharePageWrapper(pages.map(page=>page.cloneNode(true)));
   const fullBlob=await renderShareHtmlToPng(wrapper.outerHTML,'full');
-  const x=160;
-  const yStart=20;
-  const width=900;
-  const gap=20;
-  return {fullBlob,heights,x,yStart,width,gap};
+  return {fullBlob,expectedPages:pages.length};
 }
 
 async function loadImageFromBlob(blob){
@@ -1357,34 +1347,90 @@ async function loadImageFromBlob(blob){
   });
 }
 
-async function cropImageBlob(sourceBlob,x,y,width,height,type='image/png',quality){
-  const img=await loadImageFromBlob(sourceBlob);
-  const scale=(img.naturalWidth||img.width)/1220;
-  const sx=Math.max(0,Math.round(x*scale));
-  const sy=Math.max(0,Math.round(y*scale));
-  const sw=Math.max(1,Math.round(width*scale));
-  const sh=Math.max(1,Math.round(height*scale));
-  const canvas=document.createElement('canvas');
-  canvas.width=sw;
-  canvas.height=sh;
-  const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#ffffff';
-  ctx.fillRect(0,0,sw,sh);
-  ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
-  return await new Promise((resolve,reject)=>{
-    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create the cropped page image.')),type,quality);
-  });
-}
-
 async function splitRenderedStackIntoPageBlobs(artifact){
+  const img=await loadImageFromBlob(artifact.fullBlob);
+  const width=img.naturalWidth||img.width;
+  const height=img.naturalHeight||img.height;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=width;
+  canvas.height=height;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(img,0,0);
+  const pixels=ctx.getImageData(0,0,width,height).data;
+
+  // The Worker places a hidden magenta separator between pages. Detect those
+  // separator rows in the final server-rendered image so cropping follows the
+  // actual rendered layout instead of guessing heights from the local browser.
+  const sampleXs=[
+    Math.round(width*0.25),
+    Math.round(width*0.5),
+    Math.round(width*0.75)
+  ];
+  const isMarkerRow=(y)=>{
+    let matches=0;
+    for(const x of sampleXs){
+      const i=(y*width+x)*4;
+      const r=pixels[i],g=pixels[i+1],b=pixels[i+2],a=pixels[i+3];
+      if(a>240 && r>245 && g<20 && b>245) matches++;
+    }
+    return matches>=2;
+  };
+
+  const runs=[];
+  let runStart=-1;
+  for(let y=0;y<height;y++){
+    if(isMarkerRow(y)){
+      if(runStart<0)runStart=y;
+    }else if(runStart>=0){
+      runs.push([runStart,y-1]);
+      runStart=-1;
+    }
+  }
+  if(runStart>=0)runs.push([runStart,height-1]);
+
+  if(runs.length!==Math.max(0,artifact.expectedPages-1)){
+    throw new Error(`Could not identify all page boundaries (${runs.length+1} of ${artifact.expectedPages} pages found).`);
+  }
+
+  // The server-rendered card spans from x=20 to x=width-20.
+  const cropX=20;
+  const cropWidth=Math.max(1,width-40);
+  const pageRanges=[];
+  let yStart=20;
+  for(const [markerStart,markerEnd] of runs){
+    pageRanges.push([yStart,markerStart]);
+    yStart=markerEnd+1;
+  }
+  pageRanges.push([yStart,height-20]);
+
   const out=[];
-  let y=artifact.yStart;
-  for(let i=0;i<artifact.heights.length;i++){
-    const blob=await cropImageBlob(artifact.fullBlob,artifact.x,y,artifact.width,artifact.heights[i],'image/png');
+  for(const [top,bottom] of pageRanges){
+    const pageHeight=Math.max(1,bottom-top);
+    const pageCanvas=document.createElement('canvas');
+    pageCanvas.width=cropWidth;
+    pageCanvas.height=pageHeight;
+    const pctx=pageCanvas.getContext('2d');
+    pctx.fillStyle='#ffffff';
+    pctx.fillRect(0,0,cropWidth,pageHeight);
+    pctx.drawImage(canvas,cropX,top,cropWidth,pageHeight,0,0,cropWidth,pageHeight);
+    const blob=await new Promise((resolve,reject)=>{
+      pageCanvas.toBlob(b=>b?resolve(b):reject(new Error('Could not create a page image.')),'image/png');
+    });
     out.push(blob);
-    y+=artifact.heights[i]+artifact.gap;
   }
   return out;
+}
+
+async function getTeamsPageBlobs(){
+  const key=currentSharePageCacheKey();
+  if(sharePageCache.key===key && Array.isArray(sharePageCache.blobs) && sharePageCache.blobs.length){
+    return sharePageCache.blobs;
+  }
+  const artifact=await renderTeamsPageSetArtifacts();
+  const blobs=await splitRenderedStackIntoPageBlobs(artifact);
+  sharePageCache={key,blobs};
+  return blobs;
 }
 
 function scenarioPdfFilename(){
@@ -1412,7 +1458,7 @@ function pdfObjectFromParts(parts){
   return concatBytes(parts.map(part=>part instanceof Uint8Array?part:encoder.encode(String(part))));
 }
 
-function makeJpegPdf(pages,{pageWidth=612,pageHeight=792,margin=24}={}){
+function makeJpegPdf(pages,{margin=24}={}){
   const encoder=new TextEncoder();
   const objects=[null];
   objects[1]=encoder.encode('<< /Type /Catalog /Pages 2 0 R >>');
@@ -1420,6 +1466,10 @@ function makeJpegPdf(pages,{pageWidth=612,pageHeight=792,margin=24}={}){
   const pageRefs=[];
 
   pages.forEach(page=>{
+    const landscape=(page.width/page.height)>1.12;
+    const pageWidth=landscape?792:612;
+    const pageHeight=landscape?612:792;
+
     const imageObjNo=objects.length;
     objects.push(pdfObjectFromParts([
       `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`,
@@ -1463,114 +1513,6 @@ function makeJpegPdf(pages,{pageWidth=612,pageHeight=792,margin=24}={}){
   return new Blob(chunks,{type:'application/pdf'});
 }
 
-function makeTeamsPageClones(){
-  const full=makeTraineeShareClone();
-  const headerNodes=[];
-  const contentNodes=[];
-
-  [...full.children].forEach((node,index)=>{
-    if(index<3) headerNodes.push(node.cloneNode(true));
-    else contentNodes.push(node.cloneNode(true));
-  });
-
-  const labelOf=node=>node.querySelector?.('.section-label')?.textContent?.trim().toUpperCase()||'';
-  const headingOf=node=>node.querySelector?.('h3,.share-expanded-heading')?.textContent?.trim().toUpperCase()||'';
-  const groups=[[],[],[],[]];
-
-  contentNodes.forEach(node=>{
-    const label=labelOf(node);
-    const heading=headingOf(node);
-    const cls=node.classList||{contains:()=>false};
-
-    if(label==='YOUR CALL'||label==='GUEST REQUEST'||label==='PAST GUEST DETAILS'||cls.contains('latitudes-output-section')){
-      groups[0].push(node);
-    }else if(label==='YOUR WORK'||heading.includes('CALL FLOW SUPPORT')){
-      groups[1].push(node);
-    }else if(label==='REFERENCE DETAILS'||label==='TRAINING PAYMENT'||cls.contains('details-section')||cls.contains('payment-section')){
-      groups[2].push(node);
-    }else{
-      groups[3].push(node);
-    }
-  });
-
-  const titles=[
-    'Guest Scenario & Request',
-    'Tasks & Call Flow',
-    'Reservation Reference',
-    'Final Check & Knowledge Review'
-  ];
-
-  const pages=groups.filter(g=>g.length).map((nodes,pageIndex)=>{
-    const page=document.createElement('article');
-    page.className='shared-trainee-card teams-share-page';
-    page.setAttribute('data-teams-page',String(pageIndex+1));
-
-    const pageBar=document.createElement('div');
-    pageBar.className='teams-page-bar';
-    pageBar.innerHTML=`<strong>${escapeHtml(titles[groups.indexOf(nodes)]||`Scenario Page ${pageIndex+1}`)}</strong><span>Page ${pageIndex+1}</span>`;
-    page.appendChild(pageBar);
-
-    headerNodes.forEach(n=>page.appendChild(n.cloneNode(true)));
-    nodes.forEach(n=>page.appendChild(n.cloneNode(true)));
-    return page;
-  });
-
-  pages.forEach((page,i)=>{
-    const marker=page.querySelector('.teams-page-bar span');
-    if(marker) marker.textContent=`Page ${i+1} of ${pages.length}`;
-  });
-  return pages;
-}
-
-function crc32(bytes){
-  let crc=0xFFFFFFFF;
-  for(let i=0;i<bytes.length;i++){
-    crc^=bytes[i];
-    for(let j=0;j<8;j++) crc=(crc>>>1)^((crc&1)?0xEDB88320:0);
-  }
-  return (crc^0xFFFFFFFF)>>>0;
-}
-
-function u16(n){return new Uint8Array([n&255,(n>>>8)&255])}
-function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255])}
-function concatBytes(parts){
-  const total=parts.reduce((n,p)=>n+p.length,0);
-  const out=new Uint8Array(total);let pos=0;
-  parts.forEach(p=>{out.set(p,pos);pos+=p.length});
-  return out;
-}
-
-async function makeStoredZip(files){
-  const encoder=new TextEncoder();
-  const locals=[];const centrals=[];let offset=0;
-
-  for(const file of files){
-    const name=encoder.encode(file.name);
-    const data=new Uint8Array(await file.blob.arrayBuffer());
-    const crc=crc32(data);
-    const local=concatBytes([
-      u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data
-    ]);
-    locals.push(local);
-    const central=concatBytes([
-      u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name
-    ]);
-    centrals.push(central);
-    offset+=local.length;
-  }
-
-  const centralData=concatBytes(centrals);
-  const end=concatBytes([
-    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralData.length),u32(offset),u16(0)
-  ]);
-  return new Blob([concatBytes([...locals,centralData,end])],{type:'application/zip'});
-}
-
-function teamsPageFilename(page,total){
-  const base=scenarioShareFilename().replace(/\.png$/i,'');
-  return `${base}-Teams-${String(page).padStart(2,'0')}-of-${String(total).padStart(2,'0')}.png`;
-}
-
 async function downloadTeamsPageSet(){
   if(!ensureScenarioReady())return;
   const btn=$('downloadTeamsPagesBtn');
@@ -1578,8 +1520,7 @@ async function downloadTeamsPageSet(){
   btn.disabled=true;
   btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating larger readable images</small></span>`;
   try{
-    const artifact=await renderTeamsPageSetArtifacts();
-    const blobs=await splitRenderedStackIntoPageBlobs(artifact);
+    const blobs=await getTeamsPageBlobs();
     const files=blobs.map((blob,i)=>({name:teamsPageFilename(i+1,blobs.length),blob}));
     const zip=await makeStoredZip(files);
     const url=URL.createObjectURL(zip);
@@ -1606,11 +1547,10 @@ async function downloadScenarioPdf(){
   btn.disabled=true;
   btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PDF…</strong><small>Creating a trainee-friendly multipage PDF</small></span>`;
   try{
-    const artifact=await renderTeamsPageSetArtifacts();
-    const pageBlobs=await splitRenderedStackIntoPageBlobs(artifact);
+    const pageBlobs=await getTeamsPageBlobs();
     const pages=[];
     for(const blob of pageBlobs) pages.push(await blobToJpegDescriptor(blob,0.92));
-    const pdf=makeJpegPdf(pages,{pageWidth:612,pageHeight:792,margin:24});
+    const pdf=makeJpegPdf(pages,{margin:24});
     const url=URL.createObjectURL(pdf);
     const a=document.createElement('a');
     a.href=url;
