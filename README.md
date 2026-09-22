@@ -257,3 +257,49 @@ Existing-reservation scenarios no longer use the fictional guest names from new-
 - The scenario explicitly instructs trainees to **use the guest name(s) already on their existing training reservation**.
 - At a Glance and Reference Details no longer display a generated Primary Guest name for modification scenarios.
 - Names can still be supplied when the actual modification specifically requires one, such as **Add Guest** or **Remove Guest**, through the Guest / Item Being Changed field.
+
+
+## V1.9.9 – NCL Air Programs + Round-Trip / One-Way
+
+The Scenario Generator now has a dedicated Air workflow for four NCL training products:
+
+1. Bundled Air / AIRPROM3
+2. Air Choice (US / Canada)
+3. Air Choice Plus
+4. Independent Air — No Flights / Transfer Setup
+
+### Air controls
+- Include Air / Transfers
+- Air Type
+- Round Trip or One Way
+- One-Way direction (to cruise / from cruise)
+- Optional gateway / airport
+- Program-specific Terms & Conditions preview
+
+Air-focused curriculum selections and **Add / Change Air or Transfers** modification scenarios automatically enable the Air panel.
+
+### Pre-cruise transfer reminder
+For NCL Air products, the generator instructs the trainee to **remove the pre-cruise transfer** because NCL Air is scheduled to arrive at least one day before embarkation. It also reminds the trainee to review the guest's pre-cruise hotel and ground-transportation responsibility.
+
+Independent Air / No Flights is handled separately because its source workflow specifically uses transfer setup with T1 / flight 999.
+
+### Program-aware logic
+- Bundled Air one-way: 50% of applicable promotional Air pricing.
+- Air Choice: eligibility, deposit/final-payment, ticketing and change rules.
+- Air Choice Plus: selected-guest customization, $250 deposit, 4-day cutoff and 9-business-day email-link timing.
+- Independent Air / No Flights: T1, flight 999, generic time windows and correct-airport transfer setup.
+
+
+## V1.9.10 – Bundled Air / AIRPROM3 Pride of America Guardrail
+
+Trainer clarification incorporated:
+
+- **Bundled Air / AIRPROM3 is only available on select Pride of America sailings.**
+- The Air dropdown now identifies Bundled Air as a select Pride of America product.
+- The trainer preview and generated scenario display an eligibility warning.
+- Validator behavior:
+  - Non–Pride of America sailing selected → **Error**
+  - Pride of America sailing selected → **Warning to verify that the specific sailing is eligible**
+  - No sailing attached → **Warning to verify an eligible Pride of America sailing**
+- Trainer Guide includes this eligibility check as a required coaching point.
+- One-way Bundled Air pricing guidance remains available only after the eligibility guardrail.
