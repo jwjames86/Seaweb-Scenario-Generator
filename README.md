@@ -55,3 +55,8 @@ This hotfix fixes the cut-off pages seen in the Teams Page Set and PDF export.
 ## V1.8.5 – Teams / PDF Runtime Fix
 
 Restores the missing `makeTeamsPageClones()` function that was accidentally removed in V1.8.4. The V1.8.4 full-width and page-boundary fixes remain in place. This resolves the `makeTeamsPageClones is not defined` error for both **Download Teams Page Set** and **Download PDF**.
+
+
+## V1.8.6 – Share Export Dependency Fix
+
+This hotfix restores all helper functions required by the Teams Page Set and PDF workflows: ZIP creation, filename generation, byte concatenation, and CRC handling. The cutoff/cropping fixes from V1.8.4/V1.8.5 remain in place.
