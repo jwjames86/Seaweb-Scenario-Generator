@@ -1376,6 +1376,191 @@ async function renderShareCardToPng(){
 
 
 
+function onePageSailText(d){
+  const s=d.sailing;
+  if(!s)return "Trainer-selected Norwegian Cruise Line sailing";
+  return `${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}${s.departure?` • From ${s.departure}`:""}${s.sailingMonths?.length?` • ${s.sailingMonths.join(", ")}`:""}`;
+}
+
+function onePageGuestStatusHtml(d){
+  if(!d.latitudes)return `<div class="one-page-muted">Create or verify all guest profiles using the training details.</div>`;
+  const mix=getGuestProfileMix(d);
+  return `<div class="one-page-guest-list">${Array.from({length:d.guestCount},(_,i)=>{
+    const name=i===0?(d.guest1||"Guest 1"):i===1?(d.guest2||"Guest 2"):`Guest ${i+1}`;
+    const isPast=!!mix.flags[i];
+    const number=mix.numbers[i]||"";
+    return `<div class="one-page-guest-row ${isPast?"past":"new"}"><div><strong>${escapeHtml(name)}</strong><span>Guest ${i+1}</span></div><div><b>${isPast?"Past Guest":"New Guest"}</b>${isPast?`<small>${number?`Latitudes # ${escapeHtml(number)}`:"Latitudes # — verify in Seaweb"}</small>`:`<small>Create training profile</small>`}</div></div>`;
+  }).join("")}</div>`;
+}
+
+function onePageReferenceHtml(d){
+  const s=d.sailing;
+  const agency=d.department==="Outbound Sales"?`${d.market} • Agency ${d.agency}`:`Agency ${d.agency}`;
+  const items=[
+    ["Agency",agency],
+    ["Sailing",onePageSailText(d)],
+    ["Stateroom",`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`],
+    ["Payment / Credit",d.payment],
+    ["Promotions",promotionSummary(d)],
+    ["Protection",protectionSummary(d)],
+    ["Special Requests",specialRequestSummary(d)],
+    ["Confirmation",d.confirmation?(d.email||"Send guest confirmation"):"Not required"]
+  ];
+  return `<div class="one-page-reference-list">${items.map(([label,value])=>`<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value||"Verify in Seaweb"))}</strong></div>`).join("")}</div>`;
+}
+
+function onePageCallFlowHtml(d,meta){
+  const n=(d.type||"").toLowerCase();
+  const steps=[];
+  if(meta.kind==="followup"||["Refund / Reinstate","No Payment / Service Only"].includes(d.payment))steps.push("Locate the correct reservation and complete verification.");
+  else steps.push("Qualify the request and build the correct sailing / stateroom option.");
+  if(d.latitudes)steps.push("Follow each guest's Past Guest / New Guest status before saving profiles.");
+  if(n.includes("special request")||n.includes("ada")||n.includes("multiple"))steps.push("Enter requests, links and comments in the correct Seaweb locations.");
+  if(d.fas||d.travel||d.psc)steps.push("Review applicable add-ons, promotions and timing before saving.");
+  steps.push("Review the updated reservation, amount due / deadline, and next step with the guest.");
+  if(d.confirmation||d.commenting)steps.push("Complete required comments / confirmation and recap the interaction.");
+  return `<ol class="one-page-flow-list">${[...new Set(steps)].slice(0,5).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ol>`;
+}
+
+function onePageTrainingCardHtml(d){
+  if(!d.cardRequired||!d.card)return "";
+  return `<section class="one-page-side-section one-page-training-card"><div class="one-page-side-title">Training Payment</div><div class="training-only-label">TRAINING / TEST DATA ONLY</div><div class="one-page-card-grid"><span><b>Card</b>${escapeHtml(d.card.number)}</span><span><b>Exp / CCV</b>${escapeHtml(d.card.expiration)} • ${escapeHtml(d.card.ccv)}</span><span class="wide"><b>Billing</b>${escapeHtml(d.card.address)}</span></div></section>`;
+}
+
+function makeOnePageTraineeClone(){
+  const d=state.currentScenario||scenarioData();
+  const meta=currentFocusMeta()||{};
+  const guestNames=[d.guest1,d.guest2].filter(Boolean);
+  const primary=guestNames[0]||"the guest";
+  const companion=guestNames[1]||"";
+  const s=d.sailing;
+  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:""}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const tasks=traineeTaskList(d,meta);
+  const finalChecks=beforeEndItems(d);
+  const page=document.createElement("article");
+  page.className="one-page-export";
+  page.innerHTML=`
+    <header class="one-page-header">
+      <div><span class="one-page-kicker">SEAweb Training Scenario</span><h1>${escapeHtml(d.type)}</h1><p>${escapeHtml(d.department)} • Day ${d.trainingDay} • ${escapeHtml(d.difficulty)} • ${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</p></div>
+      <div class="one-page-header-badge">TRAINEE</div>
+    </header>
+
+    <section class="one-page-call">
+      <div class="one-page-label">YOUR CALL</div>
+      <h2>Customer Scenario</h2>
+      ${customerStoryHtml(d,meta,sailText,guestNames)}
+    </section>
+
+    <div class="one-page-layout">
+      <main class="one-page-main">
+        <section class="one-page-section one-page-glance">
+          <div class="one-page-label">GUEST REQUEST</div><h2>At a Glance</h2>
+          ${atAGlanceHtml(d,meta)}
+        </section>
+
+        <section class="one-page-section one-page-status">
+          <div class="one-page-label">GUEST STATUS / LATITUDES</div><h2>Past & New Guests</h2>
+          ${onePageGuestStatusHtml(d)}
+        </section>
+
+        <section class="one-page-section one-page-tasks">
+          <div class="one-page-label">YOUR WORK</div><h2>Complete These Tasks</h2>
+          ${checklistHtml(tasks)}
+        </section>
+      </main>
+
+      <aside class="one-page-side">
+        <section class="one-page-side-section">
+          <div class="one-page-side-title">Key Booking Details</div>
+          ${onePageReferenceHtml(d)}
+        </section>
+
+        ${onePageTrainingCardHtml(d)}
+
+        <section class="one-page-side-section one-page-flow">
+          <div class="one-page-side-title">Call Flow Support</div>
+          ${onePageCallFlowHtml(d,meta)}
+        </section>
+
+        <section class="one-page-side-section one-page-final">
+          <div class="one-page-side-title">Before You End the Call</div>
+          ${checklistHtml(finalChecks)}
+          <div class="one-page-closing"><strong>Close:</strong> “Is there anything else I can help you with today, ${escapeHtml(primary.split(" ")[0]||"")}?”<br>“Thank you for choosing Norwegian Cruise Line.”</div>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="one-page-footer"><span>${escapeHtml(d.department)}</span><span>Day ${d.trainingDay} • ${escapeHtml(d.type)}</span><span>Training Use</span></footer>`;
+  return page;
+}
+
+let onePageExportCache={key:null,blob:null};
+
+async function cropOnePageLegalBlob(blob){
+  const img=await loadImageFromBlob(blob);
+  const width=img.naturalWidth||img.width;
+  const height=img.naturalHeight||img.height;
+  const scale=width/2080;
+  const sx=Math.round(20*scale);
+  const sy=Math.round(20*scale);
+  const sw=Math.min(Math.round(2040*scale),width-sx);
+  const sh=Math.min(Math.round(3360*scale),height-sy);
+  const canvas=document.createElement("canvas");
+  canvas.width=sw;canvas.height=sh;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#ffffff";ctx.fillRect(0,0,sw,sh);
+  ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+  return await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error("Could not prepare the one-page export.")),"image/png"));
+}
+
+async function getOnePageTraineePng(){
+  const key=`${currentSharePageCacheKey()}|one-page-v190`;
+  if(onePageExportCache.key===key && onePageExportCache.blob)return onePageExportCache.blob;
+  const page=makeOnePageTraineeClone();
+  const rendered=await renderShareHtmlToPng(page.outerHTML,"full");
+  const blob=await cropOnePageLegalBlob(rendered);
+  onePageExportCache={key,blob};
+  return blob;
+}
+
+function onePageExportFilename(ext){
+  return scenarioShareFilename().replace(/\.png$/i,`-One-Page-Trainee.${ext}`);
+}
+
+async function downloadOnePagePng(){
+  if(!ensureScenarioReady())return;
+  const btn=$("downloadOnePagePngBtn");
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building one-page PNG…</strong><small>Optimizing for legal-size viewing</small></span>`;
+  try{
+    const png=await getOnePageTraineePng();
+    const url=URL.createObjectURL(png);
+    const a=document.createElement("a");a.href=url;a.download=onePageExportFilename("png");document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash("One-page trainee PNG downloaded.");
+  }catch(err){alert(`Could not create the one-page PNG: ${err.message}`)}finally{btn.disabled=false;btn.innerHTML=old;}
+}
+
+async function downloadOnePagePdf(){
+  if(!ensureScenarioReady())return;
+  const btn=$("downloadOnePagePdfBtn");
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building one-page PDF…</strong><small>Creating one legal-size trainee sheet</small></span>`;
+  try{
+    const png=await getOnePageTraineePng();
+    const page=await blobToJpegDescriptor(png,0.99);
+    const pdf=makeJpegPdf([page],{margin:0});
+    const url=URL.createObjectURL(pdf);
+    const a=document.createElement("a");a.href=url;a.download=onePageExportFilename("pdf");document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash("One-page trainee PDF downloaded.");
+  }catch(err){alert(`Could not create the one-page PDF: ${err.message}`)}finally{btn.disabled=false;btn.innerHTML=old;}
+}
+
 function makeTeamsPageClones(){
   const full=makeTraineeShareClone();
   const headerNodes=[];
@@ -1698,7 +1883,7 @@ async function downloadTeamsPageSet(){
   const btn=$('downloadTeamsPagesBtn');
   const old=btn.innerHTML;
   btn.disabled=true;
-  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating 8.5 × 14 full-page PNGs</small></span>`;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building full-detail PNGs…</strong><small>Creating expanded legal-size pages</small></span>`;
   try{
     const blobs=await getTeamsPageBlobs();
     const files=blobs.map((blob,i)=>({name:teamsPageFilename(i+1,blobs.length),blob}));
@@ -1711,7 +1896,7 @@ async function downloadTeamsPageSet(){
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),2000);
     closeShareMenu();
-    flash(`Downloaded ${files.length} letter-size PNG pages. Unzip and attach the PNGs together in Teams.`);
+    flash(`Downloaded ${files.length} full-detail PNG pages.`);
   }catch(err){
     alert(`Could not create the Teams page set: ${err.message}`);
   }finally{
@@ -1725,7 +1910,7 @@ async function downloadScenarioPdf(){
   const btn=$('downloadScenarioPdfBtn');
   const old=btn.innerHTML;
   btn.disabled=true;
-  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PDF…</strong><small>Creating a trainee-friendly multipage PDF</small></span>`;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PDF…</strong><small>Creating the expanded full-detail PDF</small></span>`;
   try{
     const pageBlobs=await getTeamsPageBlobs();
     const pages=[];
@@ -1851,6 +2036,8 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("downloadOnePagePdfBtn").onclick=downloadOnePagePdf;
+$("downloadOnePagePngBtn").onclick=downloadOnePagePng;
 $("downloadScenarioPdfBtn").onclick=downloadScenarioPdf;
 $("downloadCardImageBtn").onclick=downloadCardImage;
 $("downloadTeamsPagesBtn").onclick=downloadTeamsPageSet;

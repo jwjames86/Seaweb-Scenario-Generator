@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.8.9" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.0" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.8.9 • Full-Page Legal Export + Mixed Guests</span>
+            <span class="pill">V1.9.0 • One-Page Trainee Export + Full Detail</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -277,25 +277,34 @@
                     Share Card <span aria-hidden="true">⌄</span>
                   </button>
                   <div id="shareScenarioMenu" class="share-menu" role="menu">
-                    <button id="downloadScenarioPdfBtn" type="button" role="menuitem">
+                    <button id="downloadOnePagePdfBtn" type="button" role="menuitem" class="recommended-share-option">
                       <span class="share-menu-icon">PDF</span>
-                      <span><strong>Download PDF</strong><small>8.5 × 14 legal pages — same full-page layout as the PNG export</small></span>
+                      <span><strong>One-Page Trainee PDF</strong><small>Recommended — one compact 8.5 × 14 page for Teams, email and printing</small></span>
+                    </button>
+                    <button id="downloadOnePagePngBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">▣</span>
+                      <span><strong>One-Page Trainee PNG</strong><small>Same one-page design as the PDF — easy to attach or preview in Teams</small></span>
+                    </button>
+                    <div class="share-menu-divider" aria-hidden="true"></div>
+                    <button id="downloadScenarioPdfBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">PDF+</span>
+                      <span><strong>Full Detail PDF</strong><small>Expanded trainee version with reference details and knowledge review</small></span>
                     </button>
                     <button id="downloadTeamsPagesBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▦</span>
-                      <span><strong>Download PNG Page Set</strong><small>8.5 × 14 legal PNG pages — same full-page layout as the PDF export</small></span>
+                      <span><strong>Full Detail PNG Page Set</strong><small>Expanded legal-size pages using the same full-detail layout as the PDF</small></span>
                     </button>
                     <button id="downloadCardImageBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">⇩</span>
-                      <span><strong>Download Full PNG</strong><small>One complete long image — best for email or saving as one file</small></span>
+                      <span><strong>Download Full Long PNG</strong><small>One continuous image of the complete trainee scenario</small></span>
                     </button>
                     <button id="copyCardImageBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▣</span>
-                      <span><strong>Copy as Image</strong><small>Quick paste for email or chat — preserves the look</small></span>
+                      <span><strong>Copy as Image</strong><small>Quick paste for email or chat</small></span>
                     </button>
                     <button id="copyCardFormattedBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">A</span>
-                      <span><strong>Copy Editable</strong><small>Formatted text that recipients can select and copy</small></span>
+                      <span><strong>Copy Editable</strong><small>Formatted text recipients can select and copy</small></span>
                     </button>
                     <button id="copyScenarioBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">¶</span>
@@ -345,6 +354,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.8.9"></script>
+  <script src="/app.js?v=1.9.0"></script>
 </body>
 </html>

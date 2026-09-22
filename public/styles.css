@@ -378,3 +378,10 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 /* V1.8.7 • Unified letter-size export layout for PNG + PDF */
 
 /* V1.8.9 • explicit mixed guest status + full-page legal exports */
+
+
+/* V1.9.0 • One-page trainee export controls */
+.share-menu-divider{height:1px;background:#DED9CF;margin:5px 6px}
+.share-menu .recommended-share-option{background:#F0F7F6}
+.share-menu .recommended-share-option:hover{background:#E4F1EF}
+.share-menu .share-menu-icon{font-size:12px;letter-spacing:-.02em}
