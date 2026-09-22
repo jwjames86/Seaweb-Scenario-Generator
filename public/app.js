@@ -155,11 +155,20 @@ function populateTrainingCards(){
 
 function renderTrainingCard(){
   const c=trainingCards[$("trainingCardProfile").value]||trainingCards.standardSesame;
-  $("trainingCardPreview").innerHTML=`
-    <div><span>Card Number</span><strong>${escapeHtml(c.number)}</strong></div>
-    <div><span>Expiration</span><strong>${escapeHtml(c.expiration)}</strong></div>
-    <div><span>CCV</span><strong>${escapeHtml(c.ccv)}</strong></div>
-    <div class="wide"><span>Billing Address</span><strong>${escapeHtml(c.address)}</strong></div>`;
+  $("trainingCardNumber").value=c.number||"";
+  $("trainingCardExpiration").value=c.expiration||"";
+  $("trainingCardCcv").value=c.ccv||"";
+  $("trainingCardAddress").value=c.address||"";
+}
+
+function currentTrainingCard(){
+  return {
+    label:trainingCards[$("trainingCardProfile").value]?.label||"Custom Training Card",
+    number:$("trainingCardNumber")?.value.trim()||"",
+    expiration:$("trainingCardExpiration")?.value.trim()||"",
+    ccv:$("trainingCardCcv")?.value.trim()||"",
+    address:$("trainingCardAddress")?.value.trim()||""
+  };
 }
 
 function updateDepartmentUI(){
@@ -686,6 +695,9 @@ $("gdprCallerType").addEventListener("change",updateGdprPreview);
 $("directGroupMarket").addEventListener("change",updateGdprPreview);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
+$("resetTrainingCardBtn").addEventListener("click",renderTrainingCard);
+$("trainingCardNumber").addEventListener("input",()=>{$("trainingCardNumber").value=$("trainingCardNumber").value.replace(/[^0-9 ]/g,"")});
+$("trainingCardCcv").addEventListener("input",()=>{$("trainingCardCcv").value=$("trainingCardCcv").value.replace(/[^0-9]/g,"")});
 $("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
 $("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
 $("guestCount").addEventListener("change",()=>refreshLatitudesPanel());
@@ -1060,7 +1072,7 @@ function scenarioData(){
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired:!!meta.cardRequired || paymentActionNeedsCard(),
     cardProfile:cardKey,
-    card:(!!meta.cardRequired || paymentActionNeedsCard()) ? trainingCards[cardKey] : null,
+    card:(!!meta.cardRequired || paymentActionNeedsCard()) ? currentTrainingCard() : null,
     curriculumObjective:meta.objective||"",
     curriculumKind:meta.kind||"",
     createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),
@@ -1495,7 +1507,77 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
     </section>`;
 }
 
+function clearValidationDisplay(){
+  state.validation=[];
+  $("validatorSummary").innerHTML="";
+  $("validatorResults").innerHTML="";
+}
+
+function resetScenarioForm(){
+  state.currentScenario=null;
+  state.selectedSailing=null;
+  adaptiveExportCache={key:null,mode:null,blob:null};
+  sharePageCache={key:null,blobs:null};
+
+  $("department").value="Guest Services";
+  $("reservationWorkflow").value="new";
+  $("trainingDay").value="6";
+  $("scenarioApproach").value="variation";
+  $("difficulty").value="Beginner";
+  $("guestCount").value="2";
+  $("agency").value="5";
+  $("guest1").value="";
+  $("guest2").value="";
+  $("category").value="Balcony";
+  $("locationPref").value="Any";
+  $("sidePref").value="Any";
+  $("paymentAction").value="No Payment / Service Only";
+  $("pricing").value="";
+  $("confirmationEmail").value="";
+  $("existingReservationNumber").value="";
+  $("modificationType").value="special_request";
+  $("modificationTarget").value="";
+  $("modificationRequest").value="";
+  $("modificationGuestStatus").value="new";
+  $("modificationLatitudes").value="";
+  $("gdprCallerType").value="";
+  $("directGroupMarket").value="direct_groups_sot";
+  $("trainerNotes").value="";
+
+  $("latitudesToggle").checked=false;
+  $("commentToggle").checked=false;
+  $("confirmToggle").checked=false;
+  $("fasToggle").checked=false;
+  $("travelToggle").checked=false;
+  $("pscToggle").checked=false;
+
+  $("trainingCardProfile").value="standardSesame";
+  renderTrainingCard();
+
+  updateDepartmentUI();
+  // updateDepartmentUI selects the first focus so clear it afterward.
+  $("scenarioType").selectedIndex=-1;
+  $("curriculumNote").innerHTML="";
+  updateWorkflowUI(false);
+  refreshLatitudesPanel();
+  refreshTrainingCardPanel();
+
+  renderSelectedSailing();
+  $("scenarioOutput").innerHTML='<p class="empty-copy">Start a new scenario by choosing your options, then click <strong>Generate Scenario</strong>.</p>';
+  $("scenarioStatus").className="status-badge neutral";
+  $("scenarioStatus").textContent="Draft";
+  clearValidationDisplay();
+  setMode("trainer");
+  flash("Scenario cleared. You can start a brand-new exercise.");
+  $("department").focus();
+}
+
 function generateScenario(){
+  if(!$("scenarioType").value){
+    alert("Choose a Scenario Focus before generating the scenario.");
+    $("scenarioType").focus();
+    return;
+  }
   const d=scenarioData();
   const meta=currentFocusMeta()||{};
   const guestNames=[d.guest1,d.guest2].filter(Boolean);
@@ -1601,6 +1683,7 @@ function generateScenario(){
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
 }
 $("generateBtn").onclick=generateScenario;
+$("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
 
 function runValidator(){
   const d=state.currentScenario||scenarioData(), s=d.sailing, checks=[];
@@ -2822,7 +2905,14 @@ window.openSaved=(id)=>{
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;$("trainerNotes").value=x.trainerNotes||"";
-  if(x.cardProfile && trainingCards[x.cardProfile]){$("trainingCardProfile").value=x.cardProfile;renderTrainingCard();}
+  if(x.cardProfile && trainingCards[x.cardProfile])$("trainingCardProfile").value=x.cardProfile;
+  renderTrainingCard();
+  if(x.card){
+    $("trainingCardNumber").value=x.card.number||"";
+    $("trainingCardExpiration").value=x.card.expiration||"";
+    $("trainingCardCcv").value=x.card.ccv||"";
+    $("trainingCardAddress").value=x.card.address||"";
+  }
   renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
 };
 $("exportBtn").onclick=()=>{

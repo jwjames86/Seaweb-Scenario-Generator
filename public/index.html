@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.6" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.7" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.6 • GDPR Ask-First Verification Logic</span>
+            <span class="pill">V1.9.7 • Trainer Instructions + New Scenario Reset + Editable Payment</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -58,6 +58,24 @@
             <p>Agency, training guests, internal promo codes, exact deposit/final-payment details, Commenting Tool tasks and answer-key notes.</p>
           </div>
         </div>
+
+        <details class="trainer-instructions dashboard-instructions trainer-only" open>
+          <summary>
+            <span>Trainer Instructions — How to Use the Seaweb Scenario Generator</span>
+            <small>Recommended workflow from sailing search through sharing and saving</small>
+          </summary>
+          <div class="instructions-body">
+            <div class="instruction-step-grid">
+              <div class="instruction-step"><span>1</span><div><strong>Choose the type of exercise</strong><p>Decide whether trainees are creating a new reservation or modifying a reservation they created previously.</p></div></div>
+              <div class="instruction-step"><span>2</span><div><strong>Find a real sailing when needed</strong><p>Use Real Sailing Search for new-booking exercises. Modification exercises usually use an existing training reservation instead.</p></div></div>
+              <div class="instruction-step"><span>3</span><div><strong>Build the scenario</strong><p>Select the department, workflow, scenario focus, guests, booking action, and any required servicing details. Guest Services modifications automatically include the GDPR workflow.</p></div></div>
+              <div class="instruction-step"><span>4</span><div><strong>Generate and review</strong><p>Generate the scenario, switch between Trainer and Trainee views, and make adjustments until the exercise matches the skill you want to practice.</p></div></div>
+              <div class="instruction-step"><span>5</span><div><strong>Validate before assigning</strong><p>Run Scenario Validator to catch missing guest information, GDPR requirements, payment conflicts, or other setup issues.</p></div></div>
+              <div class="instruction-step"><span>6</span><div><strong>Share, print, or save</strong><p>Use Share Card to download, copy, or print Trainer/Trainee versions. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
+            </div>
+            <div class="instruction-tip"><strong>Tip:</strong> Use <em>Start New Scenario</em> whenever you want to clear the current exercise and begin again without carrying over guest names, reservation numbers, notes, payment details, or the previously generated card.</div>
+          </div>
+        </details>
 
         <div class="stat-grid">
           <div class="stat"><span>Saved Scenarios</span><strong id="savedCount">0</strong></div>
@@ -75,6 +93,19 @@
           <div><h2>Real Sailing Search</h2><p>Public NCL.com data only. Exact cabin inventory and internal Seaweb fields are never inferred.</p></div>
           <span class="status-badge">Live NCL Adapter</span>
         </div>
+
+        <details class="trainer-instructions tab-instructions trainer-only">
+          <summary><span>How to Use Real Sailing Search</span><small>Find a public NCL sailing to use in a new-reservation scenario</small></summary>
+          <div class="instructions-body">
+            <ul>
+              <li>Choose a From date. The To date automatically fills 30 days later; shorten it if needed.</li>
+              <li>Use only one main search filter: Destination, Embarkation Port, or Ship. Vacation Length is optional.</li>
+              <li>Select <strong>Use in Scenario</strong> on the sailing you want. The sailing will appear at the top of Scenario Generator.</li>
+              <li>Use port-of-call requirements after retrieving results instead of over-filtering the initial search.</li>
+              <li>This tab uses public NCL.com information only. Verify cabin inventory, exact pricing, and internal rules in Seaweb.</li>
+            </ul>
+          </div>
+        </details>
 
         <div class="panel seaweb-search-panel">
           <div class="search-mode-row">
@@ -153,6 +184,20 @@
           <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
+
+        <details class="trainer-instructions tab-instructions trainer-only">
+          <summary><span>How to Use Scenario Generator</span><small>Create, review, clear, share and save an exercise</small></summary>
+          <div class="instructions-body">
+            <ul>
+              <li>Choose the Department, Reservation Workflow, Scenario Focus, difficulty, and scenario approach.</li>
+              <li>For <strong>Create New Reservation</strong>, select guest/stateroom details and optionally attach a real sailing from the Search tab.</li>
+              <li>For <strong>Modify Existing Reservation</strong>, enter the prior training reservation number and choose exactly what is being changed. Guest Services modifications require GDPR setup.</li>
+              <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
+              <li>Select <strong>Generate Scenario</strong>, then review the card on the right. Trainer View includes coaching information; Trainee View hides trainer-only content.</li>
+              <li>Use <strong>Start New Scenario</strong> to clear the current setup and generated scenario before building a completely different exercise.</li>
+            </ul>
+          </div>
+        </details>
 
         <div class="two-col">
           <div class="panel">
@@ -331,10 +376,27 @@
                 <div><strong>Training Credit Card Information</strong><span>Shown because this scenario requires a card payment.</span></div>
                 <span class="status-badge review">TRAINING / TEST DATA ONLY</span>
               </div>
-              <label>Training Card Profile
-                <select id="trainingCardProfile"></select>
-              </label>
-              <div id="trainingCardPreview" class="training-card-preview"></div>
+              <div class="training-card-profile-row">
+                <label>Training Card Profile
+                  <select id="trainingCardProfile"></select>
+                </label>
+                <button id="resetTrainingCardBtn" type="button" class="secondary tiny">Reset to Profile</button>
+              </div>
+              <div class="training-card-edit-grid">
+                <label>Card Number
+                  <input id="trainingCardNumber" autocomplete="off" inputmode="numeric" placeholder="Training card number" />
+                </label>
+                <label>Expiration
+                  <input id="trainingCardExpiration" autocomplete="off" placeholder="MM/YYYY" />
+                </label>
+                <label>CCV
+                  <input id="trainingCardCcv" autocomplete="off" inputmode="numeric" placeholder="CCV" />
+                </label>
+                <label class="wide">Billing Address
+                  <input id="trainingCardAddress" autocomplete="off" placeholder="Training billing address" />
+                </label>
+              </div>
+              <div class="training-card-edit-note">You can edit these values for this scenario. They are labeled as training/test data in the trainee scenario.</div>
             </div>
 
             <fieldset>
@@ -362,6 +424,7 @@
             <div class="actions">
               <button id="generateBtn" class="primary">Generate Scenario</button>
               <button id="generateNamesBtn" class="secondary">Generate Fictional Names</button>
+              <button id="clearScenarioBtn" class="secondary clear-scenario-btn" type="button">Start New Scenario</button>
             </div>
           </div>
 
@@ -421,6 +484,18 @@
           <div><h2>Scenario Validator</h2><p>Checks the scenario against the selected sailing and its own instructions.</p></div>
           <button id="runValidatorBtn" class="primary">Run Validator</button>
         </div>
+        <details class="trainer-instructions tab-instructions trainer-only">
+          <summary><span>How to Use Scenario Validator</span><small>Check the exercise before giving it to trainees</small></summary>
+          <div class="instructions-body">
+            <ul>
+              <li>Generate a scenario first, then select <strong>Run Validator</strong>.</li>
+              <li><strong>Errors</strong> are blocking issues that should be fixed before assigning the exercise.</li>
+              <li><strong>Warnings</strong> identify details a trainer should review or verify.</li>
+              <li><strong>Passed</strong> checks confirm that required information is present and internally consistent.</li>
+              <li>For Guest Services modifications, the validator checks reservation identification, GDPR caller type, and special PCC/Direct Group handling when applicable.</li>
+            </ul>
+          </div>
+        </details>
         <div id="validatorSummary" class="validator-summary"></div>
         <div id="validatorResults" class="validation-list"></div>
       </section>
@@ -433,6 +508,18 @@
             <label class="file-button secondary">Import JSON<input id="importFile" type="file" accept=".json,application/json" hidden /></label>
           </div>
         </div>
+        <details class="trainer-instructions tab-instructions trainer-only">
+          <summary><span>How to Use Saved Scenario Library</span><small>Reuse, duplicate, organize and back up scenarios</small></summary>
+          <div class="instructions-body">
+            <ul>
+              <li>Use the department filter or search box to find a saved scenario.</li>
+              <li><strong>Open</strong> loads the scenario back into Scenario Generator so you can edit or regenerate it.</li>
+              <li><strong>Duplicate</strong> creates a separate copy you can modify without changing the original.</li>
+              <li>Use Favorites and Archive to organize frequently used and retired scenarios.</li>
+              <li><strong>Export JSON</strong> creates a backup of the browser-local library. Use Import JSON to restore or move scenarios to another browser.</li>
+            </ul>
+          </div>
+        </details>
         <div class="panel">
           <div class="library-filter-grid">
             <select id="libraryDepartmentFilter"><option value="">All Departments</option><option>Guest Services</option><option>Outbound Sales</option></select>
@@ -446,6 +533,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.6"></script>
+  <script src="/app.js?v=1.9.7"></script>
 </body>
 </html>
