@@ -36,3 +36,17 @@ This release combines the sharing reliability hotfix with a new **Download PDF**
 1. **Download PDF** – best for Teams, email, printing, and zooming.
 2. **Download Teams Page Set** – best when you want image-by-image review in Teams chat.
 3. **Download Full PNG** – best when you specifically want one long image.
+
+
+## V1.8.4 – Teams / PDF Cutoff Fix
+
+This hotfix fixes the cut-off pages seen in the Teams Page Set and PDF export.
+
+### What changed
+- Page splitting now follows **server-rendered separator markers** instead of guessing crop dimensions from the local browser.
+- The full width of each rendered page is preserved, so left/right content is no longer clipped.
+- Page boundaries are detected from the actual final screenshot, so vertical sections are no longer cut between pages.
+- Teams page images use larger typography for easier reading.
+- PDF pages automatically choose **portrait or landscape** orientation per page to maximize readability.
+- Teams Page Set and PDF reuse the same cached rendered pages during the current scenario, reducing Cloudflare Browser Run requests and helping avoid rate-limit errors.
+- Copy as Image and Download Full PNG remain unchanged.

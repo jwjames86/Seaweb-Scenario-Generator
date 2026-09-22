@@ -154,6 +154,29 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .latitudes-output-card>strong{display:block;font-size:12px;color:#101828;margin:3px 0}
 .latitudes-output-card>small{display:block;font-size:11px;color:#006099;font-weight:600}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
+
+.teams-page-stack{width:1180px;margin:0 auto}
+.teams-page-stack .teams-share-page{width:1180px;margin:0;background:#fff}
+.share-page-split-marker{width:1180px;height:18px;margin:0;background:#FF00FF}
+.teams-page-bar{display:flex;justify-content:space-between;align-items:center;margin:-4px 0 24px;padding:12px 15px;background:#00484F;color:#fff;border-radius:4px;font-size:16px}
+.teams-page-bar strong{font-size:18px;color:#fff}
+.teams-page-bar span{font-size:15px;color:#fff}
+.teams-page-stack p,.teams-page-stack li{font-size:17px;line-height:1.5}
+.teams-page-stack h2{font-size:31px}
+.teams-page-stack h3{font-size:23px}
+.teams-page-stack h4{font-size:18px}
+.teams-page-stack .scenario-intro{font-size:17px}
+.teams-page-stack .section-label{font-size:12px}
+.teams-page-stack .chip,.teams-page-stack .status-badge{font-size:14px;padding:6px 9px}
+.teams-page-stack .glance-card>span{font-size:12px}
+.teams-page-stack .glance-card>strong{font-size:17px}
+.teams-page-stack .glance-card>small{font-size:14px}
+.teams-page-stack .latitudes-output-card>span{font-size:11px}
+.teams-page-stack .latitudes-output-card>strong{font-size:16px}
+.teams-page-stack .latitudes-output-card>small{font-size:14px}
+.teams-page-stack .share-expanded-heading{font-size:19px}
+.teams-page-stack .support-list{columns:1}
+
 .trainer-section{display:none!important}
 </style></head><body>${bodyHtml}</body></html>`;
 }
