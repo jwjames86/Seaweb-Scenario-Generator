@@ -479,6 +479,7 @@ function updateModificationTypeUI(applyDefaults=false){
   });
   $("pricingField")?.classList.toggle("workflow-hidden",modify&&!needsStateroom);
   $("guestCountField")?.classList.toggle("workflow-hidden",modify);
+  $("guest1Field")?.classList.toggle("workflow-hidden",modify);
   $("guest2Field")?.classList.toggle("workflow-hidden",modify);
 
   $("guestStatusTaskControl")?.classList.toggle("workflow-hidden",modify);
@@ -518,9 +519,10 @@ function updateModificationTypeUI(applyDefaults=false){
 
 function updateWorkflowUI(applyDefaults=false){
   const modify=$("reservationWorkflow").value==="modify";
-  $("guest1Field").querySelector(":scope > text")?.remove?.();
-  // Primary guest remains visible because it is the quickest way to identify
-  // the training reservation along with the reservation number.
+  if(modify){
+    $("guest1").value="";
+    $("guest2").value="";
+  }
   updateModificationTypeUI(applyDefaults);
   updateGdprPreview();
 }
@@ -1193,28 +1195,50 @@ function focusStoryDetail(d,meta){
 }
 
 function customerStoryHtml(d,meta,sailText,guestNames){
-  const primary=guestNames[0]||"The guest";
-  const companion=guestNames[1]||"";
+  const modifying=d.reservationWorkflow==="modify";
+
   if(meta.kind==="demo"){
     return `<p>This is a <strong>trainer-led demonstration</strong>. Use the selected or trainer-provided reservation/sailing to demonstrate the ${escapeHtml(d.type)} workflow.</p>`;
   }
-  const names=companion?`<strong>${escapeHtml(primary)}</strong> and <strong>${escapeHtml(companion)}</strong>`:`<strong>${escapeHtml(primary)}</strong>`;
-  const modifying=d.reservationWorkflow==="modify";
-  if(meta.kind==="ta"){
-    return modifying
-      ? `<p>A travel advisor is calling on behalf of ${names} to modify an existing training reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`
-      : `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
-  }
+
   if(modifying){
     const reservation=d.existingReservationNumber?` <strong>${escapeHtml(d.existingReservationNumber)}</strong>`:"";
     const target=d.modificationTarget?` The requested change involves <strong>${escapeHtml(d.modificationTarget)}</strong>.`:"";
     const request=d.modificationRequest?` ${escapeHtml(d.modificationRequest)}`:"";
-    const gdpr=d.department==="Guest Services"&&d.gdprCallerType?` Before servicing the reservation, complete GDPR verification for the ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"selected caller type")}.`:"";
-    return `<p>${names} contact Norwegian Cruise Line about existing training reservation${reservation}. They want to <strong>${escapeHtml(modificationLabel(d.modificationType).toLowerCase())}</strong>.${target}${request}${gdpr}</p>`;
+    const gdpr=d.department==="Guest Services"&&d.gdprCallerType
+      ? ` Before servicing the reservation, complete GDPR verification for the ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"selected caller type")}.`
+      :"";
+
+    let callerLead="A guest contacts Norwegian Cruise Line";
+    if(d.gdprCallerType==="travel_agent"||d.gdprCallerType==="ta_group"){
+      callerLead="A travel advisor contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="travel_agency_guest"){
+      callerLead="A travel agency guest contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="pcc_guest"){
+      callerLead="A PCC guest contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="casino_guest"){
+      callerLead="A casino guest contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="friends_family"){
+      callerLead="A Friends & Family / Team Member guest contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="direct_group"){
+      callerLead="A Direct Group caller contacts Norwegian Cruise Line";
+    }else if(d.gdprCallerType==="charter_sixthman"){
+      callerLead="A Charter / Sixthman guest contacts Norwegian Cruise Line";
+    }
+
+    return `<p>${callerLead} about an existing training reservation${reservation}. They want to <strong>${escapeHtml(modificationLabel(d.modificationType).toLowerCase())}</strong>.${target}${request}${gdpr} Use the guest name(s) already on the existing training reservation.</p>`;
   }
+
+  const primary=guestNames[0]||"The guest";
+  const companion=guestNames[1]||"";
+  const names=companion?`<strong>${escapeHtml(primary)}</strong> and <strong>${escapeHtml(companion)}</strong>`:`<strong>${escapeHtml(primary)}</strong>`;
+
+  if(meta.kind==="ta"){
+    return `<p>A travel advisor is calling on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+  }
+
   return `<p>${names} are planning ${escapeHtml(sailText)} and want to create a new reservation. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
 }
-
 function promotionSummary(d){
   const parts=[];
   if(d.fas)parts.push("Free at Sea");
@@ -1244,7 +1268,7 @@ function atAGlanceHtml(d,meta){
       : "";
     const cards=[
       ["Reservation",d.existingReservationNumber||"Use prior training reservation","Locate before making changes"],
-      ["Primary Guest",d.guest1||"Verify in reservation","Use existing reservation profile"],
+      ["Guest Name(s)","Use names on existing reservation","Do not replace with generated new-booking names"],
       ...(d.department==="Guest Services"?[["GDPR Caller Type",gdprProfile(d.gdprCallerType)?.label||"Select caller type","Verification required before servicing"]]:[]),
       ["Modification",modificationLabel(d.modificationType),d.modificationTarget||"See requested change"],
       ["Payment / Action",d.payment,"Verify any resulting amount due"],
@@ -1296,7 +1320,7 @@ function fullTaskList(d,meta){
       const action=gdprActionText(d);
       if(action)tasks.push(action);
     }
-    tasks.push(`Locate training reservation ${d.existingReservationNumber||"(trainer-provided reservation)"} and complete required verification before making changes.`);
+    tasks.push(`Locate training reservation ${d.existingReservationNumber||"(trainer-provided reservation)"} and use the guest name(s) already on that reservation. Complete required verification before making changes.`);
     tasks.push(modificationTaskText(d));
     if(d.modificationType==="add_guest" && d.modificationGuestStatus==="past"){
       tasks.push(d.modificationLatitudes?`Use training Latitudes # ${d.modificationLatitudes} to locate the guest being added.`:"Locate the Past Guest profile and verify the Latitudes number before adding the guest.");
@@ -1466,7 +1490,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
       <ul class="detail-list">
         <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
         <li><strong>Reservation:</strong> ${escapeHtml(d.existingReservationNumber||"Use prior training reservation")}</li>
-        <li><strong>Primary Guest:</strong> ${escapeHtml(d.guest1||"Verify in reservation")}</li>
+        <li><strong>Guest Name(s):</strong> Use the guest name(s) already on the existing training reservation</li>
         <li><strong>Agency:</strong> ${escapeHtml(agencyDisplay)}</li>
         <li><strong>Modification:</strong> ${escapeHtml(modificationLabel(d.modificationType))}</li>
         ${d.department==="Guest Services"?`<li><strong>GDPR Caller Type:</strong> ${escapeHtml(gdprProfile(d.gdprCallerType)?.label||"Not selected")}</li>`:""}
