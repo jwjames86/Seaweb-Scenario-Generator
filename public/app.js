@@ -1249,15 +1249,15 @@ function ensureScenarioReady(){
   return !!state.currentScenario;
 }
 
-function makeTraineeShareClone(){
+function makeViewShareClone(includeTrainer=state.mode==="trainer"){
   const source=$("scenarioOutput");
   const clone=source.cloneNode(true);
 
-  // Never share trainer-only content.
-  clone.querySelectorAll(".trainer-section").forEach(el=>el.remove());
+  if(!includeTrainer){
+    clone.querySelectorAll(".trainer-section").forEach(el=>el.remove());
+  }
 
-  // Email and Teams do not reliably support <details>. Convert each one into
-  // a static, readable section so the copied card contains the full trainee material.
+  // Convert collapsible sections into static content for exported files.
   clone.querySelectorAll("details").forEach(details=>{
     const replacement=document.createElement("section");
     replacement.className="share-expanded-section";
@@ -1277,11 +1277,27 @@ function makeTraineeShareClone(){
     details.replaceWith(replacement);
   });
 
-  // A recipient should get a clean trainee card, not UI-only controls.
   clone.querySelectorAll("button,input,select,textarea").forEach(el=>el.remove());
   clone.removeAttribute("id");
-  clone.classList.add("shared-trainee-card");
+  clone.classList.add("adaptive-export",includeTrainer?"trainer-export":"trainee-export");
+
+  const d=state.currentScenario||scenarioData();
+  const header=document.createElement("div");
+  header.className="adaptive-export-header";
+  header.innerHTML=`
+    <div>
+      <span class="adaptive-export-kicker">SEAweb Training Scenario</span>
+      <strong>${escapeHtml(d.type||"Scenario")}</strong>
+      <small>${escapeHtml(d.department||"")} • Day ${escapeHtml(String(d.trainingDay||""))}</small>
+    </div>
+    <span class="adaptive-export-mode">${includeTrainer?"TRAINER VIEW":"TRAINEE VIEW"}</span>`;
+  clone.prepend(header);
+
   return clone;
+}
+
+function makeTraineeShareClone(){
+  return makeViewShareClone(false);
 }
 
 const shareStyleProps=[
@@ -1370,11 +1386,158 @@ async function renderShareHtmlToPng(html,mode="full"){
 }
 
 async function renderShareCardToPng(){
-  const clone=makeTraineeShareClone();
+  const clone=makeViewShareClone(state.mode==="trainer");
   return renderShareHtmlToPng(clone.outerHTML,"full");
 }
 
 
+
+let adaptiveExportCache={key:null,mode:null,blob:null};
+
+function adaptiveExportFilename(ext){
+  const d=state.currentScenario||scenarioData();
+  const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const focus=(d.type||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
+  const view=state.mode==="trainer"?"Trainer":"Trainee";
+  return `${dept}-Day-${d.trainingDay||""}-${focus}-${view}.${ext}`;
+}
+
+async function cropAdaptiveExportBlob(blob){
+  const img=await loadImageFromBlob(blob);
+  const width=img.naturalWidth||img.width;
+  const height=img.naturalHeight||img.height;
+
+  // Worker document uses 20px body padding. Crop it away so the export ends
+  // exactly at the rendered content instead of carrying blank outer space.
+  const margin=20;
+  const sx=Math.min(margin,width-1);
+  const sy=Math.min(margin,height-1);
+  const sw=Math.max(1,width-(margin*2));
+  const sh=Math.max(1,height-(margin*2));
+
+  const canvas=document.createElement("canvas");
+  canvas.width=sw;
+  canvas.height=sh;
+  const ctx=canvas.getContext("2d");
+  ctx.fillStyle="#ffffff";
+  ctx.fillRect(0,0,sw,sh);
+  ctx.drawImage(img,sx,sy,sw,sh,0,0,sw,sh);
+
+  return await new Promise((resolve,reject)=>{
+    canvas.toBlob(b=>b?resolve(b):reject(new Error("Could not prepare the content-fit export.")),"image/png");
+  });
+}
+
+async function getAdaptiveCurrentViewPng(){
+  const key=`${currentSharePageCacheKey()}|adaptive-v191`;
+  const mode=state.mode;
+  if(adaptiveExportCache.key===key && adaptiveExportCache.mode===mode && adaptiveExportCache.blob){
+    return adaptiveExportCache.blob;
+  }
+
+  const clone=makeViewShareClone(mode==="trainer");
+  const rendered=await renderShareHtmlToPng(clone.outerHTML,"full");
+  const blob=await cropAdaptiveExportBlob(rendered);
+  adaptiveExportCache={key,mode,blob};
+  return blob;
+}
+
+function makeContentFitPdf(page){
+  const encoder=new TextEncoder();
+  const objects=[null];
+  objects[1]=encoder.encode("<< /Type /Catalog /Pages 2 0 R >>");
+  objects[2]=encoder.encode("");
+
+  // Use a normal 8.5-inch PDF width, but let the height follow the actual
+  // image aspect ratio. That removes artificial blank space completely.
+  const pageWidth=612;
+  const pageHeight=Math.max(180,Math.round((page.height/page.width)*pageWidth*1000)/1000);
+
+  const imageObjNo=3;
+  objects[imageObjNo]=pdfObjectFromParts([
+    `<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.bytes.length} >>\nstream\n`,
+    page.bytes,
+    `\nendstream`
+  ]);
+
+  const stream=`q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im1 Do\nQ`;
+  const contentObjNo=4;
+  objects[contentObjNo]=encoder.encode(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+  const pageObjNo=5;
+  objects[pageObjNo]=encoder.encode(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im1 ${imageObjNo} 0 R >> >> /Contents ${contentObjNo} 0 R >>`);
+  objects[2]=encoder.encode(`<< /Type /Pages /Kids [ ${pageObjNo} 0 R ] /Count 1 >>`);
+
+  let offset=0;
+  const chunks=[encoder.encode("%PDF-1.4\n%ÿÿÿÿ\n")];
+  offset=chunks[0].length;
+  const offsets=[0];
+
+  for(let i=1;i<objects.length;i++){
+    offsets[i]=offset;
+    const head=encoder.encode(`${i} 0 obj\n`);
+    const tail=encoder.encode("\nendobj\n");
+    chunks.push(head,objects[i],tail);
+    offset+=head.length+objects[i].length+tail.length;
+  }
+
+  const xrefStart=offset;
+  let xref=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<objects.length;i++) xref+=`${String(offsets[i]).padStart(10,"0")} 00000 n \n`;
+  const trailer=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  chunks.push(encoder.encode(xref),encoder.encode(trailer));
+
+  return new Blob(chunks,{type:"application/pdf"});
+}
+
+async function downloadAdaptivePng(){
+  if(!ensureScenarioReady())return;
+  const btn=$("downloadAdaptivePngBtn");
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PNG…</strong><small>Fitting to the current ${state.mode} view</small></span>`;
+  try{
+    const png=await getAdaptiveCurrentViewPng();
+    const url=URL.createObjectURL(png);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=adaptiveExportFilename("png");
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash(`${state.mode==="trainer"?"Trainer":"Trainee"} PNG downloaded with content-fit height.`);
+  }catch(err){
+    alert(`Could not create the PNG: ${err.message}`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
+}
+
+async function downloadAdaptivePdf(){
+  if(!ensureScenarioReady())return;
+  const btn=$("downloadAdaptivePdfBtn");
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building PDF…</strong><small>Removing unused page space</small></span>`;
+  try{
+    const png=await getAdaptiveCurrentViewPng();
+    const descriptor=await blobToJpegDescriptor(png,0.995);
+    const pdf=makeContentFitPdf(descriptor);
+    const url=URL.createObjectURL(pdf);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=adaptiveExportFilename("pdf");
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash(`${state.mode==="trainer"?"Trainer":"Trainee"} PDF downloaded with an adaptive page size and no forced blank area.`);
+  }catch(err){
+    alert(`Could not create the PDF: ${err.message}`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
+}
 
 function onePageSailText(d){
   const s=d.sailing;
@@ -1976,10 +2139,10 @@ async function copyCardAsImage(){
   btn.disabled=true;
   btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Creating image…</strong><small>Please wait</small></span>`;
   try{
-    const png=await renderShareCardToPng();
+    const png=await getAdaptiveCurrentViewPng();
     await navigator.clipboard.write([new ClipboardItem({"image/png":png})]);
     closeShareMenu();
-    flash("Trainee card copied as an image — paste it into Teams or email.");
+    flash(`${state.mode==="trainer"?"Trainer":"Trainee"} view copied as an image.`);
   }catch(err){
     alert(`Could not copy the card image: ${err.message}\n\nTry Copy Editable instead.`);
   }finally{
@@ -1991,7 +2154,7 @@ async function copyCardAsImage(){
 async function copyCardFormatted(){
   if(!ensureScenarioReady())return;
   const host=makeOffscreenShareHost();
-  const clone=makeTraineeShareClone();
+  const clone=makeViewShareClone(state.mode==="trainer");
   clone.style.width="760px";
   clone.style.maxWidth="760px";
   clone.style.padding="28px";
@@ -2036,11 +2199,8 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
-$("downloadOnePagePdfBtn").onclick=downloadOnePagePdf;
-$("downloadOnePagePngBtn").onclick=downloadOnePagePng;
-$("downloadScenarioPdfBtn").onclick=downloadScenarioPdf;
-$("downloadCardImageBtn").onclick=downloadCardImage;
-$("downloadTeamsPagesBtn").onclick=downloadTeamsPageSet;
+$("downloadAdaptivePdfBtn").onclick=downloadAdaptivePdf;
+$("downloadAdaptivePngBtn").onclick=downloadAdaptivePng;
 $("copyCardImageBtn").onclick=copyCardAsImage;
 $("copyCardFormattedBtn").onclick=copyCardFormatted;
 document.addEventListener("click",e=>{
@@ -2050,7 +2210,7 @@ document.addEventListener("click",e=>{
 
 $("copyScenarioBtn").onclick=async()=>{
   if(!ensureScenarioReady())return;
-  const clone=makeTraineeShareClone();
+  const clone=makeViewShareClone(state.mode==="trainer");
   await navigator.clipboard.writeText(clone.innerText);
   closeShareMenu();
   flash("Plain-text trainee scenario copied.");

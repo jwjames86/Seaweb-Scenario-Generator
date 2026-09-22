@@ -385,3 +385,6 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .share-menu .recommended-share-option{background:#F0F7F6}
 .share-menu .recommended-share-option:hover{background:#E4F1EF}
 .share-menu .share-menu-icon{font-size:12px;letter-spacing:-.02em}
+
+
+/* V1.9.1 • Adaptive content-fit export. PDF/PNG height follows rendered content. */
