@@ -1574,6 +1574,64 @@ function makeJpegPdf(pages,{margin=24}={}){
   return new Blob(chunks,{type:'application/pdf'});
 }
 
+function crc32(bytes){
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++){
+    crc^=bytes[i];
+    for(let j=0;j<8;j++) crc=(crc>>>1)^((crc&1)?0xEDB88320:0);
+  }
+  return (crc^0xFFFFFFFF)>>>0;
+}
+
+function u16(n){return new Uint8Array([n&255,(n>>>8)&255])}
+function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255])}
+
+function concatBytes(parts){
+  const total=parts.reduce((n,p)=>n+p.length,0);
+  const out=new Uint8Array(total);
+  let pos=0;
+  parts.forEach(p=>{out.set(p,pos);pos+=p.length});
+  return out;
+}
+
+async function makeStoredZip(files){
+  const encoder=new TextEncoder();
+  const locals=[];
+  const centrals=[];
+  let offset=0;
+
+  for(const file of files){
+    const name=encoder.encode(file.name);
+    const data=new Uint8Array(await file.blob.arrayBuffer());
+    const crc=crc32(data);
+    const local=concatBytes([
+      u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),
+      u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data
+    ]);
+    locals.push(local);
+
+    const central=concatBytes([
+      u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),
+      u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),
+      u16(0),u16(0),u32(0),u32(offset),name
+    ]);
+    centrals.push(central);
+    offset+=local.length;
+  }
+
+  const centralData=concatBytes(centrals);
+  const end=concatBytes([
+    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),
+    u32(centralData.length),u32(offset),u16(0)
+  ]);
+  return new Blob([concatBytes([...locals,centralData,end])],{type:'application/zip'});
+}
+
+function teamsPageFilename(page,total){
+  const base=scenarioShareFilename().replace(/\.png$/i,'');
+  return `${base}-Teams-${String(page).padStart(2,'0')}-of-${String(total).padStart(2,'0')}.png`;
+}
+
 async function downloadTeamsPageSet(){
   if(!ensureScenarioReady())return;
   const btn=$('downloadTeamsPagesBtn');
