@@ -183,7 +183,53 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .one-page-training-card{background:#FFF9E9}.one-page-training-card .training-only-label{font-size:9px;margin-bottom:8px}.one-page-card-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.one-page-card-grid span{display:block;background:#fff;padding:8px 9px;border-radius:3px;font-size:12px;line-height:1.3}.one-page-card-grid b{display:block;font-size:9px;text-transform:uppercase;color:#8A5B00;letter-spacing:.7px;margin-bottom:2px}.one-page-card-grid .wide{grid-column:1/-1}
 .one-page-final .task-checklist li{font-size:13px;padding:6px 0}.one-page-closing{margin-top:9px;padding-top:9px;border-top:1px solid #DED9CF;font-size:12px;line-height:1.4;color:#454949}.one-page-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:11px;margin-top:14px;border-top:1px solid #D8D5CE;color:#667085;font-size:10px;text-transform:uppercase;letter-spacing:1px}
 
-.trainer-section{display:none!important}
+.adaptive-export{width:2040px;margin:0 auto;background:#fff;border:0;border-radius:0;padding:30px 40px;color:#101828;font-family:Arial,Helvetica,sans-serif}
+.adaptive-export-header{display:flex;justify-content:space-between;align-items:center;gap:20px;background:#00484F;color:#fff;padding:15px 19px;border-radius:4px;margin-bottom:18px}
+.adaptive-export-header>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.adaptive-export-kicker{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:#CDE4E2;font-weight:800}
+.adaptive-export-header strong{font-size:24px;color:#fff;line-height:1.15}
+.adaptive-export-header small{font-size:12px;color:#E4F2F1}
+.adaptive-export-mode{font-size:11px;font-weight:800;letter-spacing:1px;background:#fff;color:#00484F;padding:7px 10px;border-radius:3px;white-space:nowrap}
+.adaptive-export .scenario-section{margin:16px 0}
+.adaptive-export h2{font-size:31px;line-height:1.2;margin:7px 0 13px}
+.adaptive-export h3{font-size:21px;line-height:1.25;margin:0 0 8px}
+.adaptive-export h4{font-size:16px;margin:16px 0 7px}
+.adaptive-export p,.adaptive-export li{font-size:15px;line-height:1.45}
+.adaptive-export .scenario-intro{font-size:15px;line-height:1.5;margin:0 0 15px}
+.adaptive-export .scenario-meta-row{margin-bottom:8px}
+.adaptive-export .chip,.adaptive-export .status-badge{font-size:11px;padding:5px 7px}
+.adaptive-export .call-section{padding:14px 17px}
+.adaptive-export .glance-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+.adaptive-export .glance-card{min-height:70px;padding:10px 11px}
+.adaptive-export .glance-card>span{font-size:9px}
+.adaptive-export .glance-card>strong{font-size:13px;line-height:1.3}
+.adaptive-export .glance-card>small{font-size:10px;line-height:1.3}
+.adaptive-export .latitudes-output-section{padding:13px 15px}
+.adaptive-export .latitudes-output-grid{gap:7px}
+.adaptive-export .latitudes-output-card{padding:9px 10px}
+.adaptive-export .latitudes-output-card>strong{font-size:12px}
+.adaptive-export .latitudes-output-card>small{font-size:10px}
+.adaptive-export .task-checklist li{padding:6px 0}
+.adaptive-export .check-box{width:13px;height:13px;flex-basis:13px}
+.adaptive-export .details-section{padding-top:14px}
+.adaptive-export .detail-list{columns:2;column-gap:34px}
+.adaptive-export .detail-list li{break-inside:avoid}
+.adaptive-export .instruction-strip{margin:8px 0 11px;padding:10px 12px}
+.adaptive-export .payment-section{padding:12px 14px}
+.adaptive-export .end-call-section{padding:13px 15px}
+.adaptive-export .share-expanded-section{margin:14px 0}
+.adaptive-export .share-expanded-heading{padding:10px 12px;font-size:14px}
+.adaptive-export .support-body{padding:10px 13px}
+.adaptive-export .support-list{columns:2;column-gap:30px}
+.adaptive-export.trainee-export .trainer-section{display:none!important}
+.adaptive-export.trainer-export .trainer-section{display:block!important;margin-top:18px;padding-top:16px;border-top:2px solid #00484F}
+.adaptive-export.trainer-export .trainer-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.adaptive-export.trainer-export .trainer-info-card{padding:10px 12px}
+.adaptive-export.trainer-export .trainer-workflow{columns:2;column-gap:36px}
+.adaptive-export.trainer-export .trainer-workflow li{break-inside:avoid}
+.adaptive-export.trainer-export .trainer-guide>ul{columns:2;column-gap:36px}
+.adaptive-export.trainer-export .trainer-guide>ul li{break-inside:avoid}
+
 </style></head><body>${bodyHtml}</body></html>`;
 }
 

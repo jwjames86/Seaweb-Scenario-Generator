@@ -97,3 +97,17 @@ V1.9.0 adds two export styles instead of forcing every trainee scenario into the
 - **Full Detail PDF** and **Full Detail PNG Page Set** preserve the expanded trainee version when the trainer wants every reference section included.
 
 The mixed Past Guest / New Guest controls and per-guest Latitudes behavior from V1.8.9 are preserved.
+
+
+## V1.9.1 – Adaptive Full-Space Export
+
+The fixed 8.5 × 14 export has been replaced with an **adaptive content-fit export**.
+
+- The PDF page height now follows the actual rendered scenario content.
+- The PNG is cropped to the exact scenario bounds.
+- No forced legal/letter height means there is no large blank bottom area.
+- Export follows the active **Trainer View** or **Trainee View**.
+- Trainer View includes the Trainer Guide and uses a compact two-column coaching layout to reduce unnecessary height.
+- Trainee View automatically excludes trainer-only content.
+- The Share Card menu is simplified to **Download Current View PDF**, **Download Current View PNG**, and current-view copy options.
+- The export keeps a normal 8.5-inch PDF width while allowing the height to expand or contract to the content.
