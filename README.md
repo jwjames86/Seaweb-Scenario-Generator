@@ -111,3 +111,13 @@ The fixed 8.5 × 14 export has been replaced with an **adaptive content-fit expo
 - Trainee View automatically excludes trainer-only content.
 - The Share Card menu is simplified to **Download Current View PDF**, **Download Current View PNG**, and current-view copy options.
 - The export keeps a normal 8.5-inch PDF width while allowing the height to expand or contract to the content.
+
+
+## V1.9.2 – Generator Layout + Tight Export Fix
+
+This hotfix addresses two regressions introduced in V1.9.1:
+
+- Restores the generated scenario to the **right-hand preview panel beneath the Share / Print / Save toolbar**.
+- Restores compact toolbar spacing so Share Card, Print and Save stay grouped together.
+- Replaces fixed viewport cropping with **actual rendered-card boundary detection**. The PNG and PDF now crop at the true bottom of the Trainer/Trainee scenario instead of retaining unused Browser Run viewport space.
+- Both Trainer and Trainee exports use the same tight content-fit behavior.
