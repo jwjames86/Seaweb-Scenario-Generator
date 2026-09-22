@@ -217,110 +217,66 @@ const modificationLabels={
 const gdprProfiles={
   direct_guest:{
     label:"Direct Guest",
-    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total."
   },
   travel_agent:{
     label:"Travel Agent",
-    instruction:"Reservation Number is mandatory. If the Travel Agent cannot provide #2 but can provide 3 pieces from items 3–6, service the call/chat as a Travel Agency Guest.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "ABTA # or Agency ID or Phone #",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number","ABTA # / Agency ID / Phone #"],
+    askFirst:["Reservation Number","ABTA # or Agency ID or Phone #","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Date of Birth","First Line of Address"],
+    instruction:"Ask all primary items first. To service the caller as a Travel Agent, Reservation Number and the agency identifier (ABTA #, Agency ID, or Phone #) are mandatory. If the agency identifier cannot be provided, do not continue under the Travel Agent verification path; use the Travel Agency Guest path once 3 pieces are obtained from Guest Full Name, Ship & Full Sail Date, Date of Birth, and First Line of Address."
   },
   travel_agency_guest:{
     label:"Travel Agency Guest",
-    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total."
   },
   ta_group:{
     label:"TA Group",
-    instruction:"Reservation Number is mandatory. If the Travel Agent cannot provide #2 but can provide 3 pieces from items 3–6, process the service/chat as a Travel Agency Guest.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "ABTA # or Agency ID or Phone #",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number","ABTA # / Agency ID / Phone #"],
+    askFirst:["Reservation Number","ABTA # or Agency ID or Phone #","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Date of Birth","First Line of Address"],
+    instruction:"Ask all primary items first. To service the caller as a Travel Agent / TA Group, Reservation Number and the agency identifier (ABTA #, Agency ID, or Phone #) are mandatory. If the agency identifier cannot be provided, use the Travel Agency Guest path once 3 pieces are obtained from Guest Full Name, Ship & Full Sail Date, Date of Birth, and First Line of Address."
   },
   friends_family:{
     label:"Friends & Family / Team Member",
-    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total."
   },
   casino_guest:{
     label:"Casino Guest",
-    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total."
   },
   pcc_guest:{
     label:"PCC Guest",
-    instruction:"Reservation Number is mandatory. Complete GDPR verification before following the PCC servicing / transfer guidance.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total. Complete GDPR before following PCC servicing / transfer guidance."
   },
   direct_group:{
     label:"Direct Group",
-    instruction:"Reservation Number is mandatory. Complete GDPR verification before following Direct Group transfer guidance.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total. Complete GDPR before following Direct Group transfer guidance."
   },
   charter_sixthman:{
     label:"Charter / Sixthman",
-    instruction:"Reservation Number is mandatory. If verification is not satisfied, continue through the remaining options until 3 pieces of information are obtained.",
-    requirements:[
-      "MANDATORY — Reservation Number",
-      "Guest Full Name",
-      "Ship & Full Sail Date",
-      "Agency Name",
-      "Date of Birth",
-      "First Line of Address"
-    ]
+    alwaysMandatory:["Reservation Number"],
+    askFirst:["Reservation Number","Guest Full Name","Ship & Full Sail Date"],
+    fallback:["Agency Name","Date of Birth","First Line of Address"],
+    instruction:"Ask the primary verification items first. Reservation Number is always mandatory. If one of the other primary items cannot be obtained, use the fallback questions until 3 verification pieces are obtained in total."
   }
 };
 
@@ -362,6 +318,33 @@ function gdprActionText(d){
   return "";
 }
 
+function gdprItemClass(profile,item){
+  const mandatory=(profile.alwaysMandatory||[]).some(x=>x===item || (item.includes("ABTA")&&x.includes("ABTA")));
+  return mandatory?"gdpr-always-mandatory":"gdpr-primary-item";
+}
+
+function gdprVerificationListsHtml(profile){
+  const askFirst=(profile.askFirst||[]).map((item,i)=>{
+    const cls=gdprItemClass(profile,item);
+    const mandatory=cls==="gdpr-always-mandatory";
+    return `<li class="${cls}"><span class="gdpr-number">${i+1}.</span><span>${escapeHtml(item)}</span>${mandatory?`<strong class="gdpr-mandatory-tag">MANDATORY</strong>`:""}</li>`;
+  }).join("");
+
+  const fallback=(profile.fallback||[]).map((item,i)=>`<li><span class="gdpr-number">${(profile.askFirst||[]).length+i+1}.</span><span>${escapeHtml(item)}</span></li>`).join("");
+
+  return `<div class="gdpr-question-groups">
+    <div class="gdpr-question-group primary">
+      <div class="gdpr-group-title">ASK FIRST</div>
+      <ol class="gdpr-primary-list">${askFirst}</ol>
+    </div>
+    <div class="gdpr-question-group fallback">
+      <div class="gdpr-group-title">IF NEEDED — ADDITIONAL VERIFICATION</div>
+      <p>Only use these when one of the non-mandatory primary verification items cannot be obtained.</p>
+      <ol class="gdpr-fallback-list">${fallback}</ol>
+    </div>
+  </div>`;
+}
+
 function gdprScenarioHtml(d){
   if(d.department!=="Guest Services"||d.reservationWorkflow!=="modify")return "";
   const profile=gdprProfile(d.gdprCallerType);
@@ -373,8 +356,9 @@ function gdprScenarioHtml(d){
     <div class="section-label">GDPR — REQUIRED • GUEST SERVICES</div>
     <h3>Complete GDPR Verification First</h3>
     <p><strong>Caller / Reservation Type:</strong> ${escapeHtml(profile.label)}</p>
+    <div class="gdpr-rule-banner"><strong>Verification order matters:</strong> ask the primary items first. Reservation Number is always mandatory.${["travel_agent","ta_group"].includes(d.gdprCallerType)?` The agency identifier is also mandatory to continue under the Travel Agent verification path.`:""}</div>
     <p class="gdpr-instruction">${escapeHtml(profile.instruction)}</p>
-    <ol class="gdpr-requirement-list">${profile.requirements.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ol>
+    ${gdprVerificationListsHtml(profile)}
     ${action?`<div class="gdpr-action-card"><strong>Required Handling</strong><span>${escapeHtml(action)}</span></div>`:""}
   </section>`;
 }
@@ -404,8 +388,9 @@ function updateGdprPreview(){
   const action=gdprActionText(draft);
   preview.innerHTML=`
     <div class="gdpr-preview-title">${escapeHtml(profile.label)} Verification</div>
+    <div class="gdpr-rule-banner compact"><strong>Ask first:</strong> the highlighted primary verification items below. Reservation Number is always mandatory.${["travel_agent","ta_group"].includes(caller)?` Agency ID / Phone # (or ABTA # where applicable) is also mandatory to remain on the Travel Agent path.`:""}</div>
     <p>${escapeHtml(profile.instruction)}</p>
-    <ol>${profile.requirements.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ol>
+    ${gdprVerificationListsHtml(profile)}
     ${action?`<div class="gdpr-preview-action"><strong>Required Handling</strong><span>${escapeHtml(action)}</span></div>`:""}`;
 }
 
@@ -1294,7 +1279,7 @@ function fullTaskList(d,meta){
     if(d.department==="Guest Services"){
       const profile=gdprProfile(d.gdprCallerType);
       tasks.push(profile
-        ? `Complete GDPR verification for the ${profile.label} before servicing the reservation. Reservation Number is mandatory.`
+        ? `Complete GDPR verification for the ${profile.label} before servicing the reservation. Ask the primary verification items first. Reservation Number is always mandatory.${["travel_agent","ta_group"].includes(d.gdprCallerType)?" The agency identifier (ABTA #, Agency ID, or Phone #) is also mandatory to continue under the Travel Agent path.":""}`
         : "Complete required Guest Services GDPR verification before servicing the reservation.");
       const action=gdprActionText(d);
       if(action)tasks.push(action);
@@ -1650,7 +1635,7 @@ function runValidator(){
     if(d.department==="Guest Services"){
       const profile=gdprProfile(d.gdprCallerType);
       if(!profile)add("error","GDPR caller type required","Guest Services modifications must identify the caller / reservation type so the correct GDPR verification can be completed.");
-      else add("passed","GDPR verification required",`${profile.label} • Reservation Number mandatory`);
+      else add("passed","GDPR verification required",`${profile.label} • Ask primary items first • Reservation Number always mandatory${["travel_agent","ta_group"].includes(d.gdprCallerType)?" • Agency identifier mandatory for Travel Agent path":""}`);
       if(d.gdprCallerType==="pcc_guest")add("info","PCC Guest handling included",pccActionText(d));
       if(d.gdprCallerType==="direct_group")add("info","Direct Group transfer included",directGroupActionText(d));
     }
