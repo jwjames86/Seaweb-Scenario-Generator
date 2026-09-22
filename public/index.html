@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.8" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.10" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.8 • Generic Existing-Reservation Guest Wording</span>
+            <span class="pill">V1.9.10 • Bundled Air / AIRPROM3 Pride of America Guardrail</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -192,6 +192,7 @@
               <li>Choose the Department, Reservation Workflow, Scenario Focus, difficulty, and scenario approach.</li>
               <li>For <strong>Create New Reservation</strong>, select guest/stateroom details and optionally attach a real sailing from the Search tab.</li>
               <li>For <strong>Modify Existing Reservation</strong>, enter the prior training reservation number and choose exactly what is being changed. Guest Services modifications require GDPR setup.</li>
+              <li>For Air scenarios, select <strong>Include Air / Transfers</strong>, choose the Air product, and choose Round Trip or One Way. The applicable training terms and transfer reminder will appear automatically.</li>
               <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
               <li>Select <strong>Generate Scenario</strong>, then review the card on the right. Trainer View includes coaching information; Trainee View hides trainer-only content.</li>
               <li>Use <strong>Start New Scenario</strong> to clear the current setup and generated scenario before building a completely different exercise.</li>
@@ -407,7 +408,50 @@
               <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
               <label class="check"><input id="travelToggle" type="checkbox" /> Travel Protection discussion</label>
               <label class="check"><input id="pscToggle" type="checkbox" /> Prepaid Service Charges discussion</label>
+              <label class="check"><input id="airToggle" type="checkbox" /> Include Air / Transfers</label>
             </fieldset>
+
+            <div id="airProgramPanel" class="air-program-panel hidden-field">
+              <div class="air-panel-head">
+                <div>
+                  <strong>NCL Air Program</strong>
+                  <span>Choose the Air type and itinerary. The generator will apply the relevant training terms and reminders.</span>
+                </div>
+                <span class="status-badge">AIR</span>
+              </div>
+
+              <div class="form-grid air-program-grid">
+                <label>Air Type
+                  <select id="airProgram">
+                    <option value="bundled">Bundled Air / AIRPROM3 — Select Pride of America Sailings</option>
+                    <option value="air_choice">Air Choice (US / Canada)</option>
+                    <option value="air_choice_plus">Air Choice Plus</option>
+                    <option value="independent_no_flights">Independent Air — No Flights / Transfer Setup</option>
+                  </select>
+                </label>
+
+                <label>Air Itinerary
+                  <select id="airTripType">
+                    <option value="round_trip">Round Trip</option>
+                    <option value="one_way">One Way</option>
+                  </select>
+                </label>
+
+                <label id="airOneWayDirectionField" class="hidden-field">One-Way Direction
+                  <select id="airOneWayDirection">
+                    <option value="to_cruise">To Cruise / Embarkation City</option>
+                    <option value="from_cruise">From Cruise / Debarkation City</option>
+                  </select>
+                </label>
+
+                <label>Gateway / Airport(s) <span class="optional-label">optional</span>
+                  <input id="airGateway" placeholder="Example: MIA, JFK, FLL..." />
+                </label>
+              </div>
+
+              <div id="airTransferHint" class="air-transfer-hint"></div>
+              <div id="airProgramPreview" class="air-program-preview"></div>
+            </div>
 
             <div id="latitudesNumberPanel" class="latitudes-number-panel hidden-field">
               <div class="latitudes-panel-head">
@@ -533,6 +577,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.8"></script>
+  <script src="/app.js?v=1.9.10"></script>
 </body>
 </html>

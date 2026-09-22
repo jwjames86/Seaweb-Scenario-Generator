@@ -754,3 +754,143 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
   .training-card-edit-grid .wide{grid-column:auto}
   .clear-scenario-btn{margin-left:0}
 }
+
+
+/* V1.9.9 • NCL Air program controls */
+.air-program-panel{
+  margin:16px 0;
+  padding:15px;
+  border:1px solid #B8D7E3;
+  border-left:5px solid #0A84BD;
+  border-radius:10px;
+  background:#F5FAFC;
+}
+.air-panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:12px;
+}
+.air-panel-head>div{display:flex;flex-direction:column;gap:3px}
+.air-panel-head strong{font-size:14px;color:#006099}
+.air-panel-head span:not(.status-badge){font-size:11px;line-height:1.45;color:#667085}
+.air-program-grid{margin-bottom:10px}
+.optional-label{font-size:9px;font-weight:500;color:#98A2B3}
+.air-transfer-hint{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:10px 0;
+  padding:10px 12px;
+  border-left:4px solid #68ACAA;
+  background:#EEF8F6;
+}
+.air-transfer-hint.important{
+  border-left-color:#FF938A;
+  background:#FFF5F3;
+}
+.air-transfer-hint strong{font-size:11px;color:#101828}
+.air-transfer-hint span{font-size:11px;line-height:1.45;color:#475467}
+.air-program-preview{
+  background:#fff;
+  border:1px solid #D8E4E8;
+  border-radius:7px;
+  padding:11px 13px;
+}
+.air-preview-title{
+  font-size:12px;
+  font-weight:850;
+  color:#006099;
+  margin-bottom:7px;
+}
+.air-program-preview ul{
+  margin:0;
+  padding-left:18px;
+}
+.air-program-preview li{
+  margin:0 0 5px;
+  font-size:10px;
+  line-height:1.45;
+  color:#344054;
+}
+.air-pricing-note{
+  margin:0 0 8px;
+  padding:8px 10px;
+  background:#FFFBE8;
+  border-left:4px solid #D9B949;
+  font-size:10px;
+  line-height:1.45;
+}
+.air-output-section{
+  background:#F5FAFC;
+  border-left:5px solid #0A84BD;
+  padding:14px 16px;
+}
+.air-output-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-bottom:8px;
+}
+.air-output-meta span{
+  padding:4px 7px;
+  background:#E4F2F7;
+  border-radius:3px;
+  font-size:10px;
+  font-weight:800;
+  color:#006099;
+}
+.air-scenario-hint,.air-scenario-callout{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  margin:8px 0;
+  padding:9px 11px;
+  border-left:4px solid #FF938A;
+  background:#FFF5F3;
+}
+.air-scenario-callout{
+  border-left-color:#D9B949;
+  background:#FFFBE8;
+}
+.air-scenario-hint strong,.air-scenario-callout strong{font-size:11px;color:#101828}
+.air-scenario-hint span,.air-scenario-callout span{font-size:11px;line-height:1.45;color:#475467}
+.air-terms-details{
+  margin-top:8px;
+  border:1px solid #D8E4E8;
+  border-radius:5px;
+  background:#fff;
+}
+.air-terms-details summary{
+  cursor:pointer;
+  padding:9px 11px;
+  font-size:11px;
+  font-weight:800;
+  color:#006099;
+}
+.air-terms-details ul{
+  margin:0;
+  padding:0 28px 10px;
+}
+.air-terms-details li{
+  margin:0 0 5px;
+  font-size:11px;
+  line-height:1.45;
+}
+
+
+/* V1.9.10 • Bundled Air eligibility guardrail */
+.air-eligibility-note{
+  margin:0 0 8px;
+  padding:9px 10px;
+  background:#FFF1F0;
+  border-left:4px solid #D92D20;
+  color:#7A271A;
+  font-size:10px;
+  line-height:1.45;
+}
+.air-eligibility-callout{
+  border-left-color:#D92D20!important;
+  background:#FFF1F0!important;
+}

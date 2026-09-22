@@ -37,6 +37,181 @@ const trainingCards = {
   obSpecial:{label:"OB Special Requests Training Card",number:"4444 3333 2222 1111",expiration:"05/2028",ccv:"456",address:"123 Sesame Street, Miami, FL 33126"}
 };
 
+const airPrograms = {
+  bundled:{
+    label:"Bundled Air / AIRPROM3 — Select Pride of America Sailings",
+    nclAir:true,
+    terms:[
+      "Training eligibility: Bundled Air / AIRPROM3 is only available on select Pride of America sailings. Verify the specific sailing is eligible before assigning the scenario.",
+      "For an eligible Pride of America sailing, AIRPROM3 applies to qualifying new individual FIT reservations; air must be added more than 80 days prior to sailing.",
+      "Guarantee categories IX, OX, BX and MX are not eligible.",
+      "Guests 1–2 are eligible under the promotion; Guests 3–8 pay the full promotional airfare amount.",
+      "Round-trip air uses the applicable promotional airfare. One-way air is charged at 50% of the applicable promotional air pricing for the selected gateway.",
+      "Air is economy from select, capacity-controlled gateways and pricing must be confirmed in the reservation system.",
+      "NCL Air is scheduled to arrive at least one day prior to embarkation.",
+      "The guest is responsible for the pre-cruise hotel and the ground transportation associated with that early arrival.",
+      "Airport transfers are an additional cost when selected; airline baggage and other personal airline charges are not included.",
+      "Current AIRPROM3 air deviations are priced at $0.00 and a hotel add-on is not required for the deviation request."
+    ]
+  },
+  air_choice:{
+    label:"Air Choice (US / Canada)",
+    nclAir:true,
+    terms:[
+      "Air Choice is available for qualifying domestic reservations, including US and Canada, from 330 to 4 days prior to sailing.",
+      "Air Choice can be used on new or existing reservations and is not combinable with AIRPROM3.",
+      "Outside final payment, a $250 non-refundable Air Choice deposit per stateroom applies for standard Economy flexible air; upgraded class / specific layover requests have higher deposit requirements.",
+      "Inside final payment, the air must be paid in full at booking. Restricted Air requires full non-refundable payment at booking.",
+      "Flights are booked immediately; an air confirmation is sent within 24 hours and tickets are generally issued 30 days prior to sailing.",
+      "Changing or canceling Air Choice flight plans forfeits the applicable non-refundable air deposit.",
+      "Economy is the default class unless an upgraded class of service is requested.",
+      "NCL Air guests are required to arrive at least one day prior to sailing and are responsible for accommodations and ground transportation associated with the early arrival.",
+      "Seat assignments, frequent-flyer additions, special meals and similar airline ancillary requests are handled directly with the airline after booking."
+    ]
+  },
+  air_choice_plus:{
+    label:"Air Choice Plus",
+    nclAir:true,
+    terms:[
+      "Air Choice Plus is offered to select guests and allows eligible guests to select and book their desired flight itinerary.",
+      "Travel Partner reservations are eligible.",
+      "Air Choice Plus can be added and customized up to 4 days prior to sailing.",
+      "A $250 non-refundable Air Choice Plus deposit is assessed per stateroom; customizations within final payment require full payment.",
+      "Guests use the email offer link to schedule an appointment with the Air Choice Plus team; the link expires after 9 business days.",
+      "The program provides exact-flight selection and flexible fares; class-of-service upgrades can be handled directly with the airline.",
+      "For NCL Miami, the program applies to US and Canada, appears in Seaweb in the Bundle Air tab as Interactive, and comments are notated as Air Choice Plus.",
+      "Air Choice Plus is NCL Air, so use the one-day-prior arrival rule when building the training scenario."
+    ]
+  },
+  independent_no_flights:{
+    label:"Independent Air — No Flights / Transfer Setup",
+    nclAir:false,
+    terms:[
+      "Use this workflow when guests arrive in the embarkation city prior to sailing, remain in the debarkation city after sailing, or have an Air Deviation and want a transfer to or from the pier.",
+      "Enter the applicable departure / arrival airport gateway information; do not use the same air gateway for both Arrival and Departure.",
+      "For the generic outbound entry, use 8:00 AM–10:00 AM. For the generic return entry, use 2:00 PM–5:00 PM.",
+      "Use airline carrier/code T1 (BAGGAGE PICKUP) and flight number 999 only.",
+      "Advise the guest of the recommended airport arrival / departure times in NCLHelp because the generic times do not guarantee the actual transfer time.",
+      "When multiple airports are available, select the correct airport transfer or the guest will not be met.",
+      "Cruisetour guests who arrive earlier must make their own transfer arrangements; T1 / flight 999 cannot be used."
+    ]
+  }
+};
+
+function airProgramMeta(value){
+  return airPrograms[value]||airPrograms.bundled;
+}
+
+function bundledAirEligibility(d){
+  const ship=(d?.sailing?.ship||"").trim();
+  if(!ship){
+    return {status:"verify",message:"Bundled Air / AIRPROM3 is only available on select Pride of America sailings. No sailing is attached, so the trainer must verify an eligible Pride of America sailing before assigning the scenario."};
+  }
+  if(!/pride of america/i.test(ship)){
+    return {status:"ineligible",message:`Bundled Air / AIRPROM3 should not be used with ${ship}. It is only available on select Pride of America sailings.`};
+  }
+  return {status:"verify",message:"Pride of America is selected. Verify that this specific sailing is one of the select sailings eligible for Bundled Air / AIRPROM3 before assigning the scenario."};
+}
+
+function airTripLabel(d){
+  if(d.airTripType==="one_way"){
+    return d.airOneWayDirection==="from_cruise" ? "One Way — From Cruise" : "One Way — To Cruise";
+  }
+  return "Round Trip";
+}
+
+function defaultAirProgramForMeta(meta){
+  const text=`${meta?.name||""} ${meta?.objective||""}`.toLowerCase();
+  if(text.includes("air choice plus"))return "air_choice_plus";
+  if(text.includes("air choice"))return "air_choice";
+  if(text.includes("independent air"))return "independent_no_flights";
+  if(text.includes("bundled air")||text.includes("air deviation"))return "bundled";
+  return "bundled";
+}
+
+function isAirFocus(meta){
+  return /\bair\b|ground transfer|air deviation/.test(`${meta?.name||""} ${meta?.objective||""}`.toLowerCase());
+}
+
+function airTransferReminder(program){
+  if(program==="independent_no_flights"){
+    return "Independent Air / No Flights is a transfer-setup workflow. Use the T1 / flight 999 setup and select the correct airport transfer.";
+  }
+  return "Trainer hint: remove the pre-cruise transfer when adding NCL Air. NCL Air is scheduled to arrive at least 1 day before embarkation, so the guest is responsible for the hotel and ground transportation associated with that early arrival. Review post-cruise transfer needs separately.";
+}
+
+function updateAirProgramPreview(){
+  const enabled=$("airToggle")?.checked;
+  $("airProgramPanel")?.classList.toggle("hidden-field",!enabled);
+  if(!enabled)return;
+
+  const program=$("airProgram").value;
+  const meta=airProgramMeta(program);
+  const trip=$("airTripType").value;
+  $("airOneWayDirectionField").classList.toggle("hidden-field",trip!=="one_way");
+
+  const hint=$("airTransferHint");
+  hint.className=`air-transfer-hint ${meta.nclAir?"important":"neutral"}`;
+  hint.innerHTML=`<strong>${meta.nclAir?"Pre-Cruise Transfer Reminder":"Transfer Setup Reminder"}</strong><span>${escapeHtml(airTransferReminder(program))}</span>`;
+
+  const eligibilityNote=program==="bundled"
+    ? `<div class="air-eligibility-note"><strong>Eligibility Guardrail:</strong> Bundled Air / AIRPROM3 is only available on select Pride of America sailings. Verify the sailing before assigning the scenario.</div>`
+    : "";
+
+  const oneWayNote=program==="bundled" && trip==="one_way"
+    ? `<div class="air-pricing-note"><strong>One-Way Bundled Air:</strong> use 50% of the applicable promotional air pricing for the selected gateway.</div>`
+    : "";
+
+  $("airProgramPreview").innerHTML=`
+    <div class="air-preview-title">${escapeHtml(meta.label)} • ${escapeHtml(trip==="one_way"?"One Way":"Round Trip")}</div>
+    ${eligibilityNote}
+    ${oneWayNote}
+    <ul>${meta.terms.map(term=>`<li>${escapeHtml(term)}</li>`).join("")}</ul>`;
+}
+
+function syncAirPanelFromScenario(applyDefault=false){
+  const meta=currentFocusMeta()||{};
+  const modifyAir=$("reservationWorkflow")?.value==="modify" && $("modificationType")?.value==="air_transfer";
+  const airFocus=isAirFocus(meta);
+
+  if(applyDefault && (modifyAir||airFocus)){
+    $("airToggle").checked=true;
+    $("airProgram").value=defaultAirProgramForMeta(meta);
+  }else if(modifyAir){
+    $("airToggle").checked=true;
+  }
+
+  updateAirProgramPreview();
+}
+
+function airScenarioHtml(d){
+  if(!d.airEnabled)return "";
+  const meta=airProgramMeta(d.airProgram);
+  const gateway=d.airGateway?`<p><strong>Gateway / Airport(s):</strong> ${escapeHtml(d.airGateway)}</p>`:"";
+  const bundledEligibility=d.airProgram==="bundled"
+    ? `<div class="air-scenario-callout air-eligibility-callout"><strong>Bundled Air eligibility:</strong><span>${escapeHtml(bundledAirEligibility(d).message)}</span></div>`
+    : "";
+  const oneWay=d.airProgram==="bundled"&&d.airTripType==="one_way"
+    ? `<div class="air-scenario-callout"><strong>Bundled Air one-way pricing:</strong><span>Use 50% of the applicable promotional air pricing for the selected gateway.</span></div>`
+    : "";
+  const independent=d.airProgram==="independent_no_flights"
+    ? `<div class="air-scenario-callout"><strong>Independent Air / No Flights setup:</strong><span>Use T1 (BAGGAGE PICKUP), flight number 999, the approved generic time ranges, and the correct airport transfer.</span></div>`
+    : "";
+
+  return `<section class="scenario-section air-output-section">
+    <div class="section-label">AIR PROGRAM</div>
+    <h3>${escapeHtml(meta.label)}</h3>
+    <div class="air-output-meta"><span>${escapeHtml(airTripLabel(d))}</span>${d.airGateway?`<span>${escapeHtml(d.airGateway)}</span>`:""}</div>
+    ${gateway}
+    <div class="air-scenario-hint"><strong>${meta.nclAir?"Pre-Cruise Transfer Hint":"Transfer Setup Hint"}</strong><span>${escapeHtml(airTransferReminder(d.airProgram))}</span></div>
+    ${bundledEligibility}${oneWay}${independent}
+    <details class="air-terms-details" open>
+      <summary>Key Terms & Conditions for This Training Scenario</summary>
+      <ul>${meta.terms.map(term=>`<li>${escapeHtml(term)}</li>`).join("")}</ul>
+    </details>
+  </section>`;
+}
+
 const scenarioCatalog = {
   "Guest Services": {
     6: [
@@ -513,7 +688,9 @@ function updateModificationTypeUI(applyDefaults=false){
     target.placeholder=placeholders[type]||placeholders.general;
   }
 
+  if(type==="air_transfer") $("airToggle").checked=true;
   if(applyDefaults)updateModificationDefaults();
+  syncAirPanelFromScenario(applyDefaults);
   updateGdprPreview();
 }
 
@@ -665,6 +842,7 @@ function applyFocusDefaults(){
   }
 
   refreshTrainingCardPanel(meta.cardProfile);
+  syncAirPanelFromScenario(true);
   const level=trainingSupportLabel(+$("trainingDay").value);
   $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • ${escapeHtml(meta.name)}</strong><span>${escapeHtml(meta.objective)}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
 }
@@ -693,6 +871,10 @@ $("reservationWorkflow").addEventListener("change",()=>updateWorkflowUI(true));
 $("modificationType").addEventListener("change",()=>updateModificationTypeUI(true));
 $("modificationGuestStatus").addEventListener("change",()=>updateModificationTypeUI(false));
 $("modificationLatitudes").addEventListener("input",()=>{$("modificationLatitudes").value=$("modificationLatitudes").value.replace(/[^0-9]/g,"")});
+$("airToggle").addEventListener("change",updateAirProgramPreview);
+$("airProgram").addEventListener("change",updateAirProgramPreview);
+$("airTripType").addEventListener("change",updateAirProgramPreview);
+$("airOneWayDirection").addEventListener("change",updateAirProgramPreview);
 $("gdprCallerType").addEventListener("change",updateGdprPreview);
 $("directGroupMarket").addEventListener("change",updateGdprPreview);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
@@ -1071,6 +1253,11 @@ function scenarioData(){
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
+    airEnabled:$("airToggle")?.checked||false,
+    airProgram:$("airProgram")?.value||"bundled",
+    airTripType:$("airTripType")?.value||"round_trip",
+    airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",
+    airGateway:$("airGateway")?.value.trim()||"",
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired:!!meta.cardRequired || paymentActionNeedsCard(),
     cardProfile:cardKey,
@@ -1103,7 +1290,12 @@ function focusConsiderations(d){
   if(name.includes("infant")||name.includes("guests 3-8")||name.includes("singles")) items.push("Does the selected stateroom capacity support the full occupancy?","How do deposit, promotion, and service-charge rules differ for infants, children, solos, or Guests 3–8?");
   if(name.includes("multiple")) items.push("Should the reservations be linked with TWITH?","If one caller pays for another reservation, what Authorized Person guidance and notation are required?");
   if(name.includes("ta booking")||d.curriculumKind==="ta") items.push("What information must the travel agent provide before pricing or creating a reservation?","Where is commission displayed and what servicing restrictions apply to a travel-agent booking?");
-  if(name.includes("air")||name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable air/land terms, deposit requirements, ticketing or confirmation timing, and transfer details.");
+  if(d.airEnabled){
+    const airMeta=airProgramMeta(d.airProgram);
+    items.push(`Confirm the selected ${airMeta.label} terms, ${airTripLabel(d)} itinerary, payment/deposit timing, and transfer handling.`);
+    if(d.airProgram==="bundled")items.push("Verify that the selected sailing is one of the select Pride of America sailings eligible for Bundled Air / AIRPROM3.");
+    if(airMeta.nclAir)items.push("Verify the trainee removes the pre-cruise transfer because the NCL Air arrival is at least one day prior.");
+  }else if(name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable land terms, deposit requirements, confirmation timing, and transfer details.");
   if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
   if(name.includes("amenities")||name.includes("dining")) items.push("Is payment due immediately for the selected add-on?","Which confirmation or amenity invoice must be sent after the transaction?");
   if(name.includes("cruise first")) items.push("What are the CruiseFirst terms and where is the credit purchased/applied?");
@@ -1322,6 +1514,16 @@ function fullTaskList(d,meta){
     }
     tasks.push(`Locate training reservation ${d.existingReservationNumber||"(trainer-provided reservation)"} and use the guest name(s) already on that reservation. Complete required verification before making changes.`);
     tasks.push(modificationTaskText(d));
+    if(d.airEnabled){
+      const airMeta=airProgramMeta(d.airProgram);
+      tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
+      if(airMeta.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's hotel and ground-transportation responsibility.");
+      if(d.airProgram==="bundled"){
+        tasks.push("Confirm the selected sailing is an eligible Pride of America sailing before applying Bundled Air / AIRPROM3.");
+        if(d.airTripType==="one_way")tasks.push("For one-way Bundled Air, use 50% of the applicable promotional air pricing for the selected gateway.");
+      }
+      if(d.airProgram==="independent_no_flights")tasks.push("For Independent Air / No Flights, use T1 (BAGGAGE PICKUP), flight number 999, the approved generic times, and the correct airport transfer.");
+    }
     if(d.modificationType==="add_guest" && d.modificationGuestStatus==="past"){
       tasks.push(d.modificationLatitudes?`Use training Latitudes # ${d.modificationLatitudes} to locate the guest being added.`:"Locate the Past Guest profile and verify the Latitudes number before adding the guest.");
     }
@@ -1349,7 +1551,18 @@ function fullTaskList(d,meta){
   if(name.includes("fcc")||d.payment==="FCC / CruiseNext"||name.includes("cruise first"))tasks.push("Apply the applicable training credit/coupon using the required offer/status sequence, then review the updated pricing before saving.");
   if(name.includes("special request")||name.includes("ada")||name.includes("infant")||name.includes("multiple"))tasks.push("Enter special/accessibility/dietary requests in the correct Seaweb location and add any required comments.");
   if(name.includes("multiple"))tasks.push("Link related reservations with TWITH when required and verify room relationship/authorized-person notes.");
-  if(name.includes("air")||name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg"))tasks.push("Review the applicable air/land/hotel terms, timing, deposits, transfers, and confirmation expectations.");
+  if(d.airEnabled){
+    const airMeta=airProgramMeta(d.airProgram);
+    tasks.push(`Review the ${airMeta.label} terms for the selected ${airTripLabel(d)} itinerary.`);
+    if(airMeta.nclAir)tasks.push("Remove the pre-cruise transfer because NCL Air is scheduled to arrive at least one day before embarkation; review the guest's responsibility for the pre-cruise hotel and related ground transportation.");
+    if(d.airProgram==="bundled"){
+        tasks.push("Confirm the selected sailing is an eligible Pride of America sailing before applying Bundled Air / AIRPROM3.");
+        if(d.airTripType==="one_way")tasks.push("For one-way Bundled Air, use 50% of the applicable promotional air pricing for the selected gateway.");
+      }
+    if(d.airProgram==="independent_no_flights")tasks.push("For Independent Air / No Flights, use T1 (BAGGAGE PICKUP), flight number 999, the approved generic times, and the correct airport transfer.");
+  }else if(name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")){
+    tasks.push("Review the applicable land/hotel terms, timing, deposits, transfers, and confirmation expectations.");
+  }
   if(name.includes("cancel")||name.includes("reinstate"))tasks.push("Evaluate final-payment status and complete the cancellation/reinstatement workflow before quoting any refund or pricing change.");
   if(name.includes("amenit")||name.includes("dining")||name.includes("spa"))tasks.push("Confirm availability and collect any immediate payment required for the selected onboard item.");
 
@@ -1437,7 +1650,11 @@ function commonMistakes(d,meta){
   if(n.includes("payments"))items.unshift("Processing the wrong amount due or skipping the final-payment-date review.");
   if(n.includes("multiple"))items.unshift("Forgetting TWITH/linked-reservation steps or Authorized Person notation.");
   if(n.includes("norwegian"))items.unshift("Giving a travel-protection deadline without checking final-payment timing.");
-  if(n.includes("air"))items.unshift("Missing arrival/deviation/transfer terms or confirmation timing.");
+  if(d.airEnabled){
+    items.unshift(`Using the wrong terms for ${airProgramMeta(d.airProgram).label} or missing the selected ${airTripLabel(d)} itinerary.`);
+    if(d.airProgram==="bundled")items.unshift("Using Bundled Air / AIRPROM3 on a sailing that has not been verified as an eligible Pride of America sailing.");
+    if(airProgramMeta(d.airProgram).nclAir)items.unshift("Leaving a pre-cruise transfer on an NCL Air reservation even though the flight is scheduled to arrive one day before embarkation.");
+  }
   if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
   return [...new Set(items)];
 }
@@ -1500,6 +1717,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
         ${addedGuest}
       </ul>
       ${stateroom}
+      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram).label)} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
       ${addOns.length?`<h4>Additional Components</h4><p>${escapeHtml(addOns.join(" • "))}</p>`:""}
@@ -1524,6 +1742,8 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
 
       <h4>Guest Information</h4>
       <ul class="detail-list">${guestInfoItems}</ul>
+
+      ${d.airEnabled?`<h4>Air Program</h4><p>${escapeHtml(airProgramMeta(d.airProgram).label)} • ${escapeHtml(airTripLabel(d))}${d.airGateway?` • ${escapeHtml(d.airGateway)}`:""}</p>`:""}
 
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
@@ -1574,6 +1794,12 @@ function resetScenarioForm(){
   $("fasToggle").checked=false;
   $("travelToggle").checked=false;
   $("pscToggle").checked=false;
+  $("airToggle").checked=false;
+  $("airProgram").value="bundled";
+  $("airTripType").value="round_trip";
+  $("airOneWayDirection").value="to_cruise";
+  $("airGateway").value="";
+  updateAirProgramPreview();
 
   $("trainingCardProfile").value="standardSesame";
   renderTrainingCard();
@@ -1670,6 +1896,8 @@ function generateScenario(){
       ${atAGlanceHtml(d,meta)}
     </section>
 
+    ${airScenarioHtml(d)}
+
     ${latitudesScenarioHtml(d)}
 
     <section class="scenario-section">
@@ -1765,6 +1993,22 @@ function runValidator(){
 
     if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
     else add("passed","Category instruction is explicit",d.category);
+  }
+
+  if(d.airEnabled){
+    const airMeta=airProgramMeta(d.airProgram);
+    add("passed","Air program selected",`${airMeta.label} • ${airTripLabel(d)}`);
+    if(airMeta.nclAir)add("info","Pre-cruise transfer reminder","Remove the pre-cruise transfer because NCL Air guests are scheduled to arrive at least one day before embarkation. Review hotel and related ground-transportation responsibility.");
+    if(d.airProgram==="bundled"){
+      const eligibility=bundledAirEligibility(d);
+      if(eligibility.status==="ineligible")add("error","Bundled Air sailing is not eligible",eligibility.message);
+      else add("warning","Verify Bundled Air sailing eligibility",eligibility.message);
+      if(d.airTripType==="one_way")add("info","Bundled Air one-way pricing","Use 50% of the applicable promotional air pricing for the selected gateway.");
+    }
+    if(d.airProgram==="independent_no_flights"){
+      add("info","Independent Air transfer setup","Use T1 / flight 999, the approved generic time ranges, and the correct airport transfer.");
+      if(d.airTripType==="one_way")add("warning","Verify Independent Air one-way setup","The source article describes required information for both outbound and inbound flight records. Confirm the intended one-way training setup in NCLHelp before class.");
+    }
   }
 
   if(/\bada\b|accessible/i.test(`${d.type} ${d.curriculumObjective}`)){
@@ -2870,7 +3114,7 @@ function renderLibrary(){
   const deptFilter=$("libraryDepartmentFilter").value;
   let items=saved().filter(x=>{
     if(deptFilter && x.department!==deptFilter)return false;
-    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.modificationType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
@@ -2928,7 +3172,14 @@ window.openSaved=(id)=>{
   $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
-  $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;$("trainerNotes").value=x.trainerNotes||"";
+  $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;
+  $("airToggle").checked=!!x.airEnabled;
+  $("airProgram").value=x.airProgram||"bundled";
+  $("airTripType").value=x.airTripType||"round_trip";
+  $("airOneWayDirection").value=x.airOneWayDirection||"to_cruise";
+  $("airGateway").value=x.airGateway||"";
+  updateAirProgramPreview();
+  $("trainerNotes").value=x.trainerNotes||"";
   if(x.cardProfile && trainingCards[x.cardProfile])$("trainingCardProfile").value=x.cardProfile;
   renderTrainingCard();
   if(x.card){
