@@ -1269,12 +1269,11 @@ function escapeXml(value=""){
   }[ch]));
 }
 
-async function renderShareCardToPng(){
-  const clone=makeTraineeShareClone();
+async function renderShareHtmlToPng(html,mode="full"){
   const response=await fetch("/api/share-card",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({html:clone.outerHTML})
+    body:JSON.stringify({html,mode})
   });
 
   if(!response.ok){
@@ -1290,6 +1289,151 @@ async function renderShareCardToPng(){
   const blob=await response.blob();
   if(!blob || !blob.size) throw new Error("The image renderer returned an empty PNG.");
   return blob.type==="image/png" ? blob : new Blob([blob],{type:"image/png"});
+}
+
+async function renderShareCardToPng(){
+  const clone=makeTraineeShareClone();
+  return renderShareHtmlToPng(clone.outerHTML,"full");
+}
+
+
+function makeTeamsPageClones(){
+  const full=makeTraineeShareClone();
+  const headerNodes=[];
+  const contentNodes=[];
+
+  [...full.children].forEach((node,index)=>{
+    if(index<3) headerNodes.push(node.cloneNode(true));
+    else contentNodes.push(node.cloneNode(true));
+  });
+
+  const labelOf=node=>node.querySelector?.('.section-label')?.textContent?.trim().toUpperCase()||'';
+  const headingOf=node=>node.querySelector?.('h3,.share-expanded-heading')?.textContent?.trim().toUpperCase()||'';
+  const groups=[[],[],[],[]];
+
+  contentNodes.forEach(node=>{
+    const label=labelOf(node);
+    const heading=headingOf(node);
+    const cls=node.classList||{contains:()=>false};
+
+    if(label==='YOUR CALL'||label==='GUEST REQUEST'||label==='PAST GUEST DETAILS'||cls.contains('latitudes-output-section')){
+      groups[0].push(node);
+    }else if(label==='YOUR WORK'||heading.includes('CALL FLOW SUPPORT')){
+      groups[1].push(node);
+    }else if(label==='REFERENCE DETAILS'||label==='TRAINING PAYMENT'||cls.contains('details-section')||cls.contains('payment-section')){
+      groups[2].push(node);
+    }else{
+      groups[3].push(node);
+    }
+  });
+
+  const titles=[
+    'Guest Scenario & Request',
+    'Tasks & Call Flow',
+    'Reservation Reference',
+    'Final Check & Knowledge Review'
+  ];
+
+  const pages=groups.filter(g=>g.length).map((nodes,pageIndex)=>{
+    const page=document.createElement('article');
+    page.className='shared-trainee-card teams-share-page';
+    page.setAttribute('data-teams-page',String(pageIndex+1));
+
+    const pageBar=document.createElement('div');
+    pageBar.className='teams-page-bar';
+    pageBar.innerHTML=`<strong>${escapeHtml(titles[groups.indexOf(nodes)]||`Scenario Page ${pageIndex+1}`)}</strong><span>Page ${pageIndex+1}</span>`;
+    page.appendChild(pageBar);
+
+    headerNodes.forEach(n=>page.appendChild(n.cloneNode(true)));
+    nodes.forEach(n=>page.appendChild(n.cloneNode(true)));
+    return page;
+  });
+
+  pages.forEach((page,i)=>{
+    const marker=page.querySelector('.teams-page-bar span');
+    if(marker) marker.textContent=`Page ${i+1} of ${pages.length}`;
+  });
+  return pages;
+}
+
+function crc32(bytes){
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++){
+    crc^=bytes[i];
+    for(let j=0;j<8;j++) crc=(crc>>>1)^((crc&1)?0xEDB88320:0);
+  }
+  return (crc^0xFFFFFFFF)>>>0;
+}
+
+function u16(n){return new Uint8Array([n&255,(n>>>8)&255])}
+function u32(n){return new Uint8Array([n&255,(n>>>8)&255,(n>>>16)&255,(n>>>24)&255])}
+function concatBytes(parts){
+  const total=parts.reduce((n,p)=>n+p.length,0);
+  const out=new Uint8Array(total);let pos=0;
+  parts.forEach(p=>{out.set(p,pos);pos+=p.length});
+  return out;
+}
+
+async function makeStoredZip(files){
+  const encoder=new TextEncoder();
+  const locals=[];const centrals=[];let offset=0;
+
+  for(const file of files){
+    const name=encoder.encode(file.name);
+    const data=new Uint8Array(await file.blob.arrayBuffer());
+    const crc=crc32(data);
+    const local=concatBytes([
+      u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),name,data
+    ]);
+    locals.push(local);
+    const central=concatBytes([
+      u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),name
+    ]);
+    centrals.push(central);
+    offset+=local.length;
+  }
+
+  const centralData=concatBytes(centrals);
+  const end=concatBytes([
+    u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralData.length),u32(offset),u16(0)
+  ]);
+  return new Blob([concatBytes([...locals,centralData,end])],{type:'application/zip'});
+}
+
+function teamsPageFilename(page,total){
+  const base=scenarioShareFilename().replace(/\.png$/i,'');
+  return `${base}-Teams-${String(page).padStart(2,'0')}-of-${String(total).padStart(2,'0')}.png`;
+}
+
+async function downloadTeamsPageSet(){
+  if(!ensureScenarioReady())return;
+  const btn=$('downloadTeamsPagesBtn');
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Teams pages…</strong><small>Creating larger readable images</small></span>`;
+  try{
+    const pages=makeTeamsPageClones();
+    const files=[];
+    for(let i=0;i<pages.length;i++){
+      const blob=await renderShareHtmlToPng(pages[i].outerHTML,'teams-page');
+      files.push({name:teamsPageFilename(i+1,pages.length),blob});
+    }
+    const zip=await makeStoredZip(files);
+    const url=URL.createObjectURL(zip);
+    const a=document.createElement('a');
+    const base=scenarioShareFilename().replace(/\.png$/i,'');
+    a.href=url;
+    a.download=`${base}-Teams-Image-Set.zip`;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    closeShareMenu();
+    flash(`Downloaded ${files.length} Teams-optimized pages. Unzip and attach the PNGs together in Teams.`);
+  }catch(err){
+    alert(`Could not create the Teams page set: ${err.message}`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
 }
 
 function scenarioShareFilename(){
@@ -1397,6 +1541,7 @@ $("shareScenarioBtn").onclick=(e)=>{
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
 $("downloadCardImageBtn").onclick=downloadCardImage;
+$("downloadTeamsPagesBtn").onclick=downloadTeamsPageSet;
 $("copyCardImageBtn").onclick=copyCardAsImage;
 $("copyCardFormattedBtn").onclick=copyCardFormatted;
 document.addEventListener("click",e=>{

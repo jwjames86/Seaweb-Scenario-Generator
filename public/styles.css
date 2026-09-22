@@ -349,3 +349,7 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .latitudes-output-card>small{font-size:11px;color:#006099;font-weight:600}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
 @media(max-width:680px){.latitudes-guest-fields,.latitudes-output-grid{grid-template-columns:1fr}}
+
+/* V1.8.1 • Teams page-set sharing */
+.share-menu button#downloadTeamsPagesBtn{background:#eef8f6;border:1px solid #c6dfdc}
+.share-menu button#downloadTeamsPagesBtn:hover{background:#dcefeb}
