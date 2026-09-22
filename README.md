@@ -74,8 +74,10 @@ This update rebuilds the PDF and PNG exports so they use the same page design. B
 - The PDF now embeds those same portrait page images, so the PDF and PNG versions look nearly identical.
 
 
-## V1.8.8 – legal-size export + mixed guest status
-- PDF and PNG page-set exports now use **8.5 x 14 legal-size pages** to reduce page count and use more of the page.
-- The export render groups were rebalanced so earlier pages do not have large empty gaps.
-- The export image size was increased for sharper PNG and PDF output.
-- The generator now supports **mixed guest types** in the same scenario: each guest can be marked as a **past guest** or **new guest**, and only past guests require a Latitudes number.
+## V1.8.9 – full-page legal export + true mixed guest status
+- Corrects the hybrid deployment where the Worker was newer than the public app files.
+- Uses **two 8.5 x 14 legal pages for normal scenarios** instead of four lightly filled pages.
+- Removes the outer page border and redistributes content to use the page area more efficiently.
+- Renders exports at approximately **240 pixels per inch** for sharper PNG and PDF output.
+- Adds explicit **Past Guest / New Guest radio choices for each guest**. Only Past Guests display or require a Latitudes number.
+- Saves/restores per-guest status in the scenario library and includes it in trainee output and validation.
