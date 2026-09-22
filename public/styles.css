@@ -328,3 +328,24 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:680px){
   .share-menu{position:fixed;left:12px;right:12px;bottom:12px;top:auto;width:auto}
 }
+
+
+/* V1.8 • Latitudes numbers + Teams download workflow */
+.latitudes-number-panel{margin:16px 0 20px;padding:16px;border:1px solid #B9D7D4;border-left:5px solid var(--teal);background:#F2F8F7;border-radius:4px}
+.latitudes-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:13px}
+.latitudes-panel-head>div{display:flex;flex-direction:column;gap:4px}
+.latitudes-panel-head strong{font-size:13px}
+.latitudes-panel-head span:not(.status-badge){font-size:11px;line-height:1.45;color:#667085}
+.latitudes-guest-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.latitudes-guest-fields label{display:flex;flex-direction:column;gap:6px;padding:10px;background:#fff;border:1px solid #D8E3E1;border-radius:4px}
+.latitudes-guest-fields label>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#344054}
+.latitude-number-input{font-variant-numeric:tabular-nums}
+.latitudes-output-section{background:#F3F8F7;border-left:5px solid var(--teal);padding:18px 20px;border-radius:0 10px 10px 0}
+.latitudes-output-intro{margin:0 0 12px;color:#667085;font-size:12px}
+.latitudes-output-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.latitudes-output-card{background:#fff;border:1px solid #D1E3E0;border-radius:8px;padding:11px 12px;display:flex;flex-direction:column;gap:3px}
+.latitudes-output-card>span{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#667085;font-weight:800}
+.latitudes-output-card>strong{font-size:12px;color:#101828}
+.latitudes-output-card>small{font-size:11px;color:#006099;font-weight:600}
+.latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
+@media(max-width:680px){.latitudes-guest-fields,.latitudes-output-grid{grid-template-columns:1fr}}

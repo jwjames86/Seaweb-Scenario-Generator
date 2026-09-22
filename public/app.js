@@ -196,6 +196,38 @@ function refreshTrainingCardPanel(preferredProfile){
   }
 }
 
+function collectLatitudesNumbers(){
+  const count=+$('guestCount').value||1;
+  return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
+}
+
+function guestDisplayName(index){
+  if(index===0)return $('guest1').value.trim()||'Guest 1';
+  if(index===1)return $('guest2').value.trim()||'Guest 2';
+  return `Guest ${index+1}`;
+}
+
+function renderLatitudesFields(values){
+  const count=+$('guestCount').value||1;
+  const existing=Array.isArray(values)?values:collectLatitudesNumbers();
+  const host=$('latitudesGuestFields');
+  if(!host)return;
+  host.innerHTML=Array.from({length:count},(_,i)=>{
+    const guest=guestDisplayName(i);
+    const value=existing[i]||'';
+    return `<label><span>${escapeHtml(guest)}</span><input id="latitudeNumber${i+1}" class="latitude-number-input" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="Latitudes number" value="${escapeAttr(value)}" /></label>`;
+  }).join('');
+  host.querySelectorAll('.latitude-number-input').forEach(input=>{
+    input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,'')});
+  });
+}
+
+function refreshLatitudesPanel(values){
+  const enabled=$('latitudesToggle').checked;
+  $('latitudesNumberPanel').classList.toggle('hidden-field',!enabled);
+  if(enabled)renderLatitudesFields(values);
+}
+
 function applyFocusDefaults(){
   const meta=currentFocusMeta();
   if(!meta)return;
@@ -212,6 +244,7 @@ function applyFocusDefaults(){
   $("travelToggle").checked=/norwegian care|travel protection/.test(focusText);
   $("pscToggle").checked=/ppsrvchg|prepaid service charge/.test(focusText);
   $("latitudesToggle").checked=!/new guest/.test(focusText);
+  refreshLatitudesPanel();
 
   // ADA scenarios must request an accessible category. Location and side are
   // left flexible because accessible inventory controls what can actually be sold.
@@ -250,10 +283,15 @@ $("scenarioType").addEventListener("change",applyFocusDefaults);
 $("marketAgency").addEventListener("change",()=>{$("agency").value=$("marketAgency").value});
 $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
+$("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
+$("guestCount").addEventListener("change",()=>refreshLatitudesPanel());
+$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields()});
+$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields()});
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
   $("guest1").value=pair[0]; $("guest2").value=pair[1];
+  if($("latitudesToggle").checked)renderLatitudesFields();
 };
 
 const anchorSuggestions = {
@@ -600,6 +638,7 @@ function scenarioData(){
     agency:$("agency").value,
     market:$("department").value==="Outbound Sales"?selectedMarketLabel():"Agency 5",
     guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
+    latitudesNumbers:collectLatitudesNumbers(),
     category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
     latitudes:$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
@@ -770,7 +809,7 @@ function atAGlanceHtml(d,meta){
   const sailing=s?`${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}`:"Trainer to provide/verify sailing";
   const stateroom=`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
   return `<div class="glance-grid">
-    <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${d.latitudes?"Past guest / Latitudes workflow":"Create or verify profiles"}</small></div>
+    <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${d.latitudes?`${(d.latitudesNumbers||[]).filter(Boolean).length} Latitudes number${(d.latitudesNumbers||[]).filter(Boolean).length===1?"":"s"} provided`:`Create or verify profiles`}</small></div>
     <div class="glance-card"><span>Sailing</span><strong>${escapeHtml(sailing)}</strong><small>${s?.departure?`From ${escapeHtml(s.departure)}`:"Verify exact date/port in Seaweb"}</small></div>
     <div class="glance-card"><span>Stateroom</span><strong>${escapeHtml(stateroom)}</strong><small>Use actual available inventory</small></div>
     <div class="glance-card"><span>Promotions</span><strong>${escapeHtml(promotionSummary(d))}</strong><small>Verify current eligibility and deadlines</small></div>
@@ -778,6 +817,17 @@ function atAGlanceHtml(d,meta){
     <div class="glance-card"><span>Payment / Credit</span><strong>${escapeHtml(d.payment)}</strong><small>${d.cardRequired?"Training card details provided below":"Follow scenario workflow"}</small></div>
     <div class="glance-card wide"><span>Special Requests / Notes</span><strong>${escapeHtml(specialRequestSummary(d))}</strong><small>${d.commenting?"Commenting Tool / reservation notes may be required":"Document only what the scenario requires"}</small></div>
   </div>`;
+}
+
+function latitudesScenarioHtml(d){
+  if(!d.latitudes)return '';
+  const nums=Array.isArray(d.latitudesNumbers)?d.latitudesNumbers:[];
+  const rows=Array.from({length:d.guestCount},(_,i)=>{
+    const name=i===0?(d.guest1||'Guest 1'):i===1?(d.guest2||'Guest 2'):`Guest ${i+1}`;
+    const number=nums[i]||'';
+    return `<div class="latitudes-output-card"><span>Guest ${i+1}</span><strong>${escapeHtml(name)}</strong><small>Latitudes #: ${number?escapeHtml(number):'<em>Not entered — verify in Seaweb</em>'}</small></div>`;
+  }).join('');
+  return `<section class="scenario-section latitudes-output-section"><div class="section-label">PAST GUEST DETAILS</div><h3>Latitudes Numbers</h3><p class="latitudes-output-intro">Use these training Latitudes numbers to locate and verify the past-guest profiles in Seaweb.</p><div class="latitudes-output-grid">${rows}</div></section>`;
 }
 
 function fullTaskList(d,meta){
@@ -792,7 +842,7 @@ function fullTaskList(d,meta){
   if(name.includes("ada")) tasks.push("Select a qualifying ADA / accessible stateroom; verify actual capacity and available location before promising a preference.");
   else if(!name.includes("price drop")&&!name.includes("cancel")&&!name.includes("reinstate")) tasks.push("Review available staterooms and select the best match for the guest's preferences.");
 
-  tasks.push(d.latitudes?"Locate/verify the training guest profiles and confirm legal names and dates of birth.":"Create or verify all required guest profiles using the training details.");
+  tasks.push(d.latitudes?((d.latitudesNumbers||[]).some(Boolean)?"Use the provided Latitudes number(s) to locate/verify the training guest profiles, then confirm legal names and dates of birth.":"Locate/verify the training guest profiles and confirm legal names and dates of birth."):"Create or verify all required guest profiles using the training details.");
 
   if(d.fas||name.includes("price programs"))tasks.push("Review and apply the applicable Free at Sea selections in the correct order.");
   if(d.psc)tasks.push("Add prepaid service charges where requested and verify the updated pricing.");
@@ -987,6 +1037,8 @@ function generateScenario(){
       ${atAGlanceHtml(d,meta)}
     </section>
 
+    ${latitudesScenarioHtml(d)}
+
     <section class="scenario-section">
       <div class="section-label">YOUR WORK</div>
       <h3>Complete These Tasks</h3>
@@ -1011,7 +1063,7 @@ function generateScenario(){
       ${pricing}
 
       <h4>Guest Information</h4>
-      <ul class="detail-list">${guestNames.map((g,i)=>`<li><strong>Guest ${i+1}:</strong> ${escapeHtml(g)}${d.latitudes?" — locate/verify the training Latitudes profile in Seaweb":""}</li>`).join("")}${extraGuests}</ul>
+      <ul class="detail-list">${guestNames.map((g,i)=>`<li><strong>Guest ${i+1}:</strong> ${escapeHtml(g)}${d.latitudes?` — Latitudes #: ${escapeHtml((d.latitudesNumbers||[])[i]||"verify in Seaweb")}`:""}</li>`).join("")}${extraGuests}</ul>
 
       <h4>Payment / Booking Action</h4>
       <p>${escapeHtml(paymentInstruction)}</p>
@@ -1055,6 +1107,11 @@ function runValidator(){
   if(!d.guest1 && meta.kind!=="demo")add("error","Missing primary guest","Guest 1 is required for trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
   if(d.guestCount>1 && !d.guest2 && meta.kind!=="demo")add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(d.latitudes){
+    const entered=(d.latitudesNumbers||[]).filter(Boolean).length;
+    if(!entered)add("warning","Latitudes numbers not entered","Past Guests / Latitudes is selected, but no training Latitudes numbers were entered.");
+    else add("passed","Latitudes numbers included",`${entered} training Latitudes number${entered===1?"":"s"} included in the trainee scenario.`);
+  }
 
   if(d.department==="Guest Services"){
     if(String(d.agency)!=="5")add("error","Guest Services agency mismatch","Current Guest Services scenarios use Agency 5.");
@@ -1235,6 +1292,39 @@ async function renderShareCardToPng(){
   return blob.type==="image/png" ? blob : new Blob([blob],{type:"image/png"});
 }
 
+function scenarioShareFilename(){
+  const d=state.currentScenario||scenarioData();
+  const dept=(d.department||'Seaweb').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const focus=(d.type||'Scenario').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+  return `${dept}-Day-${d.trainingDay||''}-${focus}.png`;
+}
+
+async function downloadCardImage(){
+  if(!ensureScenarioReady())return;
+  const btn=$('downloadCardImageBtn');
+  const old=btn.innerHTML;
+  btn.disabled=true;
+  btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Creating PNG…</strong><small>Please wait</small></span>`;
+  try{
+    const png=await renderShareCardToPng();
+    const url=URL.createObjectURL(png);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download=scenarioShareFilename();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    closeShareMenu();
+    flash('PNG downloaded. Attach it in Teams so trainees can click it open for a larger preview.');
+  }catch(err){
+    alert(`Could not download the card image: ${err.message}`);
+  }finally{
+    btn.disabled=false;
+    btn.innerHTML=old;
+  }
+}
+
 async function copyCardAsImage(){
   if(!ensureScenarioReady())return;
   if(!navigator.clipboard || typeof ClipboardItem==="undefined"){
@@ -1306,6 +1396,7 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("downloadCardImageBtn").onclick=downloadCardImage;
 $("copyCardImageBtn").onclick=copyCardAsImage;
 $("copyCardFormattedBtn").onclick=copyCardFormatted;
 document.addEventListener("click",e=>{
@@ -1392,6 +1483,7 @@ window.openSaved=(id)=>{
   if([...$("paymentAction").options].some(o=>o.value===x.payment)) $("paymentAction").value=x.payment;
   $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
+  refreshLatitudesPanel(x.latitudesNumbers||[]);
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;$("trainerNotes").value=x.trainerNotes||"";
   if(x.cardProfile && trainingCards[x.cardProfile]){$("trainingCardProfile").value=x.cardProfile;renderTrainingCard();}
   renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
@@ -1411,4 +1503,4 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();
