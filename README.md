@@ -72,3 +72,10 @@ This update rebuilds the PDF and PNG exports so they use the same page design. B
 - Each page is rendered as a fixed portrait sheet, so the export fills the page instead of appearing as a long or inconsistently cropped image.
 - The export styling was adjusted to more closely match the in-generator scenario view.
 - The PDF now embeds those same portrait page images, so the PDF and PNG versions look nearly identical.
+
+
+## V1.8.8 – legal-size export + mixed guest status
+- PDF and PNG page-set exports now use **8.5 x 14 legal-size pages** to reduce page count and use more of the page.
+- The export render groups were rebalanced so earlier pages do not have large empty gaps.
+- The export image size was increased for sharper PNG and PDF output.
+- The generator now supports **mixed guest types** in the same scenario: each guest can be marked as a **past guest** or **new guest**, and only past guests require a Latitudes number.

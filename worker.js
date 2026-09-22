@@ -57,7 +57,7 @@ async function handleShareCard(request, env) {
   try {
     const shot = await env.BROWSER.quickAction("screenshot", {
       html: page,
-      viewport: { width: 1220, height: 1400 },
+      viewport: { width: 1740, height: 2400 },
       screenshotOptions: { fullPage: true, type: "png" }
     });
 
@@ -106,7 +106,7 @@ function shareCardDocument(bodyHtml) {
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;background:#EBE7DF}
 body{padding:20px;font-family:Arial,Helvetica,sans-serif;color:#101828}
-.shared-trainee-card,.scenario-paper{width:1180px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:32px;color:#101828}
+.shared-trainee-card,.scenario-paper{width:1700px;margin:0 auto;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:34px;color:#101828}
 h2{font-size:25px;line-height:1.25;margin:8px 0 18px;color:#101010}
 h3{font-size:18px;margin:0 0 12px;color:#101828}
 h4{font-size:14px;margin:20px 0 8px;color:#101828}
@@ -120,7 +120,7 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .section-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#00484F;margin-bottom:6px}
 .call-section{background:#EBE7DF;border-left:5px solid #68ACAA;padding:18px 20px}
 .call-section p{margin:0;line-height:1.7}
-.glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 .glance-card{background:#fff;border:1px solid #D9D4CA;border-radius:9px;padding:13px;min-height:88px}
 .glance-card.wide{grid-column:1/-1}
 .glance-card>span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#667085;font-weight:700}
@@ -155,35 +155,36 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .latitudes-output-card>small{display:block;font-size:11px;color:#006099;font-weight:600}
 .latitudes-output-card em{font-style:normal;color:#8A5B00;font-weight:500}
 
-.teams-page-stack{width:1180px;margin:0 auto}
-.teams-page-stack .teams-share-page,.export-letter-page{width:1180px;min-height:1528px;margin:0;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:30px 32px;display:flex;flex-direction:column;justify-content:flex-start}
+.teams-page-stack{width:1700px;margin:0 auto}
+.teams-page-stack .teams-share-page,.export-legal-page{width:1700px;min-height:2800px;margin:0;background:#fff;border:1px solid #B9B6AF;border-radius:3px;padding:36px 40px;display:flex;flex-direction:column;justify-content:flex-start}
 .export-page-body{flex:1 1 auto}
-.share-page-split-marker{width:1180px;height:18px;margin:0;background:#FF00FF}
-.export-page-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin:0 0 18px;padding:14px 16px;background:#00484F;color:#fff;border-radius:6px}
-.export-page-bar div{display:flex;flex-direction:column;gap:5px}
-.export-page-bar strong{font-size:20px;color:#fff;line-height:1.2}
-.export-page-bar small{font-size:13px;color:#D4ECEB;line-height:1.35}
-.export-page-bar span{font-size:14px;color:#fff;font-weight:700;white-space:nowrap}
-.export-page-footer{display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:12px;border-top:1px solid #D8D5CE;font-size:12px;color:#667085;text-transform:uppercase;letter-spacing:1px}
-.teams-page-stack h2{font-size:29px;line-height:1.22;margin:8px 0 16px}
-.teams-page-stack h3{font-size:20px;line-height:1.28;margin:0 0 11px}
-.teams-page-stack h4{font-size:15px;margin:18px 0 8px}
-.teams-page-stack p,.teams-page-stack li{font-size:14px;line-height:1.5}
-.teams-page-stack .scenario-intro{font-size:14px;line-height:1.6;margin:0 0 20px}
-.teams-page-stack .section-label{font-size:10px;font-weight:700;letter-spacing:2px}
-.teams-page-stack .chip,.teams-page-stack .status-badge{font-size:11px;padding:5px 8px}
-.teams-page-stack .glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.teams-page-stack .glance-card{min-height:80px}
-.teams-page-stack .glance-card>span{font-size:10px}
-.teams-page-stack .glance-card>strong{font-size:13px;line-height:1.35}
-.teams-page-stack .glance-card>small{font-size:11px;line-height:1.35}
-.teams-page-stack .task-checklist li{padding:8px 0}
-.teams-page-stack .latitudes-output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-.teams-page-stack .latitudes-output-card>span{font-size:9px}
-.teams-page-stack .latitudes-output-card>strong{font-size:12px}
-.teams-page-stack .latitudes-output-card>small{font-size:11px}
-.teams-page-stack .share-expanded-heading{font-size:14px}
+.share-page-split-marker{width:1700px;height:20px;margin:0;background:#FF00FF}
+.export-page-bar{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin:0 0 20px;padding:16px 18px;background:#00484F;color:#fff;border-radius:6px}
+.export-page-bar div{display:flex;flex-direction:column;gap:6px}
+.export-page-bar strong{font-size:24px;color:#fff;line-height:1.2}
+.export-page-bar small{font-size:15px;color:#D4ECEB;line-height:1.35}
+.export-page-bar span{font-size:16px;color:#fff;font-weight:700;white-space:nowrap}
+.export-page-footer{display:flex;justify-content:space-between;align-items:center;margin-top:20px;padding-top:14px;border-top:1px solid #D8D5CE;font-size:13px;color:#667085;text-transform:uppercase;letter-spacing:1px}
+.teams-page-stack h2{font-size:39px;line-height:1.18;margin:10px 0 18px}
+.teams-page-stack h3{font-size:27px;line-height:1.25;margin:0 0 12px}
+.teams-page-stack h4{font-size:18px;margin:20px 0 10px}
+.teams-page-stack p,.teams-page-stack li{font-size:18px;line-height:1.55}
+.teams-page-stack .scenario-intro{font-size:18px;line-height:1.6;margin:0 0 22px}
+.teams-page-stack .section-label{font-size:12px;font-weight:700;letter-spacing:2px}
+.teams-page-stack .chip,.teams-page-stack .status-badge{font-size:14px;padding:6px 10px}
+.teams-page-stack .glance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.teams-page-stack .glance-card{min-height:102px;padding:16px}
+.teams-page-stack .glance-card>span{font-size:12px}
+.teams-page-stack .glance-card>strong{font-size:17px;line-height:1.35}
+.teams-page-stack .glance-card>small{font-size:14px;line-height:1.4}
+.teams-page-stack .task-checklist li{padding:10px 0}
+.teams-page-stack .latitudes-output-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.teams-page-stack .latitudes-output-card>span{font-size:11px}
+.teams-page-stack .latitudes-output-card>strong{font-size:16px}
+.teams-page-stack .latitudes-output-card>small{font-size:14px;line-height:1.45}
+.teams-page-stack .share-expanded-heading{font-size:18px}
 .teams-page-stack .support-list{columns:1;column-gap:0}
+
 
 .trainer-section{display:none!important}
 </style></head><body>${bodyHtml}</body></html>`;
