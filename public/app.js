@@ -1636,7 +1636,7 @@ async function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">Loading exact sailing dates from NCL.com U.S.…</option>';
     $("useItineraryDateBtn").disabled=true;
     $("itineraryChooserNotice").className="notice info";
-    $("itineraryChooserNotice").textContent="Loading the available departure dates for this itinerary…";
+    $("itineraryChooserNotice").textContent="Loading the exact NCL departure dates for this itinerary…";
 
     try{
       const params=new URLSearchParams({
@@ -1679,7 +1679,7 @@ async function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="NCL.com U.S. did not expose exact dates for this itinerary. Use the verified date field only as a fallback.";
+    $("itineraryChooserNotice").textContent="NCL.com U.S. did not expose exact dates in its public page data for this itinerary. Use the verified date field only as a fallback.";
   }
 
   updateUseSailingButton();
