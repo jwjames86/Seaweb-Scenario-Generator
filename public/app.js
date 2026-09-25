@@ -1490,7 +1490,7 @@ $("searchSailingsBtn").onclick=async()=>{
   resetItineraryChooser();
   const btn=$("searchSailingsBtn"); btn.disabled=true; btn.textContent="Searching…";
   $("searchNotice").className="notice info";
-  $("searchNotice").textContent=`Searching NCL.com U.S. from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
+  $("searchNotice").textContent=`Loading NCL.com U.S. itinerary data from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
   $("searchResults").innerHTML="";
   try{
     const r=await fetch(`/api/sailings?${queryParams()}`);
