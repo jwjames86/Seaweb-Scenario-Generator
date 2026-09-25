@@ -478,3 +478,21 @@ A dedicated panel opens underneath the results. The trainer then chooses the exa
 - The chosen exact date continues through the generated scenario, validator, saved scenario, PNG and PDF.
 
 This separates itinerary selection from sailing-date selection so trainers can clearly choose both.
+
+
+## V1.9.19 – Always-Visible Itinerary + Sailing Date Selector
+
+The sailing selection workflow has been simplified again so the trainer does not need a hidden secondary panel.
+
+After search results load, an **always-visible** selector appears underneath the results:
+
+1. **Itinerary** dropdown
+2. **Specific Sailing Date** dropdown
+
+If NCL.com U.S. exposes exact dates, the sailing-date dropdown is populated with those dates.
+
+If the public NCL result does not expose exact dates, the second dropdown is replaced with a clearly labeled **Verified Sailing Date** field. The trainer can enter the exact date after confirming it on NCL.com U.S. or in Seaweb.
+
+Each result card also includes **Choose This Itinerary**, which selects that itinerary in the dropdown and scrolls to the selector.
+
+This removes the hidden-panel dependency and makes both selections visible at the same time.
