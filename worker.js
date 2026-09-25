@@ -296,7 +296,7 @@ async function handleSailings(request, reqUrl, env) {
   // NCL's U.S. vacation page is JavaScript-driven. Pull the structured
   // itinerary inventory first so the search is not dependent on rendered
   // result cards appearing in the page HTML.
-  const apiAttempt = await fetchNclUsInventory(criterion, value, from, to, duration);
+  const apiAttempt = await fetchNclUsInventory(env, criterion, value, from, to, duration);
   if (apiAttempt.ok && apiAttempt.results.length) {
     const sourceUrl = buildNclSearchUrls(criterion, value, from, to)[0];
     return json({
@@ -400,7 +400,7 @@ async function handleSailings(request, reqUrl, env) {
       : parsed.results.length
         ? "NCL.com U.S. itineraries loaded, but no visible public card matched this 30-day window and optional vacation length. Try Any Length or another single search option."
         : apiAttempt?.error
-          ? `NCL.com U.S. loaded, but the itinerary inventory service did not return usable results (${apiAttempt.error}).`
+          ? `NCL.com U.S. loaded, but neither the browser-context inventory request nor the fully rendered results page returned usable itinerary data (${apiAttempt.error}).`
           : "NCL.com U.S. loaded, but no readable itinerary data was returned.",
     results,
     diagnostic: {
@@ -416,7 +416,7 @@ async function handleSailings(request, reqUrl, env) {
   });
 }
 
-async function fetchNclUsInventory(criterion, value, from, to, duration) {
+async function fetchNclUsInventory(env, criterion, value, from, to, duration) {
   const pageLimit = 50;
   const maxPages = 8;
   const collected = [];
@@ -427,7 +427,7 @@ async function fetchNclUsInventory(criterion, value, from, to, duration) {
 
   for (let page = 0; page < maxPages; page++) {
     const apiUrl = `https://www.ncl.com/api/v2/vacations/search?limit=${pageLimit}&offset=${offset}`;
-    const response = await requestNclSearchJson(apiUrl, page === 0);
+    const response = await requestNclSearchJson(env, apiUrl, page === 0);
     attempts.push(response.diagnostic || { url: apiUrl });
 
     if (!response.ok) {
@@ -545,7 +545,7 @@ async function fetchNclUsInventory(criterion, value, from, to, duration) {
   };
 }
 
-async function requestNclSearchJson(apiUrl, allowBrowserFallback = true) {
+async function requestNclSearchJson(env, apiUrl, allowBrowserFallback = true) {
   const headers = {
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9",
@@ -605,19 +605,83 @@ async function requestNclSearchJson(apiUrl, allowBrowserFallback = true) {
     }
   }
 
-  // NCL's U.S. catalogue is normally requested from within the browser page.
-  // If a direct Worker fetch is challenged, make the same GET through Browser
-  // Run with a U.S./English page context.
-  try {
-    if (typeof globalThis !== "undefined") {
-      // no-op; keeps this function valid in Worker and Node syntax checks.
+  // NCL protects the search API when it is called directly from a Worker.
+  // Make the same request through Cloudflare Browser Run so it is loaded in a
+  // real browser context instead of a server-to-server request.
+  if (allowBrowserFallback && env?.BROWSER && typeof env.BROWSER.quickAction === "function") {
+    try {
+      const browserResponse = await env.BROWSER.quickAction("content", {
+        url: apiUrl,
+        gotoOptions: {
+          waitUntil: "networkidle2",
+          timeout: 30000
+        },
+        waitForTimeout: 2500,
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+      });
+
+      if (browserResponse.ok) {
+        const body = await browserResponse.text();
+        const content = unwrapQuickActionText(body, "content");
+        const parsed = safeJsonParse(content);
+        if (parsed) {
+          return {
+            ok: true,
+            data: parsed,
+            diagnostic: {
+              url: apiUrl,
+              transport: "browser-content",
+              status: browserResponse.status || 200,
+              bytes: content.length
+            }
+          };
+        }
+
+        // Browser Run may return the JSON wrapped by rendered HTML. Strip the
+        // page markup once and try again.
+        const normalized = normalizeHtml(content);
+        const parsedNormalized = safeJsonParse(normalized);
+        if (parsedNormalized) {
+          return {
+            ok: true,
+            data: parsedNormalized,
+            diagnostic: {
+              url: apiUrl,
+              transport: "browser-content-normalized",
+              status: browserResponse.status || 200,
+              bytes: normalized.length
+            }
+          };
+        }
+
+        return {
+          ok: false,
+          error: "Browser loaded the NCL search API but the response was not JSON",
+          diagnostic: {
+            url: apiUrl,
+            transport: "browser-content",
+            status: browserResponse.status || 200,
+            sample: String(content).slice(0, 160)
+          }
+        };
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        error: `Browser-context NCL API request failed: ${String(e?.message || e)}`,
+        diagnostic: {
+          url: apiUrl,
+          transport: "browser-content",
+          error: String(e?.message || e)
+        }
+      };
     }
-  } catch (_) {}
+  }
 
   return {
     ok: false,
-    error: "Direct NCL API request was not readable",
-    diagnostic: { url: apiUrl, transport: "fetch" }
+    error: "NCL search API was not readable from direct or browser-context requests",
+    diagnostic: { url: apiUrl, transport: "fetch+browser" }
   };
 }
 
@@ -1020,7 +1084,7 @@ async function renderAndParse(env, sourceUrl) {
           waitUntil: "networkidle2",
           timeout: 30000
         },
-        waitForTimeout: 1800,
+        waitForTimeout: 12000,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
       });
 
@@ -1047,7 +1111,7 @@ async function renderAndParse(env, sourceUrl) {
           waitUntil: "networkidle2",
           timeout: 30000
         },
-        waitForTimeout: 1800,
+        waitForTimeout: 12000,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
       });
 

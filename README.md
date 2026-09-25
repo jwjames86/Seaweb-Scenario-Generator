@@ -552,3 +552,18 @@ The Real Sailing Search now uses the current `/api/v2/vacations/search` endpoint
 - If an itinerary is returned without exact dates, the itinerary remains selectable and the UI shows the Verified Sailing Date field rather than discarding the itinerary.
 - Checks explicit currency fields and will not silently label a non-USD storefront as U.S. data.
 - Retains the public-page Browser Run parser as a fallback.
+
+
+## V1.9.23 – Browser-Context NCL Search
+
+The V1.9.22 direct request to NCL's current `/api/v2/vacations/search` endpoint can be challenged when it comes from a Cloudflare Worker, even though the exact same endpoint is used successfully by the NCL website in a browser.
+
+### Search changes
+1. Try the current NCL U.S. search API directly.
+2. If NCL blocks or challenges that server-to-server request, retry the same endpoint through **Cloudflare Browser Run**.
+3. If the structured endpoint still cannot be read, load the actual NCL U.S. Vacations results page and allow its JavaScript/XHR requests to finish before parsing the rendered itinerary cards.
+
+### Timing fix
+NCL's search XHR can occur roughly 9 seconds after page initialization. Previous versions only waited about 1.8 seconds. The Browser Run results-page fallback now waits **12 seconds** before reading the rendered content.
+
+This keeps the current U.S. NCL source while avoiding reliance on a direct Worker request that NCL may reject.
