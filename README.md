@@ -586,3 +586,18 @@ While the second lookup is running, the dropdown displays **Loading exact sailin
 The manual **Verified Sailing Date** field is now only shown when NCL's public pages still do not expose exact dates after the automatic lookup. This avoids inventing dates while still giving trainers a way to use a date that they personally verified in NCL.com U.S. or Seaweb.
 
 The selected sailing also keeps the itinerary's more specific NCL detail URL when one is discovered.
+
+
+## V1.9.25 – Hidden NCL Sailing Date Extraction
+
+The NCL vacations result cards usually display only month-level availability. Exact dates may still exist in the page's underlying HTML, data attributes or serialized itinerary data.
+
+### Changes
+- The exact-date lookup now scans the **raw rendered NCL HTML/JSON before stripping tags or scripts**.
+- Recognizes NCL URLs containing **`sail-id` / `sail_id`** as sailing-detail links.
+- Searches date values next to sailing/departure/start-date keys and data attributes.
+- Searches the serialized context around NCL sail IDs for ISO, U.S. numeric and named dates.
+- Supports compact `YYYYMMDD` dates in page data.
+- Continues filtering all extracted dates to the trainer's original From/To search window so unrelated page dates are discarded.
+- If exact dates are found, the Specific Sailing Date dropdown populates automatically.
+- Manual Verified Sailing Date remains only as the final fallback when NCL's public data truly does not expose the dates.

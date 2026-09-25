@@ -306,10 +306,14 @@ async function handleSailingDates(reqUrl, env) {
 
     if (!loaded.ok) continue;
 
-    let dates = extractExactSailingDates(loaded.text);
+    let dates = [
+      ...(loaded.dates || []),
+      ...extractContextualSailingDates(loaded.raw || ""),
+      ...extractExactSailingDates(loaded.text || "")
+    ];
+    dates = [...new Set(dates)].sort();
     if (from) dates = dates.filter(d => d >= from);
     if (to) dates = dates.filter(d => d <= to);
-    dates = [...new Set(dates)].sort();
 
     if (dates.length) {
       return json({
@@ -341,7 +345,10 @@ async function handleSailingDates(reqUrl, env) {
 function looksLikeNclCruiseDetailUrl(value) {
   try {
     const u = new URL(value);
-    return /\/cruises?\//i.test(u.pathname) || u.searchParams.has("itineraryCode");
+    return /\/cruises?\//i.test(u.pathname)
+      || u.searchParams.has("itineraryCode")
+      || u.searchParams.has("sail-id")
+      || u.searchParams.has("sail_id");
   } catch {
     return false;
   }
@@ -463,6 +470,10 @@ function scoreNclCruiseLink(item, target) {
   }
 
   if (/view dates|dates & prices|view cruise/i.test(item.label)) score += 3;
+  try {
+    const u = new URL(item.url);
+    if (u.searchParams.has("sail-id") || u.searchParams.has("sail_id")) score += 5;
+  } catch (_) {}
   return score;
 }
 
@@ -476,7 +487,7 @@ async function loadNclDateText(env, url) {
             waitUntil: "networkidle2",
             timeout: 30000
           },
-          waitForTimeout: 8000,
+          waitForTimeout: 10000,
           userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
         });
 
@@ -485,15 +496,23 @@ async function loadNclDateText(env, url) {
         const body = await response.text();
         const raw = unwrapQuickActionText(body, mode);
         const text = mode === "content" ? normalizeHtml(raw) : normalizeMarkdown(raw);
+        const dates = [
+          ...extractContextualSailingDates(raw),
+          ...extractExactSailingDates(raw)
+        ];
 
-        if (text) {
+        if (raw || text) {
           return {
             ok: true,
+            raw,
             text,
+            dates: [...new Set(dates)].sort(),
             diagnostic: {
               url,
               method: `browser-${mode}`,
-              textLength: text.length
+              rawLength: raw.length,
+              textLength: text.length,
+              rawDates: dates.length
             }
           };
         }
@@ -506,27 +525,42 @@ async function loadNclDateText(env, url) {
       redirect: "follow",
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml",
+        "Accept": "text/html,application/xhtml+xml,application/json",
         "Accept-Language": "en-US,en;q=0.9"
       }
     });
     if (response.ok) {
-      const html = await response.text();
-      const text = normalizeHtml(html);
+      const raw = await response.text();
+      const text = normalizeHtml(raw);
+      const dates = [
+        ...extractContextualSailingDates(raw),
+        ...extractExactSailingDates(raw)
+      ];
       return {
         ok: true,
+        raw,
         text,
-        diagnostic: { url, method: "raw-fetch", textLength: text.length }
+        dates: [...new Set(dates)].sort(),
+        diagnostic: {
+          url,
+          method: "raw-fetch",
+          rawLength: raw.length,
+          textLength: text.length,
+          rawDates: dates.length
+        }
       };
     }
   } catch (_) {}
 
   return {
     ok: false,
+    raw: "",
     text: "",
+    dates: [],
     diagnostic: { url, method: "unreadable" }
   };
 }
+
 
 async function handleSailings(request, reqUrl, env) {
   const manual = reqUrl.searchParams.get("url");
@@ -1688,6 +1722,58 @@ function isoDate(year, month, day) {
   return iso;
 }
 
+function extractContextualSailingDates(raw) {
+  const source = String(raw || "");
+  const out = new Set();
+
+  // Exact dates attached to NCL sailing/departure/start-date keys or data attributes.
+  const patterns = [
+    /(?:sail(?:ing)?Date|sail_date|departureDate|departure_date|embarkDate|embark_date|startDate|start_date|data-sail(?:ing)?-date|data-departure-date)\s*["':=\\\s]+\s*["']?((?:20\d{2}-\d{2}-\d{2})(?:[T\s][^"'<>\\\s]+)?)/gi,
+    /(?:sail(?:ing)?Date|sail_date|departureDate|departure_date|embarkDate|embark_date|startDate|start_date|data-sail(?:ing)?-date|data-departure-date)\s*["':=\\\s]+\s*["']?(\d{1,2}\/\d{1,2}\/20\d{2})/gi,
+    /(?:sail(?:ing)?Date|departureDate|embarkDate|startDate)\s*["':=\\\s]+\s*["']?([A-Za-z]{3,9}\s+\d{1,2},?\s+20\d{2})/gi
+  ];
+
+  for (const re of patterns) {
+    for (const m of source.matchAll(re)) {
+      const d = normalizeLooseNclDate(m[1]);
+      if (d) out.add(d);
+    }
+  }
+
+  // NCL pages frequently keep sail IDs and dates together in serialized JSON.
+  // Inspect compact windows around sail-id references and extract dates there.
+  for (const m of source.matchAll(/(?:sail-id|sail_id|sailId|sailingId)["'=:\s\\]*["']?(\d{3,})/gi)) {
+    const pos = m.index ?? 0;
+    const window = source.slice(Math.max(0, pos - 800), Math.min(source.length, pos + 1400));
+    for (const d of extractExactSailingDates(window)) out.add(d);
+  }
+
+  return [...out].sort();
+}
+
+function normalizeLooseNclDate(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+
+  const iso = text.match(/^(20\d{2})-(\d{2})-(\d{2})/);
+  if (iso) return isoDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+
+  const us = text.match(/^(\d{1,2})\/(\d{1,2})\/(20\d{2})$/);
+  if (us) return isoDate(Number(us[3]), Number(us[1]), Number(us[2]));
+
+  const monthNames = {
+    january:1,february:2,march:3,april:4,may:5,june:6,
+    july:7,august:8,september:9,october:10,november:11,december:12,
+    jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12
+  };
+  const named = text.match(/^([A-Za-z]{3,9})\s+(\d{1,2}),?\s+(20\d{2})$/);
+  if (named && monthNames[named[1].toLowerCase()]) {
+    return isoDate(Number(named[3]), monthNames[named[1].toLowerCase()], Number(named[2]));
+  }
+
+  return "";
+}
+
 function extractExactSailingDates(text) {
   const out = new Set();
   const source = String(text || "");
@@ -1724,6 +1810,12 @@ function extractExactSailingDates(text) {
   const usNumeric = new RegExp("\\b(\\d{1,2})/(\\d{1,2})/(20\\d{2})\\b", "g");
   for (const m of source.matchAll(usNumeric)) {
     const iso = isoDate(Number(m[3]), Number(m[1]), Number(m[2]));
+    if (iso) out.add(iso);
+  }
+
+  // Compact YYYYMMDD values sometimes appear in serialized itinerary data.
+  for (const m of source.matchAll(/\b(20\d{2})(\d{2})(\d{2})\b/g)) {
+    const iso = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
     if (iso) out.add(iso);
   }
 
