@@ -541,6 +541,8 @@ function clearScenarioFocusSelections(){
   $("trainingDay").value="6";
   updateFocusPickerDisplay();
   $("curriculumNote").innerHTML="";
+  if($("couponToggle"))$("couponToggle").checked=false;
+  if(typeof refreshCouponPanel==="function")refreshCouponPanel();
 }
 
 function syncScenarioFocusSelection(){
@@ -863,6 +865,7 @@ function updateModificationTypeUI(applyDefaults=false){
   if(type==="air_transfer") $("airToggle").checked=true;
   if(applyDefaults)updateModificationDefaults();
   syncAirPanelFromScenario(applyDefaults);
+  refreshCouponPanel();
   updateGdprPreview();
 }
 
@@ -983,6 +986,112 @@ function getGuestProfileMix(d){
   return {count,numbers,flags,pastCount,newCount};
 }
 
+const couponTypes=[
+  "CruiseNext Credit",
+  "Future Cruise Credit (FCC)",
+  "10% Discount Coupon",
+  "CruiseFirst Credit",
+  "Latitudes / Guest Coupon",
+  "Other Credit / Coupon"
+];
+let couponRowSequence=0;
+
+function couponWorkflowRequested(){
+  const text=selectedFocusMetas().map(m=>`${m.name} ${m.objective}`).join(" ").toLowerCase();
+  return !!$("couponToggle")?.checked || /fcc|cruisenext|cruise first|coupon|credit/.test(text) || $("paymentAction")?.value==="FCC / CruiseNext" || ($("reservationWorkflow")?.value==="modify" && $("modificationType")?.value==="credit_coupon");
+}
+
+function couponGuestNames(){
+  const count=+$("guestCount")?.value||1;
+  return Array.from({length:count},(_,i)=>guestDisplayName(i)).filter(Boolean);
+}
+
+function refreshCouponGuestOptions(){
+  const list=$("couponGuestOptions");
+  if(!list)return;
+  list.innerHTML=couponGuestNames().map(name=>`<option value="${escapeAttr(name)}"></option>`).join("");
+}
+
+function latitudeForGuestName(name){
+  const target=String(name||"").trim().toLowerCase();
+  if(!target)return "";
+  const names=couponGuestNames();
+  const nums=collectLatitudesNumbers();
+  const idx=names.findIndex(n=>n.toLowerCase()===target);
+  return idx>=0?(nums[idx]||""):"";
+}
+
+function addCouponRow(data={}){
+  const host=$("couponRows");
+  if(!host)return;
+  const id=++couponRowSequence;
+  const row=document.createElement("div");
+  row.className="coupon-row";
+  row.dataset.couponRow=String(id);
+  row.innerHTML=`
+    <label>Credit / Coupon Type
+      <select class="coupon-type">
+        <option value="">Choose credit / coupon...</option>
+        ${couponTypes.map(type=>`<option value="${escapeAttr(type)}" ${data.type===type?'selected':''}>${escapeHtml(type)}</option>`).join('')}
+      </select>
+    </label>
+    <label>Source Guest
+      <input class="coupon-guest" list="couponGuestOptions" value="${escapeAttr(data.guest||'')}" placeholder="Guest whose profile owns the coupon" />
+    </label>
+    <label>Source Latitudes #
+      <input class="coupon-latitudes" inputmode="numeric" maxlength="12" value="${escapeAttr(data.latitudes||'')}" placeholder="Latitudes number" />
+    </label>
+    <label>Details / Value <span class="optional-label">optional</span>
+      <input class="coupon-detail" value="${escapeAttr(data.detail||'')}" placeholder="Example: 10% off, $250, certificate #..." />
+    </label>
+    <button type="button" class="coupon-remove secondary tiny" aria-label="Remove credit or coupon">Remove</button>`;
+  host.appendChild(row);
+  const guest=row.querySelector('.coupon-guest');
+  const lat=row.querySelector('.coupon-latitudes');
+  guest.addEventListener('change',()=>{if(!lat.value.trim()){const found=latitudeForGuestName(guest.value);if(found)lat.value=found;}});
+  guest.addEventListener('blur',()=>{if(!lat.value.trim()){const found=latitudeForGuestName(guest.value);if(found)lat.value=found;}});
+  lat.addEventListener('input',()=>{lat.value=lat.value.replace(/[^0-9]/g,'')});
+  row.querySelector('.coupon-remove').addEventListener('click',()=>{row.remove();if(!$("couponRows").children.length && couponWorkflowRequested())addCouponRow();});
+}
+
+function collectCoupons(){
+  return [...document.querySelectorAll('#couponRows .coupon-row')].map(row=>({
+    type:row.querySelector('.coupon-type')?.value||"",
+    guest:row.querySelector('.coupon-guest')?.value.trim()||"",
+    latitudes:row.querySelector('.coupon-latitudes')?.value.trim()||"",
+    detail:row.querySelector('.coupon-detail')?.value.trim()||""
+  })).filter(x=>x.type||x.guest||x.latitudes||x.detail);
+}
+
+function setCouponRows(items=[]){
+  $("couponRows").innerHTML="";
+  (Array.isArray(items)?items:[]).forEach(item=>addCouponRow(item));
+  if(!$("couponRows").children.length && couponWorkflowRequested())addCouponRow();
+  refreshCouponGuestOptions();
+}
+
+function refreshCouponPanel(){
+  const show=couponWorkflowRequested();
+  $("couponPanel")?.classList.toggle('hidden-field',!show);
+  refreshCouponGuestOptions();
+  if(show && !$("couponRows").children.length)addCouponRow();
+}
+
+function couponLabel(item){
+  return `${item.type||'Credit / Coupon'}${item.detail?` — ${item.detail}`:''}`;
+}
+
+function couponScenarioHtml(d){
+  if(!Array.isArray(d.coupons)||!d.coupons.length)return '';
+  const rows=d.coupons.map((item,i)=>`<div class="scenario-coupon-card"><span>Credit / Coupon ${i+1}</span><strong>${escapeHtml(couponLabel(item))}</strong><small>${escapeHtml(item.guest||'Source guest not entered')} • Latitudes # ${escapeHtml(item.latitudes||'Not entered')}</small></div>`).join('');
+  return `<section class="scenario-section visual-section coupon-output-section">${scenarioIconHeading('🎟️','Credits & Coupons')}<div class="scenario-coupon-grid">${rows}</div><p class="scenario-reminder">Apply each credit/coupon from the specified training Latitudes profile and follow the required reservation-status / sequencing workflow before saving.</p></section>`;
+}
+
+function couponTaskItems(d){
+  if(!Array.isArray(d.coupons)||!d.coupons.length)return [];
+  return d.coupons.map(item=>`Apply ${couponLabel(item)}${item.guest?` from ${item.guest}`:''}${item.latitudes?` (Latitudes # ${item.latitudes})`:''} using the required reservation-status and sequencing workflow.`);
+}
+
 function applyFocusDefaults(){
   const records=selectedFocusRecords();
   const metas=records.map(r=>r.meta);
@@ -1009,6 +1118,7 @@ function applyFocusDefaults(){
   $("fasToggle").checked=/\bfas\b|free at sea/.test(focusText);
   $("travelToggle").checked=/norwegian care|travel protection/.test(focusText);
   $("pscToggle").checked=/ppsrvchg|prepaid service charge/.test(focusText);
+  $("couponToggle").checked=/fcc|cruisenext|cruise first|coupon|credit/.test(focusText);
   $("latitudesToggle").checked=!/\bnew guest\b/.test(focusText);
   refreshLatitudesPanel();
 
@@ -1025,6 +1135,7 @@ function applyFocusDefaults(){
   }else updateWorkflowUI(false);
 
   refreshTrainingCardPanel(cardMeta.cardProfile);
+  refreshCouponPanel();
   syncAirPanelFromScenario(true);
   const level=trainingSupportLabel(+$("trainingDay").value);
   $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • ${metas.length} focus${metas.length===1?'':'es'}</strong><span>${metas.map(m=>escapeHtml(m.name)).join(' • ')}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
@@ -1070,11 +1181,13 @@ $("trainingCardProfile").addEventListener("change",renderTrainingCard);
 $("resetTrainingCardBtn").addEventListener("click",renderTrainingCard);
 $("trainingCardNumber").addEventListener("input",()=>{$("trainingCardNumber").value=$("trainingCardNumber").value.replace(/[^0-9 ]/g,"")});
 $("trainingCardCcv").addEventListener("input",()=>{$("trainingCardCcv").value=$("trainingCardCcv").value.replace(/[^0-9]/g,"")});
-$("paymentAction").addEventListener("change",()=>refreshTrainingCardPanel());
+$("paymentAction").addEventListener("change",()=>{refreshTrainingCardPanel();refreshCouponPanel()});
+$("addCouponBtn").addEventListener("click",()=>addCouponRow());
+$("couponToggle").addEventListener("change",refreshCouponPanel);
 $("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
-$("guestCount").addEventListener("change",()=>refreshLatitudesPanel());
-$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields()});
-$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields()});
+$("guestCount").addEventListener("change",()=>{refreshLatitudesPanel();refreshCouponGuestOptions()});
+$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
+$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
@@ -1454,6 +1567,8 @@ function scenarioData(){
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
+    couponEnabled:couponWorkflowRequested(),
+    coupons:couponWorkflowRequested()?collectCoupons():[],
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
     curriculumObjective:metas.map(m=>m.objective).join(" | "),
@@ -1727,6 +1842,7 @@ function fullTaskList(d,meta){
     }
     tasks.push(`Locate training reservation ${d.existingReservationNumber||"(trainer-provided reservation)"} and use the guest name(s) already on that reservation. Complete required verification before making changes.`);
     tasks.push(modificationTaskText(d));
+    tasks.push(...couponTaskItems(d));
     if(d.airEnabled){
       const airMeta=airProgramMeta(d.airProgram);
       if(!airMeta){
@@ -1765,7 +1881,8 @@ function fullTaskList(d,meta){
   if(d.fas||name.includes("price programs"))tasks.push("Review and apply the applicable Free at Sea selections in the correct order.");
   if(d.psc)tasks.push("Add prepaid service charges where requested and verify the updated pricing.");
   if(d.travel||name.includes("norwegian"))tasks.push("Add or discuss the applicable travel protection and explain the relevant timing/deadline.");
-  if(name.includes("fcc")||d.payment==="FCC / CruiseNext"||name.includes("cruise first"))tasks.push("Apply the applicable training credit/coupon using the required offer/status sequence, then review the updated pricing before saving.");
+  if(d.coupons?.length)tasks.push(...couponTaskItems(d));
+  else if(name.includes("fcc")||d.payment==="FCC / CruiseNext"||name.includes("cruise first"))tasks.push("Apply the applicable training credit/coupon using the required offer/status sequence, then review the updated pricing before saving.");
   if(name.includes("special request")||name.includes("ada")||name.includes("infant")||name.includes("multiple"))tasks.push("Enter special/accessibility/dietary requests in the correct Seaweb location and add any required comments.");
   if(name.includes("multiple"))tasks.push("Link related reservations with TWITH when required and verify room relationship/authorized-person notes.");
   if(d.airEnabled){
@@ -2016,11 +2133,14 @@ function resetScenarioForm(){
   $("travelToggle").checked=false;
   $("pscToggle").checked=false;
   $("airToggle").checked=false;
+  $("couponToggle").checked=false;
   $("airProgram").value="";
   $("airTripType").value="round_trip";
   $("airOneWayDirection").value="to_cruise";
   $("airGateway").value="";
   updateAirProgramPreview();
+  $("couponRows").innerHTML="";
+  refreshCouponPanel();
 
   $("trainingCardProfile").value="standardSesame";
   renderTrainingCard();
@@ -2090,7 +2210,7 @@ function offersAddonsVisualHtml(d){
   if(d.travel||/norwegian care|travel protection/.test(n))items.push('Norwegian Care / Travel Protection');
   if(d.psc||/prepaid service charge|ppsrvchg/.test(n))items.push('Pre-Paid Service Charges');
   if(/teacher/.test(n))items.push('Teacher Appreciation Offer, when eligible');
-  if(/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext')items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
+  if((/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext') && !(d.coupons||[]).length)items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
   if(/special request|ada|dietary/.test(n))items.push('Applicable special, accessibility, or dietary requests');
   if(!items.length)return '';
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🎁','Offers & Add-Ons')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul><p class="scenario-reminder">Use Compass and the approved internal resources for the applicable offer conversations and current eligibility.</p></section>`;
@@ -2180,6 +2300,7 @@ function generateScenario(){
     ${sailingDetailsVisualHtml(d,pricing)}
     ${guestInformationVisualHtml(d)}
     ${offersAddonsVisualHtml(d)}
+    ${couponScenarioHtml(d)}
     ${d.airEnabled?airScenarioHtml(d):''}
     ${paymentVisualHtml(d,paymentInstruction)}
     ${requiredActionsVisualHtml(d)}
@@ -2295,6 +2416,20 @@ function runValidator(){
     else add("passed","Category instruction is explicit",d.category);
   }
 
+  if(couponWorkflowRequested() || (d.coupons||[]).length){
+    if(!(d.coupons||[]).length){
+      add("warning","Credits / coupons not specified","This scenario includes a credit/coupon workflow. Add each training credit/coupon and identify the source guest and Latitudes number.");
+    }else{
+      d.coupons.forEach((item,i)=>{
+        const n=i+1;
+        if(!item.type)add("error",`Credit / Coupon ${n} type missing`,`Choose the credit or coupon being applied.`);
+        if(!item.guest)add("error",`Credit / Coupon ${n} source guest missing`,`Identify which guest owns the credit/coupon.`);
+        if(!item.latitudes)add("error",`Credit / Coupon ${n} Latitudes number missing`,`Enter the training Latitudes number the credit/coupon is being applied from.`);
+        if(item.type&&item.guest&&item.latitudes)add("passed",`Credit / Coupon ${n} configured`,`${couponLabel(item)} • ${item.guest} • Latitudes # ${item.latitudes}`);
+      });
+    }
+  }
+
   if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
     if(!airMeta){
@@ -2359,48 +2494,23 @@ function ensureScenarioReady(){
 function makeViewShareClone(includeTrainer=state.mode==="trainer"){
   const source=$("scenarioOutput");
   const clone=source.cloneNode(true);
-
-  if(!includeTrainer){
-    clone.querySelectorAll(".trainer-section").forEach(el=>el.remove());
-  }
-
-  // Convert collapsible sections into static content for exported files.
-  clone.querySelectorAll("details").forEach(details=>{
-    const replacement=document.createElement("section");
-    replacement.className="share-expanded-section";
-
-    const summary=details.querySelector("summary");
-    if(summary){
-      const heading=document.createElement("div");
-      heading.className="share-expanded-heading";
-      const main=summary.querySelector("span")?.textContent || summary.textContent || "Additional Information";
-      heading.textContent=main.trim();
-      replacement.appendChild(heading);
-    }
-
-    [...details.children].forEach(child=>{
-      if(child.tagName!=="SUMMARY") replacement.appendChild(child.cloneNode(true));
-    });
-    details.replaceWith(replacement);
-  });
-
+  if(!includeTrainer)clone.querySelectorAll(".trainer-section").forEach(el=>el.remove());
   clone.querySelectorAll("button,input,select,textarea").forEach(el=>el.remove());
   clone.removeAttribute("id");
-  clone.classList.add("adaptive-export",includeTrainer?"trainer-export":"trainee-export");
-
-  const d=state.currentScenario||scenarioData();
-  const header=document.createElement("div");
-  header.className="adaptive-export-header";
-  header.innerHTML=`
-    <div>
-      <span class="adaptive-export-kicker">SEAweb Training Scenario</span>
-      <strong>${escapeHtml(focusTitle(d)||"Scenario")}</strong>
-      <small>${escapeHtml(d.department||"")} • ${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</small>
-    </div>
-    <span class="adaptive-export-mode">${includeTrainer?"TRAINER VIEW":"TRAINEE VIEW"}</span>`;
-  clone.prepend(header);
-
   return clone;
+}
+
+function makeExactSharePayload(includeTrainer=state.mode==="trainer"){
+  const source=$("scenarioOutput");
+  const width=Math.max(520,Math.round(source.getBoundingClientRect().width));
+  const host=makeOffscreenShareHost();
+  host.style.width=`${width}px`;
+  const clone=makeViewShareClone(includeTrainer);
+  host.appendChild(clone);
+  inlineComputedStyles(clone);
+  const html=clone.outerHTML;
+  host.remove();
+  return {html,width};
 }
 
 function makeTraineeShareClone(){
@@ -2416,7 +2526,9 @@ const shareStyleProps=[
   "border-top","border-right","border-bottom","border-left","border-radius",
   "list-style-type","list-style-position","column-count","column-gap",
   "grid-template-columns","grid-column","gap","align-items","justify-content",
-  "flex-direction","flex-wrap","flex","white-space"
+  "flex-direction","flex-wrap","flex","white-space","min-height","max-height",
+  "box-shadow","overflow","opacity","vertical-align","text-decoration","justify-items","align-content","place-items",
+  "background-image","background-size","background-position","background-repeat"
 ];
 
 function inlineComputedStyles(root){
@@ -2430,7 +2542,6 @@ function inlineComputedStyles(root){
         inline.push(`${prop}:${value}`);
       }
     });
-    if(el.classList.contains("trainer-section")) inline.push("display:none");
     el.setAttribute("style",inline.join(";"));
   });
 }
@@ -2465,11 +2576,11 @@ function escapeXml(value=""){
   }[ch]));
 }
 
-async function renderShareHtmlToPng(html,mode="full"){
+async function renderShareHtmlToPng(html,mode="full",renderWidth=null){
   const response=await fetch("/api/share-card",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({html})
+    body:JSON.stringify({html,exact:true,width:renderWidth||null,scale:2})
   });
 
   if(!response.ok){
@@ -2479,22 +2590,18 @@ async function renderShareHtmlToPng(html,mode="full"){
       if(data?.error) message=data.error;
       if(data?.detail) message+=` ${data.detail}`;
     }catch(_){
-      try{
-        const text=await response.text();
-        if(text) message+=` ${text.slice(0,220)}`;
-      }catch(__){}
+      try{const text=await response.text();if(text)message+=` ${text.slice(0,220)}`;}catch(__){}
     }
     throw new Error(message);
   }
-
   const blob=await response.blob();
-  if(!blob || !blob.size) throw new Error("The image renderer returned an empty PNG.");
-  return blob.type==="image/png" ? blob : new Blob([blob],{type:"image/png"});
+  if(!blob||!blob.size)throw new Error("The image renderer returned an empty PNG.");
+  return blob.type==="image/png"?blob:new Blob([blob],{type:"image/png"});
 }
 
 async function renderShareCardToPng(){
-  const clone=makeViewShareClone(state.mode==="trainer");
-  return renderShareHtmlToPng(clone.outerHTML,"full");
+  const payload=makeExactSharePayload(state.mode==="trainer");
+  return renderShareHtmlToPng(payload.html,"full",payload.width);
 }
 
 
@@ -2513,88 +2620,35 @@ async function cropAdaptiveExportBlob(blob){
   const img=await loadImageFromBlob(blob);
   const width=img.naturalWidth||img.width;
   const height=img.naturalHeight||img.height;
-
-  const canvas=document.createElement("canvas");
-  canvas.width=width;
-  canvas.height=height;
-  const ctx=canvas.getContext("2d",{willReadFrequently:true});
-  ctx.drawImage(img,0,0);
-
-  // Browser Run screenshots the full viewport even when the scenario is shorter.
-  // The page outside the export card uses the NCL sand background (#EBE7DF).
-  // Detect the real white export-card bounds and crop away that unused viewport.
+  const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});ctx.drawImage(img,0,0);
   const data=ctx.getImageData(0,0,width,height).data;
   const sand=[235,231,223];
-  const differsFromSand=(x,y)=>{
-    const i=(y*width+x)*4;
-    const r=data[i],g=data[i+1],b=data[i+2],a=data[i+3];
-    if(a<220)return false;
-    return Math.abs(r-sand[0])+Math.abs(g-sand[1])+Math.abs(b-sand[2])>18;
-  };
-
-  // The export occupies nearly the full viewport width. Scan several columns so
-  // colored/white scenario content reliably identifies the top and bottom bounds.
-  const sampleXs=[
-    Math.max(0,Math.round(width*0.12)),
-    Math.max(0,Math.round(width*0.35)),
-    Math.max(0,Math.round(width*0.50)),
-    Math.max(0,Math.round(width*0.65)),
-    Math.max(0,Math.round(width*0.88))
-  ];
-
-  let top=0;
-  let bottom=height-1;
-
-  outerTop:
-  for(let y=0;y<height;y++){
-    for(const x of sampleXs){
-      if(differsFromSand(x,y)){top=y;break outerTop;}
+  const different=(x,y)=>{const i=(y*width+x)*4;return Math.abs(data[i]-sand[0])+Math.abs(data[i+1]-sand[1])+Math.abs(data[i+2]-sand[2])>22 && data[i+3]>220};
+  let left=width-1,right=0,top=height-1,bottom=0,found=false;
+  const step=2;
+  for(let y=0;y<height;y+=step){
+    for(let x=0;x<width;x+=step){
+      if(different(x,y)){found=true;if(x<left)left=x;if(x>right)right=x;if(y<top)top=y;if(y>bottom)bottom=y;}
     }
   }
-
-  outerBottom:
-  for(let y=height-1;y>=top;y--){
-    for(const x of sampleXs){
-      if(differsFromSand(x,y)){bottom=y;break outerBottom;}
-    }
-  }
-
-  // The body uses 20px horizontal padding. Remove it too so the resulting PNG
-  // is all scenario and no artificial surrounding canvas.
-  const left=20;
-  const right=Math.max(left+1,width-20);
-  const pad=2;
-  top=Math.max(0,top-pad);
-  bottom=Math.min(height-1,bottom+pad);
-
-  const cropWidth=Math.max(1,right-left);
-  const cropHeight=Math.max(1,bottom-top+1);
-
-  const out=document.createElement("canvas");
-  out.width=cropWidth;
-  out.height=cropHeight;
-  const octx=out.getContext("2d");
-  octx.fillStyle="#ffffff";
-  octx.fillRect(0,0,cropWidth,cropHeight);
-  octx.drawImage(canvas,left,top,cropWidth,cropHeight,0,0,cropWidth,cropHeight);
-
-  return await new Promise((resolve,reject)=>{
-    out.toBlob(
-      b=>b?resolve(b):reject(new Error("Could not prepare the tightly cropped export.")),
-      "image/png"
-    );
-  });
+  if(!found)return blob;
+  const pad=3;left=Math.max(0,left-pad);top=Math.max(0,top-pad);right=Math.min(width-1,right+pad);bottom=Math.min(height-1,bottom+pad);
+  const w=Math.max(1,right-left+1),h=Math.max(1,bottom-top+1);
+  const out=document.createElement("canvas");out.width=w;out.height=h;
+  const octx=out.getContext("2d");octx.fillStyle="#ffffff";octx.fillRect(0,0,w,h);octx.drawImage(canvas,left,top,w,h,0,0,w,h);
+  return await new Promise((resolve,reject)=>out.toBlob(b=>b?resolve(b):reject(new Error("Could not prepare the exact-view export.")),"image/png"));
 }
 
 async function getAdaptiveCurrentViewPng(){
-  const key=`${currentSharePageCacheKey()}|adaptive-v192`;
+  const key=`${currentSharePageCacheKey()}|exact-v1915`;
   const mode=state.mode;
   if(adaptiveExportCache.key===key && adaptiveExportCache.mode===mode && adaptiveExportCache.blob){
     return adaptiveExportCache.blob;
   }
 
-  const clone=makeViewShareClone(mode==="trainer");
-  const rendered=await renderShareHtmlToPng(clone.outerHTML,"full");
+  const payload=makeExactSharePayload(mode==="trainer");
+  const rendered=await renderShareHtmlToPng(payload.html,"full",payload.width);
   const blob=await cropAdaptiveExportBlob(rendered);
   adaptiveExportCache={key,mode,blob};
   return blob;
@@ -3479,6 +3533,9 @@ window.openSaved=(id)=>{
   $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
+  $("couponToggle").checked=!!x.couponEnabled || !!(x.coupons&&x.coupons.length);
+  setCouponRows(x.coupons||[]);
+  refreshCouponPanel();
   $("fasToggle").checked=!!x.fas;$("travelToggle").checked=!!x.travel;$("pscToggle").checked=!!x.psc;
   $("airToggle").checked=!!x.airEnabled;
   $("airProgram").value=x.airProgram||"";
