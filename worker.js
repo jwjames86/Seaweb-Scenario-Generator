@@ -252,7 +252,7 @@ async function handleSailings(request, reqUrl, env) {
       if (!/(^|\.)ncl\.com$/i.test(u.hostname)) {
         return json({ error: "Manual imports must use an ncl.com URL." }, 400);
       }
-      sourceUrl = u.toString();
+      sourceUrl = normalizeNclUsUrl(u).toString();
     } catch {
       return json({ error: "That NCL URL is not valid." }, 400);
     }
@@ -263,6 +263,7 @@ async function handleSailings(request, reqUrl, env) {
     return json({
       live: true,
       sourceUrl,
+      sourceMarket: "US",
       retrievedAt: new Date().toISOString(),
       message: parsed.results.length
         ? `Imported ${parsed.results.length} public NCL itinerary option${parsed.results.length === 1 ? "" : "s"}.`
@@ -354,6 +355,11 @@ async function handleSailings(request, reqUrl, env) {
         r.dateWindowNote = "NCL shows additional hidden sailing months; verify an exact date in the requested window.";
       }
     }
+
+    if (from && to && r.sailingDates?.length) {
+      r.sailingDates = r.sailingDates.filter(d => d >= from && d <= to);
+      if (!r.sailingDates.length) return false;
+    }
     return true;
   }).slice(0, 40);
 
@@ -362,9 +368,9 @@ async function handleSailings(request, reqUrl, env) {
     sourceUrl,
     retrievedAt: new Date().toISOString(),
     message: results.length
-      ? `Found ${results.length} public NCL itinerary option${results.length === 1 ? "" : "s"} for this Seaweb-style search. NCL public cards are month-level, so verify the exact departure date in Seaweb.`
+      ? `Found ${results.length} public NCL U.S. itinerary option${results.length === 1 ? "" : "s"}. Select a specific sailing date before using an itinerary. When NCL does not expose an exact date on the public card, verify the date on NCL.com U.S. or in Seaweb.`
       : parsed.results.length
-        ? "NCL itineraries loaded, but no visible public card matched this 30-day window and optional vacation length. Try Any Length or another single search option."
+        ? "NCL.com U.S. itineraries loaded, but no visible public card matched this 30-day window and optional vacation length. Try Any Length or another single search option."
         : "NCL.com loaded, but no readable itinerary cards were returned from the public page.",
     results,
     diagnostic: {
@@ -377,6 +383,21 @@ async function handleSailings(request, reqUrl, env) {
       attempts
     }
   });
+}
+
+function normalizeNclUsUrl(input) {
+  const u = input instanceof URL ? new URL(input.toString()) : new URL(String(input || ""));
+  u.protocol = "https:";
+  u.hostname = "www.ncl.com";
+  u.port = "";
+
+  // Remove country/language prefixes so manual imports always use the U.S. site.
+  // Examples: /uk/en/vacations, /ca/en/vacations, /au/en/vacations.
+  u.pathname = u.pathname.replace(
+    /^\/(?:uk|ca|au|nz|no|de|fr|es|it|br|mx|se|dk|fi|nl|be|ch|at)\/(?:en|de|fr|es|it|pt|nl|sv|da|fi|no)\//i,
+    "/"
+  );
+  return u;
 }
 
 async function renderAndParse(env, sourceUrl) {
@@ -487,7 +508,7 @@ function unwrapQuickActionText(body, preferredKey) {
 }
 
 function buildNclSearchUrls(criterion, value, from, to) {
-  const base = "https://www.ncl.com/uk/en/vacations";
+  const base = "https://www.ncl.com/vacations";
   const urls = [];
   const monthParam = nclMonthParam(from, to);
 
@@ -651,6 +672,7 @@ function parseCruises(text, sourceUrl) {
       /(January|February|March|April|May|June|July|August|September|October|November|December),?\s*(20\d{2})/gi
     )].map(m => `${cap(m[1])} ${m[2]}`);
     const uniqueMonths = [...new Set(sailingMonths)];
+    const sailingDates = extractExactSailingDates(beforeAccolades);
 
     const ports = extractPorts(lines);
 
@@ -678,6 +700,7 @@ function parseCruises(text, sourceUrl) {
       title,
       departure,
       sailingMonths: uniqueMonths,
+      sailingDates,
       hasMoreDates: /\+\s*View More/i.test(chunk),
       ports,
       price,
@@ -689,6 +712,55 @@ function parseCruises(text, sourceUrl) {
   }
 
   return dedupe(out);
+}
+
+function isoDate(year, month, day) {
+  const m = String(month).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  const iso = `${year}-${m}-${d}`;
+  const test = new Date(`${iso}T12:00:00Z`);
+  if (
+    Number.isNaN(test.getTime()) ||
+    test.getUTCFullYear() !== Number(year) ||
+    test.getUTCMonth() + 1 !== Number(month) ||
+    test.getUTCDate() !== Number(day)
+  ) return "";
+  return iso;
+}
+
+function extractExactSailingDates(text) {
+  const out = new Set();
+  const months = {
+    january:1,february:2,march:3,april:4,may:5,june:6,
+    july:7,august:8,september:9,october:10,november:11,december:12,
+    jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12
+  };
+
+  for (const m of String(text||"").matchAll(
+    /\\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\\s+(\\d{1,2}),?\\s+(20\\d{2})\\b/gi
+  )) {
+    const iso = isoDate(Number(m[3]), months[m[1].toLowerCase()], Number(m[2]));
+    if (iso) out.add(iso);
+  }
+
+  for (const m of String(text||"").matchAll(
+    /\\b(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b/gi
+  )) {
+    const iso = isoDate(Number(m[3]), months[m[2].toLowerCase()], Number(m[1]));
+    if (iso) out.add(iso);
+  }
+
+  for (const m of String(text||"").matchAll(/\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b/g)) {
+    const iso = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
+    if (iso) out.add(iso);
+  }
+
+  for (const m of String(text||"").matchAll(/\\b(\\d{1,2})\\/(\\d{1,2})\\/(20\\d{2})\\b/g)) {
+    const iso = isoDate(Number(m[3]), Number(m[1]), Number(m[2]));
+    if (iso) out.add(iso);
+  }
+
+  return [...out].sort();
 }
 
 function extractPorts(lines) {

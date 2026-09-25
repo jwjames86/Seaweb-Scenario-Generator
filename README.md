@@ -429,3 +429,22 @@ Current View PDF and PNG exports now render from the exact Scenario Generator ca
 - 2× render scale for sharper image quality
 - Trainer / Trainee visibility is preserved
 - Unused outer renderer space is cropped automatically
+
+
+## V1.9.16 – Specific Sailing Date + NCL.com U.S.
+
+### U.S. NCL public source
+Real Sailing Search now builds all live search URLs from:
+
+**https://www.ncl.com/vacations**
+
+The previous `/uk/en/` source has been removed. Manual NCL imports are also normalized back to the U.S. `ncl.com` path when a country/language-prefixed NCL URL is pasted.
+
+### Specific sailing date
+Every real itinerary must now have a **specific sailing date** before it can be used in Scenario Generator.
+
+- When the NCL U.S. page exposes exact sailing dates, the result shows them in a dropdown and marks the selected date as NCL-verified.
+- When the public itinerary card only exposes month-level availability, the result shows a date picker limited to the trainer's search window.
+- Trainer-entered dates are clearly marked for verification in NCL.com U.S. / Seaweb.
+- Selected sailing summaries, the visual Sailing Details section, reference details, customer-story wording, saved scenarios, PDF/PNG exports, and Scenario Validator use the exact selected date.
+- The Validator blocks a real-sailing scenario that does not have a specific date.
