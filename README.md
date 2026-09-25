@@ -601,3 +601,28 @@ The NCL vacations result cards usually display only month-level availability. Ex
 - Continues filtering all extracted dates to the trainer's original From/To search window so unrelated page dates are discarded.
 - If exact dates are found, the Specific Sailing Date dropdown populates automatically.
 - Manual Verified Sailing Date remains only as the final fallback when NCL's public data truly does not expose the dates.
+
+
+## V1.9.26 – Live Browser Sailing-Date Capture
+
+Previous versions used Browser Run Quick Actions to read the final page content. That can miss itinerary dates because NCL loads the dates through background API requests and may never write all of them into the visible HTML.
+
+V1.9.26 switches the sailing-date lookup to a full **Cloudflare Browser Run Puppeteer session**.
+
+### What it does
+- Opens the selected NCL.com U.S. search page in a real Chromium session.
+- Watches the browser's network responses while NCL loads its own vacation/search data.
+- Captures NCL JSON responses containing cruise, itinerary and sailing information.
+- Matches those results back to the selected itinerary using ship, itinerary title, embarkation port, duration and ports of call.
+- Extracts the exact sailing dates from the same data NCL's page uses.
+- If necessary, follows the best matching `View Cruise`, `itineraryCode`, or `sail-id` link and watches that detail page's network traffic too.
+- Filters all returned dates to the trainer's original 30-day search window.
+
+### Project dependency
+This update adds Cloudflare's supported Puppeteer package:
+
+`@cloudflare/puppeteer`
+
+The ZIP therefore includes **package.json** and **wrangler.toml** in addition to the normal five files. Upload all seven files for this version.
+
+The manual Verified Sailing Date field remains only as a fallback if NCL's live browser session truly returns no selectable dates.

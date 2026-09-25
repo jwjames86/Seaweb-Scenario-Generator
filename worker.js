@@ -1,3 +1,5 @@
+import puppeteer from "@cloudflare/puppeteer";
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -268,6 +270,7 @@ async function handleSailingDates(reqUrl, env) {
   const title = clean(reqUrl.searchParams.get("title") || "");
   const departure = clean(reqUrl.searchParams.get("departure") || "");
   const duration = Number(reqUrl.searchParams.get("duration") || 0);
+  const ports = (reqUrl.searchParams.get("ports") || "").split("|").map(clean).filter(Boolean);
   const from = reqUrl.searchParams.get("from") || "";
   const to = reqUrl.searchParams.get("to") || "";
 
@@ -284,8 +287,29 @@ async function handleSailingDates(reqUrl, env) {
     return json({ error: "Invalid NCL source URL.", dates: [] }, 400);
   }
 
+  const liveCapture = await captureNclSailingDatesFromBrowser(env, sourceUrl, {
+    ship, title, departure, duration, ports, from, to
+  });
+
+  if (liveCapture.dates.length) {
+    return json({
+      ok: true,
+      dates: liveCapture.dates,
+      detailUrl: liveCapture.detailUrl || sourceUrl,
+      sourceMarket: "US",
+      retrievedAt: new Date().toISOString(),
+      diagnostic: {
+        method: "puppeteer-network-capture",
+        browser: liveCapture.diagnostic
+      }
+    });
+  }
+
   let detailUrl = looksLikeNclCruiseDetailUrl(sourceUrl) ? sourceUrl : "";
-  let discovery = { method: detailUrl ? "source-detail-url" : "search-page-link-discovery" };
+  let discovery = {
+    method: detailUrl ? "source-detail-url" : "search-page-link-discovery",
+    browserCapture: liveCapture.diagnostic
+  };
 
   if (!detailUrl) {
     const found = await discoverNclCruiseDetailUrl(env, sourceUrl, {
@@ -340,6 +364,252 @@ async function handleSailingDates(reqUrl, env) {
     message: "NCL.com U.S. did not expose exact sailing dates for this itinerary.",
     diagnostic: { discovery, attempts }
   });
+}
+
+async function captureNclSailingDatesFromBrowser(env, sourceUrl, target) {
+  if (!env?.BROWSER) {
+    return {
+      dates: [],
+      detailUrl: "",
+      diagnostic: { error: "Browser binding unavailable" }
+    };
+  }
+
+  let browser;
+  const payloads = [];
+  const observedUrls = [];
+
+  try {
+    browser = await puppeteer.launch(env.BROWSER);
+    const page = await browser.newPage();
+
+    await page.setExtraHTTPHeaders({
+      "Accept-Language": "en-US,en;q=0.9"
+    });
+
+    page.on("response", async (response) => {
+      try {
+        const url = response.url();
+        const headers = response.headers();
+        const contentType = String(headers["content-type"] || "").toLowerCase();
+
+        if (
+          /\/api\/v2\/vacations\/search/i.test(url) ||
+          /\/api\/.*(?:sail|cruise|itinerar|vacation)/i.test(url)
+        ) {
+          observedUrls.push(url);
+          if (/json/i.test(contentType)) {
+            try {
+              const data = await response.json();
+              payloads.push({ url, data });
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    });
+
+    await page.goto(sourceUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 30000
+    });
+
+    // NCL loads the vacation inventory asynchronously. Give the page enough
+    // time for the same API calls that populate its own cards and date controls.
+    try {
+      await page.waitForNetworkIdle({ idleTime: 1200, timeout: 15000 });
+    } catch (_) {}
+    await new Promise(resolve => setTimeout(resolve, 5500));
+
+    // Also inspect the final rendered DOM for direct cruise / sail-id links.
+    const pageLinks = await page.evaluate(() => {
+      return [...document.querySelectorAll("a[href]")]
+        .map(a => ({
+          href: a.href,
+          text: (a.textContent || "").trim()
+        }))
+        .filter(x => /ncl\.com/i.test(x.href) && (
+          /\/cruises?\//i.test(x.href) ||
+          /[?&](?:sail-id|sail_id|itineraryCode)=/i.test(x.href)
+        ))
+        .slice(0, 300);
+    }).catch(() => []);
+
+    const parsedItems = [];
+    for (const payload of payloads) {
+      const rawItems = findBestItineraryArray(payload.data);
+      for (const raw of rawItems) {
+        const item = normalizeNclApiItinerary(raw);
+        if (item) {
+          item._networkUrl = payload.url;
+          parsedItems.push(item);
+        }
+      }
+    }
+
+    const best = chooseBestNclInventoryMatches(parsedItems, target);
+    let dates = [];
+    let detailUrl = "";
+
+    for (const item of best) {
+      dates.push(...(item.sailingDates || []));
+      if (!detailUrl && item.sourceUrl && looksLikeNclCruiseDetailUrl(item.sourceUrl)) {
+        detailUrl = item.sourceUrl;
+      }
+    }
+
+    // If the API payload did not carry the dates directly, choose the best
+    // cruise/sail-id link from the rendered page and inspect that page.
+    if (!dates.length && pageLinks.length) {
+      const scored = pageLinks
+        .map(link => ({
+          ...link,
+          score: scoreNclCruiseLink(
+            { url: link.href, label: link.text, context: link.text },
+            target
+          )
+        }))
+        .sort((a, b) => b.score - a.score);
+
+      const bestLink = scored[0];
+      if (bestLink?.url && bestLink.score > 0) {
+        detailUrl = bestLink.url;
+        const detailPage = await browser.newPage();
+        await detailPage.setExtraHTTPHeaders({
+          "Accept-Language": "en-US,en;q=0.9"
+        });
+
+        const detailPayloads = [];
+        detailPage.on("response", async (response) => {
+          try {
+            const url = response.url();
+            const ct = String(response.headers()["content-type"] || "").toLowerCase();
+            if (
+              /\/api\/.*(?:sail|cruise|itinerar|vacation)/i.test(url) &&
+              /json/i.test(ct)
+            ) {
+              try {
+                detailPayloads.push({ url, data: await response.json() });
+              } catch (_) {}
+            }
+          } catch (_) {}
+        });
+
+        await detailPage.goto(bestLink.url, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000
+        });
+        try {
+          await detailPage.waitForNetworkIdle({ idleTime: 1000, timeout: 12000 });
+        } catch (_) {}
+        await new Promise(resolve => setTimeout(resolve, 3500));
+
+        for (const payload of detailPayloads) {
+          const rawItems = findBestItineraryArray(payload.data);
+          for (const raw of rawItems) {
+            const item = normalizeNclApiItinerary(raw);
+            if (!item) continue;
+            const matched = chooseBestNclInventoryMatches([item], target);
+            if (matched.length) dates.push(...(item.sailingDates || []));
+          }
+        }
+
+        const html = await detailPage.content().catch(() => "");
+        dates.push(...extractContextualSailingDates(html));
+        dates.push(...extractExactSailingDates(html));
+
+        await detailPage.close().catch(() => {});
+      }
+    }
+
+    dates = [...new Set(dates)]
+      .filter(Boolean)
+      .filter(d => !target.from || d >= target.from)
+      .filter(d => !target.to || d <= target.to)
+      .sort();
+
+    return {
+      dates,
+      detailUrl,
+      diagnostic: {
+        payloads: payloads.length,
+        parsedItems: parsedItems.length,
+        observedApiUrls: [...new Set(observedUrls)].slice(0, 12),
+        renderedCruiseLinks: pageLinks.length,
+        matchedItems: best.length,
+        exactDates: dates.length
+      }
+    };
+  } catch (e) {
+    return {
+      dates: [],
+      detailUrl: "",
+      diagnostic: { error: String(e?.message || e) }
+    };
+  } finally {
+    if (browser) {
+      try { await browser.close(); } catch (_) {}
+    }
+  }
+}
+
+function chooseBestNclInventoryMatches(items, target) {
+  if (!Array.isArray(items) || !items.length) return [];
+
+  const scored = items
+    .map(item => ({
+      item,
+      score: scoreNclInventoryItem(item, target)
+    }))
+    .filter(x => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length) return [];
+
+  const top = scored[0].score;
+  const threshold = Math.max(8, top - 3);
+  return scored
+    .filter(x => x.score >= threshold)
+    .slice(0, 6)
+    .map(x => x.item);
+}
+
+function scoreNclInventoryItem(item, target) {
+  let score = 0;
+
+  const ship = clean(target.ship || "").toLowerCase();
+  const itemShip = clean(item.ship || "").toLowerCase();
+  if (ship && itemShip) {
+    if (ship === itemShip) score += 12;
+    else if (itemShip.includes(ship) || ship.includes(itemShip)) score += 8;
+  }
+
+  const departure = clean(target.departure || "").toLowerCase();
+  const itemDeparture = clean(item.departure || "").toLowerCase();
+  if (departure && itemDeparture) {
+    if (departure === itemDeparture) score += 8;
+    else if (itemDeparture.includes(departure) || departure.includes(itemDeparture)) score += 5;
+  }
+
+  const duration = Number(target.duration || 0);
+  if (duration && Number(item.duration || 0) === duration) score += 6;
+
+  const titleWords = clean(target.title || "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(w => w.length >= 5);
+  const itemText = `${item.title || ""} ${(item.ports || []).join(" ")} ${(item.destinations || []).join(" ")}`.toLowerCase();
+  for (const word of titleWords) {
+    if (itemText.includes(word)) score += 1.5;
+  }
+
+  const targetPorts = Array.isArray(target.ports) ? target.ports : [];
+  const itemPorts = (item.ports || []).map(x => clean(x).toLowerCase());
+  for (const port of targetPorts) {
+    const p = clean(port).toLowerCase();
+    if (p && itemPorts.some(x => x === p || x.includes(p) || p.includes(x))) score += 2;
+  }
+
+  return score;
 }
 
 function looksLikeNclCruiseDetailUrl(value) {
