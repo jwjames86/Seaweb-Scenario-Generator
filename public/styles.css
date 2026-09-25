@@ -1236,3 +1236,13 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:760px){
   .itinerary-date-grid{grid-template-columns:1fr}
 }
+
+
+/* V1.9.24 • automatic exact sailing date lookup */
+#exactSailingDateSelect:disabled{
+  background:#F2F4F7;
+  color:#667085;
+}
+.itinerary-date-chooser .notice.info{
+  transition:opacity .15s ease;
+}

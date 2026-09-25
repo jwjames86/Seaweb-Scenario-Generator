@@ -1597,7 +1597,7 @@ function populateItineraryChooser(){
   resetItineraryChooser();
 }
 
-function updateDateChooserForItinerary(){
+async function updateDateChooserForItinerary(){
   const itinerary=$("itinerarySelect");
   const value=itinerary?.value??"";
   const index=value===""?null:Number(value);
@@ -1619,13 +1619,51 @@ function updateDateChooserForItinerary(){
     return;
   }
 
-  const s=state.sailings[state.pendingSailingIndex];
-  document.querySelector(`.result-card[data-sailing-index="${state.pendingSailingIndex}"]`)?.classList.add("itinerary-selected");
+  const selectedIndex=state.pendingSailingIndex;
+  const s=state.sailings[selectedIndex];
+  document.querySelector(`.result-card[data-sailing-index="${selectedIndex}"]`)?.classList.add("itinerary-selected");
 
-  const exact=(s.sailingDates||[]).filter(Boolean);
   manual.min=$("searchFrom")?.value||"";
   manual.max=$("searchTo")?.value||"";
   manual.value="";
+
+  let exact=(s.sailingDates||[]).filter(Boolean);
+
+  if(!exact.length){
+    $("exactDateSelectField").classList.remove("hidden-field");
+    $("manualDateField").classList.add("hidden-field");
+    exactSelect.disabled=true;
+    exactSelect.innerHTML='<option value="">Loading exact sailing dates from NCL.com U.S.…</option>';
+    $("useItineraryDateBtn").disabled=true;
+    $("itineraryChooserNotice").className="notice info";
+    $("itineraryChooserNotice").textContent="Loading the available departure dates for this itinerary…";
+
+    try{
+      const params=new URLSearchParams({
+        source:s.sourceUrl||"https://www.ncl.com/vacations",
+        ship:s.ship||"",
+        title:s.title||"",
+        departure:s.departure||"",
+        duration:String(s.duration||""),
+        from:$("searchFrom")?.value||"",
+        to:$("searchTo")?.value||""
+      });
+      const res=await fetch(`/api/sailing-dates?${params.toString()}`,{cache:"no-store"});
+      const data=await res.json().catch(()=>({}));
+
+      // Ignore a response if the trainer selected a different itinerary while
+      // this lookup was running.
+      if(state.pendingSailingIndex!==selectedIndex)return;
+
+      if(res.ok && Array.isArray(data.dates) && data.dates.length){
+        s.sailingDates=[...new Set(data.dates)].sort();
+        if(data.detailUrl)s.detailSourceUrl=data.detailUrl;
+        exact=s.sailingDates;
+      }
+    }catch(_){}
+  }
+
+  if(state.pendingSailingIndex!==selectedIndex)return;
 
   if(exact.length){
     $("exactDateSelectField").classList.remove("hidden-field");
@@ -1634,14 +1672,14 @@ function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">Choose a specific sailing date…</option>'+
       exact.map(d=>`<option value="${escapeAttr(d)}">${escapeHtml(formatSailingDate(d))}</option>`).join("");
     $("itineraryChooserNotice").className="notice success";
-    $("itineraryChooserNotice").textContent=`${exact.length} exact sailing date${exact.length===1?"":"s"} found for this itinerary on NCL.com U.S.`;
+    $("itineraryChooserNotice").textContent=`${exact.length} exact sailing date${exact.length===1?"":"s"} loaded for this itinerary from NCL.com U.S.`;
   }else{
     $("exactDateSelectField").classList.add("hidden-field");
     $("manualDateField").classList.remove("hidden-field");
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="NCL's public itinerary result did not expose exact dates. Enter the exact sailing date after verifying it on NCL.com U.S. or in Seaweb.";
+    $("itineraryChooserNotice").textContent="NCL.com U.S. did not expose exact dates for this itinerary. Use the verified date field only as a fallback.";
   }
 
   updateUseSailingButton();
@@ -1711,6 +1749,7 @@ $("useItineraryDateBtn").addEventListener("click",()=>{
   const exactDates=source.sailingDates||[];
   state.selectedSailing={
     ...source,
+    sourceUrl:source.detailSourceUrl||source.sourceUrl,
     sailingDate,
     sailingDateVerified:exactDates.includes(sailingDate),
     sailingDateSource:exactDates.includes(sailingDate)?"NCL.com U.S.":"Trainer verified"
