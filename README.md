@@ -458,3 +458,23 @@ Every real itinerary must now have a **specific sailing date** before it can be 
 - Details / Value and Remove use a second row so fields remain readable without extending beyond the panel.
 - Inputs are constrained to the panel width.
 - Narrow screens progressively reflow and mobile stacks to one column.
+
+
+## V1.9.18 – Select Itinerary + Specific Sailing Date
+
+Real Sailing Search now uses an explicit two-step workflow:
+
+### Step 1 — Select Itinerary
+Search results show itinerary choices. Select **Select Itinerary** on the route / ship you want.
+
+### Step 2 — Choose Specific Sailing Date
+A dedicated panel opens underneath the results. The trainer then chooses the exact departure date before the itinerary can be sent to Scenario Generator.
+
+- If NCL.com U.S. exposes exact dates, they appear as quick-select date buttons.
+- A date field is always available so the trainer can enter another exact sailing date after verifying it on NCL.com U.S. or in Seaweb.
+- The date is restricted to the current From/To search window.
+- The itinerary is visually highlighted while its date is being selected.
+- **Use This Sailing in Scenario** remains disabled by workflow until an exact date is entered.
+- The chosen exact date continues through the generated scenario, validator, saved scenario, PNG and PDF.
+
+This separates itinerary selection from sailing-date selection so trainers can clearly choose both.
