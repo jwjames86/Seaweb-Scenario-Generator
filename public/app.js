@@ -1526,7 +1526,7 @@ function renderSearchResults(){
   }
   $("searchResults").innerHTML=state.sailings.map((s,i)=>`
     <div class="result-card" data-sailing-index="${i}">
-      <div class="verified">● Verified from NCL.com U.S.</div>
+      <div class="verified">● NCL.com U.S. itinerary inventory</div>
       <h3>${escapeHtml(s.duration ? `${s.duration}-day Cruise on ${s.ship}` : s.ship||"NCL Sailing")}</h3>
       <strong>${escapeHtml(s.title||"")}</strong>
       <div class="meta">
