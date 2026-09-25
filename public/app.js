@@ -1636,7 +1636,7 @@ async function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">Loading exact sailing dates from NCL.com U.S.…</option>';
     $("useItineraryDateBtn").disabled=true;
     $("itineraryChooserNotice").className="notice info";
-    $("itineraryChooserNotice").textContent="Loading the exact NCL departure dates for this itinerary…";
+    $("itineraryChooserNotice").textContent="Opening the live NCL itinerary and loading its available departure dates…";
 
     try{
       const params=new URLSearchParams({
@@ -1645,6 +1645,7 @@ async function updateDateChooserForItinerary(){
         title:s.title||"",
         departure:s.departure||"",
         duration:String(s.duration||""),
+        ports:(s.ports||[]).join("|"),
         from:$("searchFrom")?.value||"",
         to:$("searchTo")?.value||""
       });
@@ -1679,7 +1680,7 @@ async function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="NCL.com U.S. did not expose exact dates in its public page data for this itinerary. Use the verified date field only as a fallback.";
+    $("itineraryChooserNotice").textContent="The live NCL itinerary did not return selectable dates. Use the verified date field only as a fallback.";
   }
 
   updateUseSailingButton();
