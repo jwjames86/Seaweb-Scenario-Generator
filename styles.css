@@ -1067,3 +1067,121 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
   line-height:1.4;
   color:#8A5B00;
 }
+
+
+/* V1.9.18 • Two-step itinerary + sailing-date selection */
+.result-card.itinerary-selected{
+  border:2px solid #0A84BD;
+  box-shadow:0 0 0 3px rgba(10,132,189,.10);
+}
+.selected-itinerary-panel{
+  margin:16px 0 18px;
+  padding:17px;
+  background:#F8FBFC;
+  border:1px solid #B9D8E4;
+  border-left:5px solid #0A84BD;
+  border-radius:8px;
+}
+.selected-itinerary-head{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:flex-start;
+  margin-bottom:13px;
+}
+.selected-itinerary-head h3{
+  margin:2px 0 4px;
+  font-size:18px;
+  color:#101828;
+}
+.selected-itinerary-head p{
+  margin:0;
+  font-size:11px;
+  line-height:1.45;
+  color:#667085;
+}
+.selected-itinerary-head .eyebrow{
+  display:block;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1.2px;
+  color:#006099;
+}
+.selected-itinerary-summary{
+  padding:12px 13px;
+  background:#fff;
+  border:1px solid #D6E5EB;
+  border-radius:6px;
+  margin-bottom:13px;
+}
+.selected-itinerary-summary>strong{
+  display:block;
+  margin-top:3px;
+  font-size:14px;
+}
+.selected-itinerary-meta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:7px;
+}
+.selected-itinerary-meta span{
+  padding:4px 7px;
+  background:#EEF6F9;
+  border-radius:999px;
+  font-size:10px;
+  color:#475467;
+}
+.specific-date-grid{
+  display:grid;
+  grid-template-columns:minmax(240px,.9fr) minmax(0,1.1fr);
+  gap:12px;
+  align-items:start;
+}
+.ncl-exact-dates-box{
+  padding:10px 11px;
+  background:#fff;
+  border:1px solid #D6E5EB;
+  border-radius:6px;
+}
+.exact-date-label{
+  display:block;
+  margin-bottom:7px;
+  font-size:10px;
+  font-weight:800;
+  color:#006099;
+}
+.exact-date-choices{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.exact-date-choice{
+  appearance:none;
+  border:1px solid #8EBFC2;
+  background:#EEF8F7;
+  color:#00484F;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:10px;
+  font-weight:750;
+  cursor:pointer;
+}
+.exact-date-choice:hover{
+  background:#DDEFEF;
+}
+.ncl-exact-dates-box small{
+  display:block;
+  margin-top:7px;
+  font-size:9px;
+  line-height:1.4;
+  color:#667085;
+}
+.selected-itinerary-actions{
+  margin-top:12px;
+}
+@media(max-width:760px){
+  .selected-itinerary-head{flex-direction:column}
+  .selected-itinerary-head button{width:100%}
+  .specific-date-grid{grid-template-columns:1fr}
+}

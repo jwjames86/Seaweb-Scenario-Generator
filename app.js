@@ -4,7 +4,8 @@ const state = {
   selectedSailing: null,
   currentScenario: null,
   validation: [],
-  sailings: []
+  sailings: [],
+  pendingSailingIndex: null
 };
 
 window.addEventListener("error",(event)=>{
@@ -1457,6 +1458,9 @@ function queryParams(){
 }
 
 $("clearSearchBtn").onclick=()=>{
+  clearPendingItinerary();
+  $("searchResults").innerHTML="";
+  state.sailings=[];
   $("searchAnchorValue").value="";
   $("searchDuration").value="";
   document.querySelector('input[name="searchAnchor"][value="destination"]').checked=true;
@@ -1483,6 +1487,7 @@ $("searchSailingsBtn").onclick=async()=>{
     return;
   }
 
+  clearPendingItinerary();
   const btn=$("searchSailingsBtn"); btn.disabled=true; btn.textContent="Searching…";
   $("searchNotice").className="notice info";
   $("searchNotice").textContent=`Searching NCL.com U.S. from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
@@ -1503,6 +1508,7 @@ $("searchSailingsBtn").onclick=async()=>{
 
 $("manualImportBtn").onclick=async()=>{
   const url=$("manualUrl").value.trim(); if(!url)return;
+  clearPendingItinerary();
   $("searchNotice").className="notice info";$("searchNotice").textContent="Importing the NCL page…";
   try{
     const r=await fetch(`/api/sailings?url=${encodeURIComponent(url)}`), data=await r.json();
@@ -1515,17 +1521,16 @@ $("manualImportBtn").onclick=async()=>{
 function renderSearchResults(){
   if(!state.sailings.length){$("searchResults").innerHTML=`<div class="panel muted">No matching sailings were found in the retrieved NCL results.</div>`;return}
   $("searchResults").innerHTML=state.sailings.map((s,i)=>`
-    <div class="result-card">
+    <div class="result-card" data-sailing-index="${i}">
       <div class="verified">● Verified from NCL.com U.S.</div>
       <h3>${escapeHtml(s.duration ? `${s.duration}-day Cruise on ${s.ship}` : s.ship||"NCL Sailing")}</h3>
       <strong>${escapeHtml(s.title||"")}</strong>
       <div class="meta">
         ${s.departure?`<span class="chip">From ${escapeHtml(s.departure)}</span>`:""}
         ${(s.sailingDates||[]).length
-          ? (s.sailingDates||[]).map(x=>`<span class="chip">${escapeHtml(formatSailingDate(x))}</span>`).join("")
+          ? `<span class="chip">${escapeHtml(String(s.sailingDates.length))} exact date${s.sailingDates.length===1?"":"s"} found</span>`
           : (s.sailingMonths||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join("")}
       </div>
-      ${sailingDateControlHtml(s,i)}
       ${s.ports?.length?`<div class="port-list"><strong>Ports:</strong> ${s.ports.map(escapeHtml).join(" • ")}</div>`:""}
       <div class="meta">
         ${s.price?`<span class="price">${escapeHtml(s.price)}</span>`:""}
@@ -1534,25 +1539,108 @@ function renderSearchResults(){
       </div>
       <div class="muted" style="font-size:11px">Retrieved ${new Date(s.retrievedAt||Date.now()).toLocaleString()}</div>
       <div class="actions">
-        <button class="primary" onclick="useSailing(${i})">Use in Scenario</button>
+        <button class="primary" onclick="selectItinerary(${i})">Select Itinerary</button>
         <a class="secondary" href="${escapeAttr(s.sourceUrl)}" target="_blank" rel="noopener" style="text-decoration:none">Open NCL Source</a>
       </div>
     </div>`).join("");
 }
-window.useSailing=(i)=>{
-  const source=state.sailings[i];
-  const dateEl=$(`sailingDate-${i}`);
+function clearPendingItinerary(){
+  state.pendingSailingIndex=null;
+  $("selectedItineraryPanel")?.classList.add("hidden-field");
+  if($("selectedItinerarySummary"))$("selectedItinerarySummary").innerHTML="";
+  if($("selectedItineraryDate"))$("selectedItineraryDate").value="";
+  if($("nclExactDateChoices"))$("nclExactDateChoices").innerHTML="";
+  $("nclExactDatesBox")?.classList.add("hidden-field");
+  if($("specificDateNotice")){
+    $("specificDateNotice").className="notice info";
+    $("specificDateNotice").textContent="Choose the exact sailing date for this itinerary.";
+  }
+  document.querySelectorAll(".result-card.itinerary-selected").forEach(el=>el.classList.remove("itinerary-selected"));
+}
+
+function renderPendingItinerary(){
+  const i=state.pendingSailingIndex;
+  const s=Number.isInteger(i)?state.sailings[i]:null;
+  if(!s){
+    clearPendingItinerary();
+    return;
+  }
+
+  const panel=$("selectedItineraryPanel");
+  panel.classList.remove("hidden-field");
+
+  document.querySelectorAll(".result-card.itinerary-selected").forEach(el=>el.classList.remove("itinerary-selected"));
+  document.querySelector(`.result-card[data-sailing-index="${i}"]`)?.classList.add("itinerary-selected");
+
+  $("selectedItinerarySummary").innerHTML=`
+    <div class="verified">● Itinerary from NCL.com U.S.</div>
+    <strong>${escapeHtml(s.ship||"NCL ship")} • ${escapeHtml(s.title||"NCL itinerary")}</strong>
+    <div class="selected-itinerary-meta">
+      ${s.departure?`<span>From ${escapeHtml(s.departure)}</span>`:""}
+      ${s.duration?`<span>${escapeHtml(String(s.duration))} days</span>`:""}
+      ${(s.ports||[]).length?`<span>${escapeHtml(String(s.ports.length))} ports</span>`:""}
+    </div>`;
+
+  const dateInput=$("selectedItineraryDate");
+  const from=$("searchFrom")?.value||"";
+  const to=$("searchTo")?.value||"";
+  dateInput.min=from;
+  dateInput.max=to;
+  dateInput.value="";
+
+  const exact=(s.sailingDates||[]).filter(Boolean);
+  const box=$("nclExactDatesBox");
+  const choices=$("nclExactDateChoices");
+  if(exact.length){
+    box.classList.remove("hidden-field");
+    choices.innerHTML=exact.map(d=>`<button type="button" class="exact-date-choice" onclick="chooseItineraryDate('${escapeAttr(d)}')">${escapeHtml(formatSailingDate(d))}</button>`).join("");
+  }else{
+    box.classList.add("hidden-field");
+    choices.innerHTML="";
+  }
+
+  $("specificDateNotice").className="notice info";
+  $("specificDateNotice").textContent=exact.length
+    ? "Choose one of the NCL dates shown or enter another exact date after verifying it."
+    : "NCL's public itinerary card did not expose an exact departure date. Enter the exact sailing date after verifying it on NCL.com U.S. or in Seaweb.";
+
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+window.selectItinerary=(i)=>{
+  state.pendingSailingIndex=i;
+  renderPendingItinerary();
+};
+
+window.chooseItineraryDate=(date)=>{
+  const input=$("selectedItineraryDate");
+  if(!input)return;
+  input.value=date;
+  input.dispatchEvent(new Event("change",{bubbles:true}));
+};
+
+function useSelectedItinerary(){
+  const i=state.pendingSailingIndex;
+  const source=Number.isInteger(i)?state.sailings[i]:null;
+  if(!source){
+    alert("Choose an itinerary first.");
+    return;
+  }
+
+  const dateEl=$("selectedItineraryDate");
   const sailingDate=dateEl?.value||"";
   if(!sailingDate){
-    alert("Choose the specific sailing date before using this itinerary in a scenario.");
+    $("specificDateNotice").className="notice error";
+    $("specificDateNotice").textContent="Choose the specific sailing date before using this itinerary.";
     dateEl?.focus();
     return;
   }
 
   const from=$("searchFrom")?.value||"";
   const to=$("searchTo")?.value||"";
-  if(from && sailingDate<from || to && sailingDate>to){
-    alert("The selected sailing date must be inside the current search window.");
+  if((from && sailingDate<from) || (to && sailingDate>to)){
+    $("specificDateNotice").className="notice error";
+    $("specificDateNotice").textContent="The sailing date must fall inside the From/To search window.";
     dateEl?.focus();
     return;
   }
@@ -1564,9 +1652,30 @@ window.useSailing=(i)=>{
     sailingDateVerified:exactDates.includes(sailingDate),
     sailingDateSource:exactDates.includes(sailingDate)?"NCL.com U.S.":"Trainer verified"
   };
+
   renderSelectedSailing();
+  clearPendingItinerary();
   go("generator");
-};
+}
+
+$("useSelectedItineraryBtn").addEventListener("click",useSelectedItinerary);
+$("clearSelectedItineraryBtn").addEventListener("click",clearPendingItinerary);
+$("changeItineraryBtn").addEventListener("click",()=>{
+  clearPendingItinerary();
+  $("searchResults")?.scrollIntoView({behavior:"smooth",block:"start"});
+});
+$("selectedItineraryDate").addEventListener("change",()=>{
+  const value=$("selectedItineraryDate").value;
+  if(!value)return;
+  const source=Number.isInteger(state.pendingSailingIndex)?state.sailings[state.pendingSailingIndex]:null;
+  const exact=source?.sailingDates||[];
+  $("specificDateNotice").className=exact.includes(value)?"notice success":"notice info";
+  $("specificDateNotice").textContent=exact.includes(value)
+    ? `${formatSailingDate(value)} was found on NCL.com U.S. for this itinerary.`
+    : `${formatSailingDate(value)} will be used as the specific sailing date. Verify it on NCL.com U.S. or in Seaweb before class.`;
+});
+
+
 function renderSelectedSailing(){
   const s=state.selectedSailing;
   if(!s){$("selectedSailingSummary").className="selected-sailing empty";$("selectedSailingSummary").textContent="No real sailing selected yet.";return}
