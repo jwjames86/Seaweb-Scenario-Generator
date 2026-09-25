@@ -496,3 +496,14 @@ If the public NCL result does not expose exact dates, the second dropdown is rep
 Each result card also includes **Choose This Itinerary**, which selects that itinerary in the dropdown and scrolls to the selector.
 
 This removes the hidden-panel dependency and makes both selections visible at the same time.
+
+
+## V1.9.20 – Cloudflare Deploy Fix
+
+The V1.9.16–V1.9.19 builds could fail during Wrangler deployment because the exact sailing-date parser used an escaped slash inside a JavaScript regular-expression literal that Cloudflare's build parser rejected.
+
+### Fixed
+- Replaced the affected date-parsing regex literals with explicit `RegExp` constructors.
+- Removes the Wrangler / esbuild syntax error reported at `worker.js:758`.
+- Keeps the V1.9.19 always-visible **Itinerary** and **Specific Sailing Date** selectors.
+- No feature rollback: all V1.9.19, coupon, NCL.com U.S., export, caller-type, Air, and multi-focus updates remain included.

@@ -730,32 +730,39 @@ function isoDate(year, month, day) {
 
 function extractExactSailingDates(text) {
   const out = new Set();
+  const source = String(text || "");
   const months = {
     january:1,february:2,march:3,april:4,may:5,june:6,
     july:7,august:8,september:9,october:10,november:11,december:12,
     jan:1,feb:2,mar:3,apr:4,jun:6,jul:7,aug:8,sep:9,sept:9,oct:10,nov:11,dec:12
   };
 
-  for (const m of String(text||"").matchAll(
-    /\\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\\s+(\\d{1,2}),?\\s+(20\\d{2})\\b/gi
-  )) {
+  const monthFirst = new RegExp(
+    "\\b(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\\s+(\\d{1,2}),?\\s+(20\\d{2})\\b",
+    "gi"
+  );
+  for (const m of source.matchAll(monthFirst)) {
     const iso = isoDate(Number(m[3]), months[m[1].toLowerCase()], Number(m[2]));
     if (iso) out.add(iso);
   }
 
-  for (const m of String(text||"").matchAll(
-    /\\b(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b/gi
-  )) {
+  const dayFirst = new RegExp(
+    "\\b(\\d{1,2})\\s+(January|February|March|April|May|June|July|August|September|October|November|December)\\s+(20\\d{2})\\b",
+    "gi"
+  );
+  for (const m of source.matchAll(dayFirst)) {
     const iso = isoDate(Number(m[3]), months[m[2].toLowerCase()], Number(m[1]));
     if (iso) out.add(iso);
   }
 
-  for (const m of String(text||"").matchAll(/\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b/g)) {
+  const isoPattern = new RegExp("\\b(20\\d{2})-(\\d{2})-(\\d{2})\\b", "g");
+  for (const m of source.matchAll(isoPattern)) {
     const iso = isoDate(Number(m[1]), Number(m[2]), Number(m[3]));
     if (iso) out.add(iso);
   }
 
-  for (const m of String(text||"").matchAll(/\\b(\\d{1,2})\\/(\\d{1,2})\\/(20\\d{2})\\b/g)) {
+  const usNumeric = new RegExp("\\b(\\d{1,2})/(\\d{1,2})/(20\\d{2})\\b", "g");
+  for (const m of source.matchAll(usNumeric)) {
     const iso = isoDate(Number(m[3]), Number(m[1]), Number(m[2]));
     if (iso) out.add(iso);
   }
