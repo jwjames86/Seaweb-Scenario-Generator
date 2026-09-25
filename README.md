@@ -534,3 +534,21 @@ When NCL returns an explicit currency, the API result is only accepted as U.S. i
 
 ### Fallback
 The Browser Rendering / public-page parser remains in place as a fallback if the itinerary inventory endpoint is temporarily unavailable.
+
+
+## V1.9.22 – Current NCL U.S. Search API
+
+V1.9.21 used an incorrect guessed inventory endpoint. The live NCL.com U.S. site currently requests:
+
+`https://www.ncl.com/api/v2/vacations/search?limit=12&offset=0`
+
+The Real Sailing Search now uses the current `/api/v2/vacations/search` endpoint.
+
+### Improvements
+- Uses NCL's current U.S. vacation-search endpoint instead of the obsolete/incorrect `/api/vacations/v1/itineraries` path.
+- Reads the response defensively so modest JSON-shape changes do not immediately break the tool.
+- Supports pagination and local filtering by Destination, Embarkation Port, Ship, date window and vacation length.
+- Extracts exact sailing dates when the NCL response exposes them.
+- If an itinerary is returned without exact dates, the itinerary remains selectable and the UI shows the Verified Sailing Date field rather than discarding the itinerary.
+- Checks explicit currency fields and will not silently label a non-USD storefront as U.S. data.
+- Retains the public-page Browser Run parser as a fallback.
