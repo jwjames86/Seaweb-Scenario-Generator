@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.13" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.14" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.13 • New Reservation Caller Type</span>
+            <span class="pill">V1.9.14 • Multi-Focus + Visual Scenario Format</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -189,7 +189,7 @@
           <summary><span>How to Use Scenario Generator</span><small>Create, review, clear, share and save an exercise</small></summary>
           <div class="instructions-body">
             <ul>
-              <li>Choose the Department, Reservation Workflow, Scenario Focus, difficulty, and scenario approach.</li>
+              <li>Choose the Department, Reservation Workflow, one or more Scenario Focus skills, difficulty, and scenario approach.</li>
               <li>For <strong>Create New Reservation</strong>, choose the <strong>Caller Type</strong> first. Direct Guest — US automatically uses Agency 5, Direct Guest — Canada uses Agency 7, and Travel Agent requires the Travel Agent’s Agency ID or phone number. Scenario wording follows the selected caller type.</li>
               <li>For <strong>Modify Existing Reservation</strong>, enter the prior training reservation number and choose exactly what is being changed. Guest Services modifications require GDPR setup.</li>
               <li>For Air scenarios, select <strong>Include Air / Transfers</strong>, choose the Air product, and choose Round Trip or One Way. The applicable training terms and transfer reminder will appear automatically.</li>
@@ -226,9 +226,22 @@
                 <span id="newCallerTypeHint" class="field-hint">Caller Type controls the scenario wording and Guest Services Agency / Booking Identifier.</span>
               </label>
               <input id="trainingDay" type="hidden" value="6" />
-              <label>Scenario Focus
-                <select id="scenarioType" aria-label="Scenario Focus"></select>
-              </label>
+              <div class="focus-picker-field">
+                <span class="field-title">Scenario Focus</span>
+                <div id="focusPicker" class="focus-picker">
+                  <button id="focusPickerBtn" type="button" class="focus-picker-trigger" aria-haspopup="true" aria-expanded="false">
+                    <span id="focusPickerText">Choose one or more focuses…</span><span aria-hidden="true">⌄</span>
+                  </button>
+                  <div id="focusPickerMenu" class="focus-picker-menu" role="dialog" aria-label="Scenario Focus">
+                    <div class="focus-picker-head"><strong>Select Scenario Focus</strong><small>Combine multiple skills into one scenario.</small></div>
+                    <div id="focusPickerOptions" class="focus-picker-options"></div>
+                    <div class="focus-picker-actions"><button id="clearFocusBtn" type="button" class="secondary tiny">Clear</button><button id="doneFocusBtn" type="button" class="primary tiny">Done</button></div>
+                  </div>
+                </div>
+                <select id="scenarioType" class="focus-compat-select" aria-hidden="true" tabindex="-1"></select>
+                <div id="selectedFocusChips" class="selected-focus-chips"></div>
+                <span class="field-hint">Select one or more skills. The generator merges their requirements into one scenario.</span>
+              </div>
               <label>Scenario Approach
                 <select id="scenarioApproach">
                   <option value="variation">Generate Variation</option>
@@ -588,6 +601,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.13"></script>
+  <script src="/app.js?v=1.9.14"></script>
 </body>
 </html>

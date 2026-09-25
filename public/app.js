@@ -178,17 +178,18 @@ function updateAirProgramPreview(){
 }
 
 function syncAirPanelFromScenario(applyDefault=false){
-  const meta=currentFocusMeta()||{};
+  const metas=selectedFocusMetas();
+  const combined={name:metas.map(m=>m.name).join(' '),objective:metas.map(m=>m.objective).join(' ')};
   const modifyAir=$("reservationWorkflow")?.value==="modify" && $("modificationType")?.value==="air_transfer";
-  const airFocus=isAirFocus(meta);
+  const airFocus=metas.some(isAirFocus);
 
   if(applyDefault && (modifyAir||airFocus)){
     $("airToggle").checked=true;
-    $("airProgram").value=defaultAirProgramForMeta(meta);
+    const specific=metas.map(defaultAirProgramForMeta).find(Boolean)||defaultAirProgramForMeta(combined);
+    $("airProgram").value=specific||"";
   }else if(modifyAir){
     $("airToggle").checked=true;
   }
-
   updateAirProgramPreview();
 }
 
@@ -215,7 +216,7 @@ function airScenarioHtml(d){
 
   return `<section class="scenario-section air-output-section">
     <div class="section-label">AIR PROGRAM</div>
-    <h3>${escapeHtml(meta.label)}</h3>
+    <h3 class="visual-section-heading"><span class="scenario-icon">✈️</span><span>${escapeHtml(meta.label)}</span></h3>
     <div class="air-output-meta"><span>${escapeHtml(airTripLabel(d))}</span>${d.airGateway?`<span>${escapeHtml(d.airGateway)}</span>`:""}</div>
     ${gateway}
     <div class="air-scenario-hint"><strong>${meta.nclAir?"Pre-Cruise Transfer Hint":"Transfer Setup Hint"}</strong><span>${escapeHtml(airTransferReminder(d.airProgram))}</span></div>
@@ -327,12 +328,61 @@ $("trainerModeBtn").onclick=()=>setMode("trainer");
 $("traineeModeBtn").onclick=()=>setMode("trainee");
 $("previewTraineeBtn").onclick=()=>{setMode("trainee");go("generator")};
 
-function currentFocusMeta(){
-  const dept=$("department")?.value||"Guest Services";
+function allFocusRecords(dept=$("department")?.value||"Guest Services"){
+  const days=Object.keys(scenarioCatalog[dept]||{}).map(Number).sort((a,b)=>a-b);
+  return days.flatMap(day=>(scenarioCatalog[dept]?.[day]||[]).map(meta=>({day,meta})));
+}
+
+function selectedFocusRecords(){
+  const checked=[...document.querySelectorAll('#focusPickerOptions .focus-choice-input:checked')];
+  if(checked.length){
+    const dept=$("department")?.value||"Guest Services";
+    const all=allFocusRecords(dept);
+    return checked.map(input=>all.find(r=>r.meta.name===input.value && String(r.day)===input.dataset.day)).filter(Boolean);
+  }
   const selected=$("scenarioType")?.selectedOptions?.[0];
-  const day=selected?.dataset?.day||$("trainingDay")?.value||"6";
-  if($("trainingDay")) $("trainingDay").value=String(day);
-  return (scenarioCatalog[dept]?.[day]||[]).find(x=>x.name===$("scenarioType")?.value) || null;
+  if(!selected)return [];
+  const dept=$("department")?.value||"Guest Services";
+  return allFocusRecords(dept).filter(r=>r.meta.name===selected.value && String(r.day)===String(selected.dataset.day||r.day)).slice(0,1);
+}
+
+function selectedFocusMetas(){return selectedFocusRecords().map(r=>r.meta)}
+function selectedFocusNames(){return selectedFocusRecords().map(r=>r.meta.name)}
+
+function currentFocusMeta(){
+  const record=selectedFocusRecords()[0];
+  if(record){
+    $("trainingDay").value=String(Math.max(...selectedFocusRecords().map(r=>r.day)));
+    return record.meta;
+  }
+  return null;
+}
+
+function focusNamesForData(d){
+  return Array.isArray(d.focuses)&&d.focuses.length?d.focuses:[d.type].filter(Boolean);
+}
+
+function focusSearchText(d){
+  return `${focusNamesForData(d).join(' ')} ${(d.curriculumObjectives||[]).join(' ')} ${d.curriculumObjective||''}`.toLowerCase();
+}
+
+function focusTitle(d){return focusNamesForData(d).join(' + ')||'SEAweb Practice'}
+
+function updateFocusPickerDisplay(){
+  const records=selectedFocusRecords();
+  const names=records.map(r=>r.meta.name);
+  const btn=$("focusPickerText");
+  if(btn)btn.textContent=names.length?`${names.length} selected • ${names.slice(0,2).join(' + ')}${names.length>2?'…':''}`:'Choose one or more focuses…';
+  const chips=$("selectedFocusChips");
+  if(chips)chips.innerHTML=names.map(n=>`<span class="focus-chip">${escapeHtml(n)}</span>`).join('');
+  const hidden=$("scenarioType");
+  if(hidden){
+    const first=records[0];
+    if(first){
+      const opt=[...hidden.options].find(o=>o.value===first.meta.name&&o.dataset.day===String(first.day));
+      if(opt)opt.selected=true;
+    }else hidden.selectedIndex=-1;
+  }
 }
 
 function populateMarketAgencies(){
@@ -463,27 +513,45 @@ function updateDepartmentUI(){
   updateGdprPreview();
 }
 
-function updateScenarioFocus(preferred,preferredDay){
+function updateScenarioFocus(preferred,preferredDay,preferredList){
   const dept=$("department").value;
-  const days=Object.keys(scenarioCatalog[dept]||{}).map(Number).sort((a,b)=>a-b);
-  const all=days.flatMap(day=>(scenarioCatalog[dept]?.[day]||[]).map(item=>({day,item})));
-  $("scenarioType").innerHTML=all.map(({day,item})=>`<option value="${escapeAttr(item.name)}" data-day="${day}">${escapeHtml(item.name)}</option>`).join("");
+  const all=allFocusRecords(dept);
+  $("scenarioType").innerHTML=all.map(({day,meta})=>`<option value="${escapeAttr(meta.name)}" data-day="${day}">${escapeHtml(meta.name)}</option>`).join("");
 
-  const options=[...$("scenarioType").options];
-  const match=preferred
-    ? options.find(o=>o.value===preferred && (!preferredDay || o.dataset.day===String(preferredDay)))
-      || options.find(o=>o.value===preferred)
-    : options[0];
+  const requested=Array.isArray(preferredList)&&preferredList.length?preferredList:(preferred?[preferred]:[]);
+  $("focusPickerOptions").innerHTML=all.map(({day,meta})=>{
+    const checked=requested.some(name=>name===meta.name) || (!requested.length && all[0]?.meta.name===meta.name && all[0]?.day===day);
+    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span><strong>${escapeHtml(meta.name)}</strong><small>${escapeHtml(meta.objective)}</small></span></label>`;
+  }).join("");
 
-  if(match) match.selected=true;
+  $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(input=>input.addEventListener('change',syncScenarioFocusSelection));
+  if(preferred && preferredDay){
+    const exact=[...$("focusPickerOptions").querySelectorAll('.focus-choice-input')].find(i=>i.value===preferred&&i.dataset.day===String(preferredDay));
+    if(exact && requested.length<=1){
+      $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(i=>i.checked=false);
+      exact.checked=true;
+    }
+  }
   syncScenarioFocusSelection();
 }
 
+function clearScenarioFocusSelections(){
+  $("focusPickerOptions")?.querySelectorAll('.focus-choice-input').forEach(i=>i.checked=false);
+  $("scenarioType").selectedIndex=-1;
+  $("trainingDay").value="6";
+  updateFocusPickerDisplay();
+  $("curriculumNote").innerHTML="";
+}
+
 function syncScenarioFocusSelection(){
-  const selected=$("scenarioType")?.selectedOptions?.[0];
-  if(selected?.dataset?.day) $("trainingDay").value=String(selected.dataset.day);
+  const records=selectedFocusRecords();
+  if(records.length)$("trainingDay").value=String(Math.max(...records.map(r=>r.day)));
+  updateFocusPickerDisplay();
   applyFocusDefaults();
 }
+
+function openFocusPicker(){$("focusPickerMenu").classList.add('open');$("focusPickerBtn").setAttribute('aria-expanded','true')}
+function closeFocusPicker(){$("focusPickerMenu").classList.remove('open');$("focusPickerBtn").setAttribute('aria-expanded','false')}
 
 const modificationLabels={
   special_request:"Add / Update Special Request",
@@ -637,12 +705,12 @@ function gdprScenarioHtml(d){
   if(d.department!=="Guest Services"||d.reservationWorkflow!=="modify")return "";
   const profile=gdprProfile(d.gdprCallerType);
   if(!profile){
-    return `<section class="scenario-section gdpr-output-section"><div class="section-label">GDPR — REQUIRED</div><h3>Complete GDPR Verification First</h3><p>Caller type has not been selected. The trainer must identify the correct GDPR caller / reservation type before this scenario is assigned.</p></section>`;
+    return `<section class="scenario-section gdpr-output-section"><div class="section-label">GDPR — REQUIRED</div><h3 class="visual-section-heading"><span class="scenario-icon">🔐</span><span>Complete GDPR Verification First</span></h3><p>Caller type has not been selected. The trainer must identify the correct GDPR caller / reservation type before this scenario is assigned.</p></section>`;
   }
   const action=gdprActionText(d);
   return `<section class="scenario-section gdpr-output-section">
     <div class="section-label">GDPR — REQUIRED • GUEST SERVICES</div>
-    <h3>Complete GDPR Verification First</h3>
+    <h3 class="visual-section-heading"><span class="scenario-icon">🔐</span><span>Complete GDPR Verification First</span></h3>
     <p><strong>Caller / Reservation Type:</strong> ${escapeHtml(profile.label)}</p>
     <div class="gdpr-rule-banner"><strong>Verification order matters:</strong> ask the primary items first. Reservation Number is always mandatory.${["travel_agent","ta_group"].includes(d.gdprCallerType)?` The agency identifier is also mandatory to continue under the Travel Agent verification path.`:""}</div>
     <p class="gdpr-instruction">${escapeHtml(profile.instruction)}</p>
@@ -814,10 +882,12 @@ function paymentActionNeedsCard(){
 
 function refreshTrainingCardPanel(preferredProfile){
   const meta=currentFocusMeta()||{};
-  const showCard=!!meta.cardRequired||paymentActionNeedsCard();
+  const metas=selectedFocusMetas();
+  const showCard=metas.some(m=>m.cardRequired)||!!meta.cardRequired||paymentActionNeedsCard();
   $("trainingCardPanel").classList.toggle("hidden-field",!showCard);
   if(showCard){
-    const desired=preferredProfile||meta.cardProfile||$("trainingCardProfile").value||"standardSesame";
+    const focusCard=metas.find(m=>m.cardRequired&&m.cardProfile)?.cardProfile||metas.find(m=>m.cardProfile)?.cardProfile;
+    const desired=preferredProfile||focusCard||meta.cardProfile||$("trainingCardProfile").value||"standardSesame";
     if(trainingCards[desired]) $("trainingCardProfile").value=desired;
     renderTrainingCard();
   }
@@ -914,29 +984,34 @@ function getGuestProfileMix(d){
 }
 
 function applyFocusDefaults(){
-  const meta=currentFocusMeta();
-  if(!meta)return;
-  const focusText=`${meta.name} ${meta.objective}`.toLowerCase();
+  const records=selectedFocusRecords();
+  const metas=records.map(r=>r.meta);
+  const meta=metas[0];
+  if(!meta){
+    updateFocusPickerDisplay();
+    return;
+  }
+  const focusText=metas.map(m=>`${m.name} ${m.objective}`).join(' ').toLowerCase();
+  const difficultyRank={Beginner:1,Intermediate:2,Advanced:3,Challenge:4};
+  const difficulty=metas.reduce((best,m)=>(difficultyRank[m.difficulty]||0)>(difficultyRank[best]||0)?m.difficulty:best,metas[0].difficulty||'Intermediate');
+  const paymentRank={"No Payment / Service Only":0,"Auto Final Payment discussion":1,"Offer / Hold only":2,"FCC / CruiseNext":3,"Amenity Payment":4,"Minimum Deposit":5,"Initial Deposit":6,"Full Payment":7,"Refund / Reinstate":8};
+  const payment=metas.reduce((best,m)=>(paymentRank[m.payment]??0)>(paymentRank[best]??0)?m.payment:best,metas[0].payment||"No Payment / Service Only");
+  const cardMeta=metas.find(m=>m.cardRequired&&m.cardProfile)||metas.find(m=>m.cardProfile)||meta;
 
-  $("difficulty").value=meta.difficulty||"Intermediate";
-  $("paymentAction").value=meta.payment||"No Payment / Service Only";
-  if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && meta.name==="Agencies: TA Booking"){
+  $("difficulty").value=difficulty||"Intermediate";
+  $("paymentAction").value=payment;
+  if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && metas.some(m=>m.name==="Agencies: TA Booking")){
     $("newCallerType").value="travel_agent";
     syncAgencyCallerLogic();
   }
-  $("commentToggle").checked=!!meta.commenting;
+  $("commentToggle").checked=metas.some(m=>m.commenting);
   $("confirmToggle").checked=true;
-
-  // Match source-curriculum components automatically so a generated variation
-  // does not contradict the skill being practiced.
   $("fasToggle").checked=/\bfas\b|free at sea/.test(focusText);
   $("travelToggle").checked=/norwegian care|travel protection/.test(focusText);
   $("pscToggle").checked=/ppsrvchg|prepaid service charge/.test(focusText);
-  $("latitudesToggle").checked=!/new guest/.test(focusText);
+  $("latitudesToggle").checked=!/\bnew guest\b/.test(focusText);
   refreshLatitudesPanel();
 
-  // ADA scenarios must request an accessible category. Location and side are
-  // left flexible because accessible inventory controls what can actually be sold.
   if(/\bada\b|accessible/.test(focusText)){
     $("category").value="ADA / Accessible";
     $("locationPref").value="Any";
@@ -944,16 +1019,15 @@ function applyFocusDefaults(){
   }
 
   if($("reservationWorkflow")?.value==="modify" && $("modificationType")){
-    $("modificationType").value=inferModificationType(meta);
+    const modMeta=metas.find(m=>m.kind==='followup')||meta;
+    $("modificationType").value=inferModificationType(modMeta);
     updateModificationTypeUI(true);
-  }else{
-    updateWorkflowUI(false);
-  }
+  }else updateWorkflowUI(false);
 
-  refreshTrainingCardPanel(meta.cardProfile);
+  refreshTrainingCardPanel(cardMeta.cardProfile);
   syncAirPanelFromScenario(true);
   const level=trainingSupportLabel(+$("trainingDay").value);
-  $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • ${escapeHtml(meta.name)}</strong><span>${escapeHtml(meta.objective)}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
+  $("curriculumNote").innerHTML=`<strong>${escapeHtml($("department").value)} • ${metas.length} focus${metas.length===1?'':'es'}</strong><span>${metas.map(m=>escapeHtml(m.name)).join(' • ')}</span><span class="support-level">Trainee support: ${escapeHtml(level)}</span>`;
 }
 
 function renderStarters(){
@@ -975,7 +1049,10 @@ window.loadStarter=(i)=>{
 };
 
 $("department").addEventListener("change",updateDepartmentUI);
-$("scenarioType").addEventListener("change",syncScenarioFocusSelection);
+$("focusPickerBtn").addEventListener("click",e=>{e.stopPropagation();$("focusPickerMenu").classList.contains("open")?closeFocusPicker():openFocusPicker()});
+$("clearFocusBtn").addEventListener("click",()=>{clearScenarioFocusSelections();applyFocusDefaults()});
+$("doneFocusBtn").addEventListener("click",closeFocusPicker);
+document.addEventListener("click",e=>{const picker=$("focusPicker");if(picker&&!picker.contains(e.target))closeFocusPicker()});
 $("reservationWorkflow").addEventListener("change",()=>updateWorkflowUI(true));
 $("modificationType").addEventListener("change",()=>updateModificationTypeUI(true));
 $("modificationGuestStatus").addEventListener("change",()=>updateModificationTypeUI(false));
@@ -1335,15 +1412,22 @@ function selectedMarketLabel(){
 }
 
 function scenarioData(){
-  const meta=currentFocusMeta()||{};
-  const cardKey=$("trainingCardProfile")?.value||meta.cardProfile||"standardSesame";
+  const records=selectedFocusRecords();
+  const metas=records.map(r=>r.meta);
+  const meta=metas[0]||{};
+  const focusNames=metas.map(m=>m.name);
+  const focusDays=records.map(r=>r.day);
+  const cardKey=$("trainingCardProfile")?.value||metas.find(m=>m.cardProfile)?.cardProfile||"standardSesame";
+  const cardRequired=metas.some(m=>m.cardRequired)||paymentActionNeedsCard();
   return {
     id: state.currentScenario?.id || crypto.randomUUID(),
     department:$("department").value,
-    trainingDay:+$("trainingDay").value,
+    trainingDay:focusDays.length?Math.max(...focusDays):+$("trainingDay").value,
     approach:$("scenarioApproach").value,
-    title:`${$("department").value} – ${$("scenarioType").value}`,
-    type:$("scenarioType").value,
+    title:`${$("department").value} – ${focusNames.join(" + ")||"Scenario"}`,
+    type:focusNames[0]||"",
+    focuses:focusNames,
+    focusDays,
     reservationWorkflow:$("reservationWorkflow")?.value||"new",
     newCallerType:$("department").value==="Guest Services"&&$("reservationWorkflow").value==="new"?$("newCallerType").value:"",
     existingReservationNumber:$("existingReservationNumber")?.value.trim()||"",
@@ -1364,25 +1448,19 @@ function scenarioData(){
       ? selectedMarketLabel()
       : ($("reservationWorkflow").value==="new"?newReservationCallerInfo($("newCallerType").value).label:guestServicesAgencyInfo($("agency").value).label),
     guest1:$("guest1").value.trim(),guest2:$("guest2").value.trim(),
-    latitudesNumbers:collectLatitudesNumbers(),
-    pastGuestFlags:collectPastGuestFlags(),
+    latitudesNumbers:collectLatitudesNumbers(),pastGuestFlags:collectPastGuestFlags(),
     category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,
     payment:$("paymentAction").value,pricing:$("pricing").value.trim(),email:$("confirmationEmail").value.trim(),
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
-    airEnabled:$("airToggle")?.checked||false,
-    airProgram:$("airProgram")?.value||"",
-    airTripType:$("airTripType")?.value||"round_trip",
-    airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",
-    airGateway:$("airGateway")?.value.trim()||"",
+    airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
-    cardRequired:!!meta.cardRequired || paymentActionNeedsCard(),
-    cardProfile:cardKey,
-    card:(!!meta.cardRequired || paymentActionNeedsCard()) ? currentTrainingCard() : null,
-    curriculumObjective:meta.objective||"",
+    cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
+    curriculumObjective:metas.map(m=>m.objective).join(" | "),
+    curriculumObjectives:metas.map(m=>m.objective),
     curriculumKind:meta.kind||"",
-    createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),
-    favorite:state.currentScenario?.favorite||false,archived:false
+    curriculumKinds:metas.map(m=>m.kind),
+    createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),favorite:state.currentScenario?.favorite||false,archived:false
   };
 }
 
@@ -1394,7 +1472,7 @@ function trainingSupportLabel(day){
 }
 
 function focusConsiderations(d){
-  const name=(d.type||"").toLowerCase();
+  const name=focusSearchText(d);
   const items=[
     "Anticipate the steps based on the reason for the call and control the call flow.",
     "Verify all guest names match travel documents exactly and confirm dates of birth before saving.",
@@ -1479,31 +1557,33 @@ function callFlowSupportHtml(d,meta){
   </details>`;
 }
 
+function focusStoryDetailForName(name,d){
+  const n=(name||"").toLowerCase();
+  if(n.includes("basic reservation")) return "They want a straightforward booking and need the pricing, stateroom and deposit expectations explained clearly.";
+  if(n.includes("payments")) return "They are ready to move forward and need the correct amount due, remaining balance and payment options reviewed.";
+  if(n.includes("applying fcc")) return "They have training credits or discount coupons that must be applied in the correct sequence.";
+  if(n.includes("norwegian")) return "They want travel protection properly offered and added using the approved workflow.";
+  if(n.includes("special request")&&!n.includes("ada")) return "They have personal or stateroom requests that must be entered and documented correctly.";
+  if(n.includes("price programs")||n.includes("fas")) return "They want all applicable Free at Sea selections and eligible pricing programs reviewed.";
+  if(n.includes("ada")) return "Accessibility and dietary needs must be handled in the correct Seaweb locations without promising unavailable inventory.";
+  if(n.includes("infant")||n.includes("guests 3-8")||n.includes("singles")) return "The party mix requires extra attention to occupancy, profiles, promotions and deposit rules.";
+  if(n.includes("multiple")) return "The party needs multiple related reservations coordinated and linked correctly.";
+  if(n.includes("ta booking")) return d.newCallerType==="travel_agent"?"The travel advisor expects the booking to follow the correct agency workflow.":"The booking source and agency workflow must match the selected caller type.";
+  if(n.includes("ncl air")||n.includes("bundled air")||n.includes("air choice")||n.includes("air deviation")) return "The applicable NCL Air Program, itinerary direction, terms and transfer handling must be reviewed carefully.";
+  if(n.includes("cancel")||n.includes("reinstate")) return "Cancellation or reinstatement requires careful review of status, refunds, fare, stateroom and promotion changes.";
+  if(n.includes("price drop")) return "Use the approved price-drop workflow and verify all required conditions before making changes.";
+  if(n.includes("cruisetour")||n.includes("land pkg")) return "The appropriate land package or cruisetour must be reviewed and added using the correct workflow.";
+  if(n.includes("hotel")) return "The requested hotel component must be reviewed for availability, timing and reservation impact.";
+  if(n.includes("amenit")) return "The requested onboard amenity must be added with any required payment and confirmation.";
+  if(n.includes("dining")||n.includes("ent")||n.includes("spa")) return "The requested onboard experiences must be checked for availability and any immediate payment requirement.";
+  if(n.includes("cruise first")) return "CruiseFirst terms and the correct purchase/application workflow must be followed.";
+  if(n.includes("gty")) return "Guarantee-category expectations must be explained clearly, including what is and is not guaranteed.";
+  return "Complete the applicable Seaweb workflow and verify the result before saving.";
+}
+
 function focusStoryDetail(d,meta){
-  const n=(d.type||"").toLowerCase();
-  if(n.includes("basic reservation")) return "They want a straightforward booking and are trying to balance value with their preferred stateroom. They also want to understand what is due now and what happens if they are not ready to pay immediately.";
-  if(n.includes("payments")) return "They are ready to move forward today and want to understand the amount due now, the remaining balance, and the payment options available.";
-  if(n.includes("applying fcc")) return "They are ready to move forward and have training credits or discount coupons they want applied correctly before the reservation is finalized.";
-  if(n.includes("norwegian")) return "They are following up because they now want travel protection and have questions about deadlines, coverage timing, and how the change affects their reservation.";
-  if(n.includes("special request") && !n.includes("ada")) return "They are following up to add stateroom preferences and personal requests that need to be documented correctly for the ship.";
-  if(n.includes("price programs")||n.includes("fas")) return "They want to update the reservation with applicable Free at Sea selections and other eligible components, and they want to understand the resulting pricing.";
-  if(n.includes("ada")) return "Accessibility is an important part of this vacation. They need an accessible stateroom and have additional dietary or special-request needs that must be documented in the correct place.";
-  if(n.includes("infant")||n.includes("guests 3-8")||n.includes("singles")) return "The party size or guest mix requires extra attention to occupancy, guest profiles, deposits, promotions, and stateroom capacity.";
-  if(n.includes("multiple")) return "The vacation involves more than one stateroom or reservation. The guests want the bookings coordinated and the rooms kept together whenever availability allows.";
-  if(n.includes("ta booking")) return d.newCallerType==="travel_agent"
-    ? "The travel advisor is arranging the vacation on the guest's behalf and expects the reservation to be built using the applicable agency and promotional workflow."
-    : "The caller wants the reservation created using the appropriate booking-source and promotional workflow.";
-  if(n.includes("ncl air")||n.includes("bundled air")) return "The caller needs the cruise reservation to include air and/or ground transportation, so the applicable NCL Air Program, air terms, and transfer details must be reviewed carefully.";
-  if(n.includes("cancel")||n.includes("reinstate")) return "The guest is calling about canceling or restoring an existing reservation and needs clear guidance about status, refunds, and any changes that may result.";
-  if(n.includes("price drop")) return "Use this trainer-led case to demonstrate how to evaluate and process a price-drop request using the approved workflow.";
-  if(n.includes("cruisetour")||n.includes("land pkg")) return "The guest or travel advisor wants to add a land package or cruisetour to an existing reservation and needs the available options reviewed.";
-  if(n.includes("air deviation")||n.includes("air choice")) return "The guest wants to change or select air arrangements and needs the applicable rules, fees, timing, and confirmation expectations explained.";
-  if(n.includes("hotel")) return "The guest wants to add a hotel component and needs the available options, timing, and reservation impact reviewed.";
-  if(n.includes("amenit")) return "The guest wants to add an onboard amenity. Confirm availability, collect any payment due, and send the correct invoice or confirmation.";
-  if(n.includes("dining")||n.includes("ent")||n.includes("spa")) return "The guest is calling to add onboard experiences. Review availability, any immediate payment requirements, and the appropriate confirmations.";
-  if(n.includes("cruise first")) return "The guest is following up to purchase or use CruiseFirst and wants to understand the terms and how the credit is applied.";
-  if(n.includes("gty")) return "Use this trainer-led case to explain a Guarantee category clearly, including what is and is not guaranteed about the eventual stateroom assignment.";
-  return d.curriculumObjective || "Complete the appropriate Seaweb workflow based on the guest's reason for calling.";
+  const pieces=focusNamesForData(d).map(name=>focusStoryDetailForName(name,d));
+  return [...new Set(pieces)].join(' ');
 }
 
 function customerStoryHtml(d,meta,sailText,guestNames){
@@ -1577,7 +1657,7 @@ function protectionSummary(d){
 }
 
 function specialRequestSummary(d){
-  const n=(d.type||"").toLowerCase();
+  const n=focusSearchText(d);
   if(n.includes("ada"))return "Accessibility + dietary/special requests";
   if(n.includes("special request"))return "Stateroom preferences / special requests";
   if(n.includes("infant"))return "Infant / family occupancy requests";
@@ -1634,7 +1714,7 @@ function latitudesScenarioHtml(d){
 }
 
 function fullTaskList(d,meta){
-  const name=(d.type||"").toLowerCase();
+  const name=focusSearchText(d);
   const tasks=[];
   if(d.reservationWorkflow==="modify"){
     if(d.department==="Guest Services"){
@@ -1777,7 +1857,7 @@ function prerequisiteSkills(d,meta){
 }
 
 function commonMistakes(d,meta){
-  const n=(d.type||"").toLowerCase();
+  const n=focusSearchText(d);
   const items=[
     "Saving before all guest names and dates of birth are verified.",
     "Quoting or promising something before checking current Seaweb availability or policy.",
@@ -1817,7 +1897,7 @@ function trainerGuideHtml(d,meta,approachText,s){
   return `<section class="trainer-section trainer-guide">
     <div class="trainer-guide-head"><div><span class="trainer-kicker">TRAINER VIEW ONLY</span><h3>Trainer Guide</h3></div><span class="status-badge neutral">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
     <div class="trainer-info-grid">
-      <div class="trainer-info-card"><span>Learning objective</span><strong>${escapeHtml(d.curriculumObjective||"Use the selected curriculum focus.")}</strong></div>
+      <div class="trainer-info-card"><span>Learning objective</span><strong>${(d.curriculumObjectives||[d.curriculumObjective]).filter(Boolean).map(x=>escapeHtml(x)).join(" • ")||"Use the selected curriculum focus."}</strong></div>
       <div class="trainer-info-card"><span>Scenario approach</span><strong>${escapeHtml(approachText)}</strong></div>
       <div class="trainer-info-card"><span>Expected completion state</span><strong>${escapeHtml(expectedCompletionState(d,meta))}</strong></div>
       <div class="trainer-info-card"><span>Prerequisite skills</span><ul>${prereqs.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul></div>
@@ -1947,8 +2027,7 @@ function resetScenarioForm(){
 
   updateDepartmentUI();
   // updateDepartmentUI selects the first focus so clear it afterward.
-  $("scenarioType").selectedIndex=-1;
-  $("curriculumNote").innerHTML="";
+  clearScenarioFocusSelections();
   updateWorkflowUI(false);
   refreshLatitudesPanel();
   refreshTrainingCardPanel();
@@ -1963,124 +2042,160 @@ function resetScenarioForm(){
   $("department").focus();
 }
 
+function scenarioIconHeading(icon,title){return `<h3 class="visual-section-heading"><span class="scenario-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(title)}</span></h3>`}
+
+function focusSummaryHtml(d){
+  return `<section class="scenario-section visual-section focus-summary-section"><div class="section-label">SCENARIO FOCUS</div>${scenarioIconHeading('🎯','Skills Included')}<div class="scenario-focus-badges">${focusNamesForData(d).map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></section>`;
+}
+
+function completionInstructionsHtml(){
+  return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
+}
+
+function bookingSourceSectionHtml(d,agencyDisplay){
+  const travelAgent=d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent";
+  const title=travelAgent?'Travel Agency Information':'Caller / Booking Information';
+  const icon=travelAgent?'🏢':'☎️';
+  const rows=[`<li><strong>Department:</strong> ${escapeHtml(d.department)}</li>`,`<li><strong>Booking Source:</strong> ${escapeHtml(agencyDisplay)}</li>`];
+  if(d.reservationWorkflow==="modify")rows.push(`<li><strong>Training Reservation #:</strong> ${escapeHtml(d.existingReservationNumber||'Trainer to provide')}</li>`);
+  return `<section class="scenario-section visual-section">${scenarioIconHeading(icon,title)}<ul class="scenario-fact-list">${rows.join('')}</ul></section>`;
+}
+
+function sailingDetailsVisualHtml(d,pricing){
+  if(d.reservationWorkflow==="modify")return '';
+  const s=d.sailing;
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('🚢','Sailing Details')}<div class="scenario-detail-grid">
+    <div><span>Sailing</span><strong>${escapeHtml(s?`${s.ship||'NCL Ship'}${s.title?` • ${s.title}`:''}`:'Trainer-selected NCL sailing')}</strong></div>
+    <div><span>Departure</span><strong>${escapeHtml(s?.departure||'Verify in Seaweb')}</strong></div>
+    <div><span>Duration / Date</span><strong>${escapeHtml(s?(s.sailingMonths||[]).join(', ')||`${s.duration||'Verify'} days`:'Verify in Seaweb')}</strong></div>
+    <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}</strong></div>
+  </div><h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}</section>`;
+}
+
+function guestInformationVisualHtml(d){
+  if(d.reservationWorkflow==="modify")return '';
+  const mix=getGuestProfileMix(d);
+  const cards=Array.from({length:d.guestCount},(_,i)=>{
+    const name=i===0?(d.guest1||`Guest ${i+1}`):i===1?(d.guest2||`Guest ${i+1}`):`Guest ${i+1}`;
+    const past=d.latitudes&&mix.flags[i];
+    const status=d.latitudes?(past?`Past Guest${mix.numbers[i]?` • Guest ID: ${escapeHtml(mix.numbers[i])}`:' • Verify Latitudes number'}`:'New Guest'):'Verify guest profile';
+    return `<div class="scenario-guest-card"><span>Guest ${i+1}</span><strong>${escapeHtml(name)}</strong><small>${status}</small></div>`;
+  }).join('');
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('👥','Guest Information')}<div class="scenario-guest-grid">${cards}</div><p class="scenario-reminder">Before proceeding, confirm legal names exactly as they appear on travel documents, dates of birth, and all other required guest details.</p></section>`;
+}
+
+function offersAddonsVisualHtml(d){
+  const n=focusSearchText(d); const items=[];
+  if(d.fas||/price programs|free at sea|\bfas\b/.test(n))items.push('All applicable Free at Sea offers');
+  if(d.travel||/norwegian care|travel protection/.test(n))items.push('Norwegian Care / Travel Protection');
+  if(d.psc||/prepaid service charge|ppsrvchg/.test(n))items.push('Pre-Paid Service Charges');
+  if(/teacher/.test(n))items.push('Teacher Appreciation Offer, when eligible');
+  if(/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext')items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
+  if(/special request|ada|dietary/.test(n))items.push('Applicable special, accessibility, or dietary requests');
+  if(!items.length)return '';
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('🎁','Offers & Add-Ons')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul><p class="scenario-reminder">Use Compass and the approved internal resources for the applicable offer conversations and current eligibility.</p></section>`;
+}
+
+function modificationDetailsVisualHtml(d){
+  if(d.reservationWorkflow!=="modify")return '';
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('🗂️','Existing Reservation')}<p>Locate training reservation <strong>${escapeHtml(d.existingReservationNumber||'provided by the trainer')}</strong> and use the guest name(s) already on that reservation.</p><div class="scenario-detail-grid"><div><span>Modification</span><strong>${escapeHtml(modificationLabel(d.modificationType))}</strong></div>${d.modificationTarget?`<div><span>Guest / Item</span><strong>${escapeHtml(d.modificationTarget)}</strong></div>`:''}</div>${d.modificationRequest?`<div class="instruction-strip"><strong>Requested Change</strong><span>${escapeHtml(d.modificationRequest)}</span></div>`:''}</section>`;
+}
+
+function paymentVisualHtml(d,paymentInstruction){
+  const card=d.cardRequired&&d.card?`<div class="scenario-payment-card"><div class="training-only-label">TRAINING / TEST DATA ONLY</div><p><strong>Card #:</strong> ${escapeHtml(d.card.number)}<br><strong>Expiration:</strong> ${escapeHtml(d.card.expiration)}<br><strong>CCV:</strong> ${escapeHtml(d.card.ccv)}<br><strong>Billing Address:</strong> ${escapeHtml(d.card.address)}</p></div>`:'';
+  return `<section class="scenario-section visual-section payment-section">${scenarioIconHeading('💳','Payment')}<p>${escapeHtml(paymentInstruction)}</p>${card}</section>`;
+}
+
+function requiredActionsVisualHtml(d){
+  const items=[];
+  if(d.confirmation)items.push(`Send the appropriate confirmation to ${d.email||'training123@ncl.com'}.`);
+  if(d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'&&d.confirmation)items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
+  if(d.commenting)items.push('Leave the appropriate reservation comments using Compass / the Commenting Tool.');
+  items.push('Complete a full reservation recap with the caller.');
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('📧','Required Actions')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul></section>`;
+}
+
+function recapVisualHtml(d){
+  const items=d.reservationWorkflow==='modify'?["Modification completed","Updated pricing / amount due","Promotion or deadline changes","Confirmation / comments","Any next steps"]:["Ship and sailing","Itinerary","Stateroom","Guests","Offers and add-ons",d.airEnabled?'Air / transfer arrangements':null,"Payment / deposit information","Any other important reservation details"].filter(Boolean);
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap the Reservation')}<p>Before ending the call, review the completed reservation or servicing outcome with the caller.</p><ul>${items.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></section>`;
+}
+
+function closingVisualHtml(d,primary){
+  const isTravelAgent=d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent";
+  const name=d.reservationWorkflow==='new'&&!isTravelAgent?(primary.split(' ')[0]||''):'';
+  return `<section class="scenario-section visual-section close-call-section">${scenarioIconHeading('☎️','Close the Call')}<p>Before ending the call, ensure customer satisfaction by asking:</p><blockquote>“Is there anything else I can help you with today${name?`, ${escapeHtml(name)}`:''}?”</blockquote><p>Then close with:</p><blockquote>“Thank you for choosing Norwegian Cruise Line.”</blockquote></section>`;
+}
+
+function considerationsVisualHtml(d){
+  return `<section class="scenario-section visual-section knowledge-visual-section">${scenarioIconHeading('🧠','Things to Consider')}<p>Anticipate the steps based on the reason for the call so you can control the call flow and guide the interaction effectively.</p><ul>${focusConsiderations(d).map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul><p class="scenario-reminder">📚 Use <strong>NCLHelp</strong> to research and confirm information when needed.</p></section>`;
+}
+
+function finalReservationCheckHtml(d,meta){
+  const items=fullTaskList(d,meta);
+  const core=[...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
+  return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
+}
 function generateScenario(){
-  if(!$("scenarioType").value){
-    alert("Choose a Scenario Focus before generating the scenario.");
-    $("scenarioType").focus();
+  const focusRecords=selectedFocusRecords();
+  if(!focusRecords.length){
+    alert("Choose at least one Scenario Focus before generating the scenario.");
+    openFocusPicker();
     return;
   }
   const d=scenarioData();
-  const meta=currentFocusMeta()||{};
+  const metas=focusRecords.map(r=>r.meta);
+  const meta=metas[0]||{};
   const guestNames=[d.guest1,d.guest2].filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
-  const sailText=s ? `${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:""}` : "a trainer-selected Norwegian Cruise Line sailing";
-
-  const addOns=[];
-  if(d.fas)addOns.push("Free at Sea");
-  if(d.travel)addOns.push("Travel Protection");
-  if(d.psc)addOns.push("Prepaid Service Charges");
-
-  const pricing=d.pricing?`<div class="instruction-strip"><strong>Pricing practice</strong><span>Quote the trainer-entered advertised-pricing practice amount: ${escapeHtml(d.pricing)}. Reconfirm current Seaweb pricing before class.</span></div>`:
-    `<div class="instruction-strip"><strong>Pricing task</strong><span>Review the current Seaweb pricing with the guest. Do not use a fabricated amount; quote what Seaweb displays at the time of the exercise.</span></div>`;
-
+  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:""}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const addOns=[];if(d.fas)addOns.push("Free at Sea");if(d.travel)addOns.push("Travel Protection");if(d.psc)addOns.push("Prepaid Service Charges");
+  const pricing=d.pricing?`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>${escapeHtml(d.pricing)}. Reconfirm current Seaweb pricing before class.</span></div>`:`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>Review the current Seaweb pricing and practice quoting what Seaweb displays. Do not use a fabricated amount.</span></div>`;
   const paymentInstruction={
     "No Payment / Service Only":"Complete the servicing task without collecting a new card payment unless Seaweb shows a newly due amount that is part of the trainer's instructions.",
     "Offer / Hold only":"Place the reservation in Offer/Hold status without collecting payment. Explain the applicable deposit deadline shown in Seaweb.",
     "Minimum Deposit":"Process only the minimum amount due using the training credit card information below.",
     "Initial Deposit":"Process the required initial deposit using the training credit card information below.",
     "Full Payment":"Review the full amount due and process full payment using the training credit card information below.",
-    "FCC / CruiseNext":"Use the applicable training FCC/CruiseNext/CruiseFirst credit according to the scenario workflow. Do not substitute a card unless the exercise specifically requires an additional payment.",
+    "FCC / CruiseNext":"Use the applicable training FCC/CruiseNext/CruiseFirst credit according to the scenario workflow. Do not substitute a card unless an additional payment is required.",
     "Amenity Payment":"Process the payment due for the amenity/add-on using the training credit card information below and send the appropriate invoice/confirmation.",
     "Auto Final Payment discussion":"Discuss Auto Final Payment and complete the enrollment steps in the training environment if instructed.",
-    "Refund / Reinstate":"Follow the cancellation/refund or reinstatement workflow. Verify the original form of payment and applicable refund timing; do not collect a new card payment unless required by the updated booking."
+    "Refund / Reinstate":"Follow the cancellation/refund or reinstatement workflow. Verify the original form of payment and applicable refund timing."
   }[d.payment]||"Complete the payment/booking action shown in Seaweb.";
-
-  const approachText={
-    current:"Use the current department/day training focus and preserve its core workflow.",
-    variation:"Trainer-generated variation of the current department/day skill; preserve the required workflow while varying guests, sailing, stateroom, or preferences.",
-    new:"New practice case built around the same department/day learning objective."
-  }[d.approach];
-
-  const cardHtml=d.cardRequired&&d.card?`<section class="scenario-section payment-section"><div class="section-label">TRAINING PAYMENT</div><h3>Training Credit Card Information</h3>
-    <div class="scenario-payment-card"><div class="training-only-label">TRAINING / TEST DATA ONLY</div>
-      <p><strong>Card #:</strong> ${escapeHtml(d.card.number)}<br><strong>Expiration:</strong> ${escapeHtml(d.card.expiration)}<br><strong>CCV:</strong> ${escapeHtml(d.card.ccv)}<br><strong>Billing Address:</strong> ${escapeHtml(d.card.address)}</p>
-    </div></section>`:"";
-
-  const guestMix=getGuestProfileMix(d);
-  const guestLabel=i=>i===0?(d.guest1||"Guest 1"):i===1?(d.guest2||"Guest 2"):`Guest ${i+1}`;
-  const guestInfoItems=Array.from({length:d.guestCount},(_,i)=>{
-    const isPast=!!guestMix.flags[i];
-    const number=guestMix.numbers[i]||"";
-    const status=d.latitudes?(isPast?`Past Guest${number?` • Latitudes #: ${escapeHtml(number)}`:" • verify Latitudes number in Seaweb"}`:"New Guest • create a new training guest profile in Seaweb"):"Verify profile";
-    return `<li><strong>Guest ${i+1}:</strong> ${escapeHtml(guestLabel(i))} — ${status}</li>`;
-  }).join("");
-  const tasks=traineeTaskList(d,meta);
-  const agencyDisplay=d.department==="Outbound Sales"
-    ? `${d.market} | Agency ${d.agency}`
-    : (d.reservationWorkflow==="new"
-        ? (d.newCallerType==="travel_agent"
-            ? `Travel Agent • Agency ID / Phone: ${d.agency||"Not entered"}`
-            : `${newReservationCallerLabel(d)} • Agency ${d.agency}`)
-        : guestServicesAgencyDisplay(d.agency));
+  const approachText={current:"Use the selected curriculum focus and preserve its core workflow.",variation:"Trainer-generated variation that preserves the required workflow while varying guests, sailing, stateroom, or preferences.",new:"New practice case built around the selected learning objectives."}[d.approach];
+  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`Travel Agent • Agency ID / Phone: ${d.agency||"Not entered"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency}`):guestServicesAgencyDisplay(d.agency));
 
   const html=`
-    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip support-chip">${escapeHtml(trainingSupportLabel(+d.trainingDay))} support</span></div>
-    <h2>Seaweb Scenario – ${escapeHtml(d.type)}</h2>
-    <p class="scenario-intro">Complete this scenario independently using Seaweb. Use the <strong>Seaweb User Guide</strong> in <strong>NCLHelp</strong> whenever you need step-by-step guidance. When the exercise is complete, post the reservation number in the class chat.</p>
+    <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip">${d.focuses.length} focus${d.focuses.length===1?'':'es'}</span></div>
+    <h2 class="scenario-main-title">🛳️ SEAweb Practice Scenario – ${escapeHtml(focusTitle(d))}</h2>
+    <p class="scenario-intro">Please complete the following scenario <strong>independently</strong>. If you encounter any difficulties, refer to the <strong>Seaweb User Guide in NCLHelp</strong> for step-by-step guidance.</p>
+    ${completionInstructionsHtml()}
+    ${focusSummaryHtml(d)}
 
-    <section class="scenario-section call-section">
-      <div class="section-label">YOUR CALL</div>
-      <h3>Customer Scenario</h3>
-      ${customerStoryHtml(d,meta,sailText,guestNames)}
-    </section>
+    <section class="scenario-section visual-section call-section">${scenarioIconHeading('☎️','Call Scenario')}${customerStoryHtml(d,meta,sailText,guestNames)}</section>
 
-    ${gdprScenarioHtml(d)}
-
-    <section class="scenario-section">
-      <div class="section-label">GUEST REQUEST</div>
-      <h3>At a Glance</h3>
-      ${atAGlanceHtml(d,meta)}
-    </section>
-
-    ${airScenarioHtml(d)}
-
-    ${latitudesScenarioHtml(d)}
-
-    <section class="scenario-section">
-      <div class="section-label">YOUR WORK</div>
-      <h3>Complete These Tasks</h3>
-      ${checklistHtml(tasks)}
-    </section>
-
+    ${bookingSourceSectionHtml(d,agencyDisplay)}
+    ${d.reservationWorkflow==='modify'?gdprScenarioHtml(d):''}
+    ${modificationDetailsVisualHtml(d)}
+    ${sailingDetailsVisualHtml(d,pricing)}
+    ${guestInformationVisualHtml(d)}
+    ${offersAddonsVisualHtml(d)}
+    ${d.airEnabled?airScenarioHtml(d):''}
+    ${paymentVisualHtml(d,paymentInstruction)}
+    ${requiredActionsVisualHtml(d)}
     ${callFlowSupportHtml(d,meta)}
-
-    ${referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,guestInfoItems)}
-    ${cardHtml}
-
-    <section class="scenario-section end-call-section">
-      <div class="section-label">BEFORE YOU END THE CALL</div>
-      <h3>Final Check</h3>
-      ${checklistHtml(beforeEndItems(d))}
-      <div class="closing-card"><strong>Branded closing</strong><span>“Is there anything else I can help you with today, ${escapeHtml(primary.split(" ")[0]||"")}?”</span><span>“Thank you for choosing Norwegian Cruise Line.”</span></div>
-    </section>
-
-    <details class="knowledge-check trainee-support">
-      <summary><span>After Completion: Knowledge Check</span><small>Open after you finish in Seaweb</small></summary>
-      <div class="support-body">
-        <ul>${focusConsiderations(d).map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>
-      </div>
-    </details>
-
+    ${recapVisualHtml(d)}
+    ${closingVisualHtml(d,primary)}
+    ${considerationsVisualHtml(d)}
+    ${finalReservationCheckHtml(d,meta)}
     ${trainerGuideHtml(d,meta,approachText,s)}`;
 
   $("scenarioOutput").innerHTML=html;
-  d.html=html;
-  state.currentScenario=d;
-  runValidator();
+  d.html=html;state.currentScenario=d;runValidator();
   $("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
 }
+
 $("generateBtn").onclick=generateScenario;
 $("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
 
@@ -2088,13 +2203,14 @@ function runValidator(){
   const d=state.currentScenario||scenarioData(), s=d.sailing, checks=[];
   const add=(severity,title,detail)=>checks.push({severity,title,detail});
   const meta=currentFocusMeta()||{};
+  const metas=selectedFocusMetas();
 
   if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
-  else add("passed","Department selected",`${d.department} • ${d.type}`);
+  else add("passed","Department selected",`${d.department} • ${focusNamesForData(d).join(" + ")}`);
   add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
-  if(!d.guest1 && meta.kind!=="demo")add("error","Missing primary guest","Guest 1 is required for trainee scenarios.");
+  if(d.reservationWorkflow==="new"&&!d.guest1 && !metas.some(m=>m.kind==="demo"))add("error","Missing primary guest","Guest 1 is required for new-reservation trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
-  if(d.guestCount>1 && !d.guest2 && meta.kind!=="demo")add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo"))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
   if(d.latitudes){
     const mix=getGuestProfileMix(d);
     const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
@@ -2116,7 +2232,7 @@ function runValidator(){
         else if(["5","7"].includes(String(d.agency)))add("error","Travel Agent identifier invalid","Agency 5 and Agency 7 are Direct Guest bookings. Enter the Travel Agent's Agency ID or phone number.");
         else add("passed","Caller / booking source",`Travel Agent • Agency ID / Phone: ${d.agency}`);
       }
-      if(d.type==="Agencies: TA Booking" && caller.type!=="travel_agent"){
+      if(focusNamesForData(d).includes("Agencies: TA Booking") && caller.type!=="travel_agent"){
         add("error","Caller type does not match scenario focus","Agencies: TA Booking requires Caller Type = Travel Agent.");
       }
     }else{
@@ -2199,7 +2315,7 @@ function runValidator(){
     }
   }
 
-  if(/\bada\b|accessible/i.test(`${d.type} ${d.curriculumObjective}`)){
+  if(/\bada\b|accessible/i.test(focusSearchText(d))){
     if(d.category!=="ADA / Accessible")add("error","ADA category mismatch","This training focus requires an ADA / accessible stateroom category. Do not assign a standard Balcony/Oceanview/Inside category.");
     else add("passed","Accessible category aligned","ADA / Accessible is selected and location/side should remain availability-driven.");
   }
@@ -2207,14 +2323,14 @@ function runValidator(){
   if(d.cardRequired){
     if(!d.card)add("error","Training credit card missing","This scenario requires a card payment, but no training card profile is attached.");
     else add("passed","Training credit card included",`${d.card.label} • TRAINING / TEST DATA ONLY`);
-    if(meta.cardRequired && ["No Payment / Service Only","Offer / Hold only","FCC / CruiseNext","Refund / Reinstate"].includes(d.payment)) add("warning","Payment action may conflict with curriculum","The selected training focus is tagged as requiring a card payment, but the current payment action may not collect one.");
-    if(!meta.cardRequired && paymentActionNeedsCard()) add("info","Trainer-added card payment","This variation adds a card payment even though the source curriculum focus does not require one by default.");
+    if(metas.some(m=>m.cardRequired) && ["No Payment / Service Only","Offer / Hold only","FCC / CruiseNext","Refund / Reinstate"].includes(d.payment)) add("warning","Payment action may conflict with curriculum","The selected training focus is tagged as requiring a card payment, but the current payment action may not collect one.");
+    if(!metas.some(m=>m.cardRequired) && paymentActionNeedsCard()) add("info","Trainer-added card payment","This variation adds a card payment even though the source curriculum focus does not require one by default.");
   }else add("passed","Payment method aligned","No training credit card is required for this focus by default.");
 
-  if((d.type.includes("FCC")||d.type.includes("Price Programs")) && d.payment!=="FCC / CruiseNext" && !d.type.includes("Price Programs")) add("warning","FCC workflow review","Confirm the selected payment action preserves the offer-first coupon/FCC workflow.");
+  if((focusSearchText(d).includes("fcc")||focusSearchText(d).includes("price programs")) && d.payment!=="FCC / CruiseNext" && !focusSearchText(d).includes("price programs")) add("warning","FCC workflow review","Confirm the selected payment action preserves the offer-first coupon/FCC workflow.");
   if(d.confirmation && !d.email)add("error","Confirmation email missing","Confirmation is required but no training email is entered.");
   else if(d.confirmation)add("passed","Confirmation task included",d.email);
-  if(meta.commenting && !d.commenting)add("warning","Commenting Tool expected","The current curriculum focus includes reservation notation/comments.");
+  if(metas.some(m=>m.commenting) && !d.commenting)add("warning","Commenting Tool expected","The current curriculum focus includes reservation notation/comments.");
 
   if(d.html){
     if(d.html.includes("Thank you for choosing Norwegian Cruise Line."))add("passed","Branded closing present","Required NCL closing is included.");
@@ -2278,7 +2394,7 @@ function makeViewShareClone(includeTrainer=state.mode==="trainer"){
   header.innerHTML=`
     <div>
       <span class="adaptive-export-kicker">SEAweb Training Scenario</span>
-      <strong>${escapeHtml(d.type||"Scenario")}</strong>
+      <strong>${escapeHtml(focusTitle(d)||"Scenario")}</strong>
       <small>${escapeHtml(d.department||"")} • ${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</small>
     </div>
     <span class="adaptive-export-mode">${includeTrainer?"TRAINER VIEW":"TRAINEE VIEW"}</span>`;
@@ -2388,7 +2504,7 @@ let adaptiveExportCache={key:null,mode:null,blob:null};
 function adaptiveExportFilename(ext){
   const d=state.currentScenario||scenarioData();
   const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
-  const focus=(d.type||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
+  const focus=(focusTitle(d)||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48);
   const view=state.mode==="trainer"?"Trainer":"Trainee";
   return `${dept}-${focus}-${view}.${ext}`;
 }
@@ -3140,7 +3256,7 @@ async function downloadScenarioPdf(){
 function scenarioShareFilename(){
   const d=state.currentScenario||scenarioData();
   const dept=(d.department||'Seaweb').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  const focus=(d.type||'Scenario').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
+  const focus=(focusTitle(d)||'Scenario').replace(/[^A-Za-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,48);
   return `${dept}-${focus}.png`;
 }
 
@@ -3302,13 +3418,13 @@ function renderLibrary(){
   const deptFilter=$("libraryDepartmentFilter").value;
   let items=saved().filter(x=>{
     if(deptFilter && x.department!==deptFilter)return false;
-    return !q||JSON.stringify([x.title,x.type,x.department,x.reservationWorkflow,x.newCallerType,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
+    return !q||JSON.stringify([x.title,x.type,x.focuses,x.department,x.reservationWorkflow,x.newCallerType,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
   $("libraryList").innerHTML=items.length?items.map(x=>`
     <div class="result-card ${x.archived?"archived":""}">
       <div style="display:flex;justify-content:space-between;gap:12px">
         <div>
-          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span><span class="chip">${escapeHtml(x.type)}</span><span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
+          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span>${(x.focuses||[x.type]).filter(Boolean).slice(0,3).map(f=>`<span class="chip">${escapeHtml(f)}</span>`).join("")}<span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
           <h3>${escapeHtml(x.title)}</h3>
           <div class="muted">${escapeHtml(x.sailing?.ship||"No real sailing")} ${x.sailing?.title?"• "+escapeHtml(x.sailing.title):""}</div>
           <div class="muted" style="font-size:11px;margin-top:6px">Updated ${new Date(x.updatedAt).toLocaleString()}</div>
@@ -3336,7 +3452,7 @@ window.openSaved=(id)=>{
   $("trainingDay").value=String(x.trainingDay||6);
   if($("department").value==="Outbound Sales" && x.agency) $("marketAgency").value=String(x.agency);
   updateDepartmentUI();
-  updateScenarioFocus(x.type,String(x.trainingDay||6));
+  updateScenarioFocus(x.type,String(x.trainingDay||6),x.focuses||[x.type].filter(Boolean));
   $("reservationWorkflow").value=x.reservationWorkflow||((x.curriculumKind==="followup")?"modify":"new");
   $("newCallerType").value=x.newCallerType||(
     String(x.agency)==="7"?"direct_ca":(["5",""].includes(String(x.agency||""))?"direct_us":"travel_agent")
