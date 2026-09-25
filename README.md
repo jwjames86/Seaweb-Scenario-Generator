@@ -372,3 +372,35 @@ The Customer Scenario, At a Glance, Reference Details, and Validator use Caller 
 
 ### TA-specific focus
 Choosing **Agencies: TA Booking** automatically switches Caller Type to Travel Agent. The Validator flags that focus if paired with a Direct Guest caller.
+
+
+## V1.9.14 – Multi-Focus + Visual Scenario Format
+
+### Multiple Scenario Focus skills
+- Scenario Focus is now a compact dropdown-style checklist.
+- Trainers can select one or multiple curriculum skills in the same scenario.
+- The generator combines the selected objectives, tasks, offers/add-ons, Air requirements, considerations, validation rules, and Trainer Guide into a single exercise.
+- Duplicate requirements are removed where possible so combined scenarios stay readable.
+- Saved scenarios preserve all selected focus skills.
+
+### Standardized trainee scenario format
+Generated scenarios now follow one consistent, trainee-friendly structure inspired by the Independent Air scenario format:
+- 🛳️ Practice Scenario title
+- ✅ Finish / class-chat instructions
+- 🎯 Skills Included
+- ☎️ Call Scenario
+- 🏢 / ☎️ Booking Source
+- 🔐 GDPR when applicable
+- 🗂️ Existing Reservation when modifying
+- 🚢 Sailing Details
+- 👥 Guest Information
+- 🎁 Offers & Add-Ons
+- ✈️ Air Program when applicable
+- 💳 Payment
+- 📧 Required Actions
+- 🗣️ Reservation Recap
+- ☎️ Call Closing
+- 🧠 Things to Consider
+- ✅ Final Reservation Check
+
+Sections that do not apply are omitted. Small visual icons are intentionally included to help trainees scan the scenario quickly in the generator, Teams, PNG, PDF, and printed versions.
