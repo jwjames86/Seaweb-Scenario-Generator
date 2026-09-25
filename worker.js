@@ -47,17 +47,20 @@ async function handleShareCard(request, env) {
   }
 
   const raw = String(payload?.html || "");
-  if (!raw || raw.length > 250000) {
+  if (!raw || raw.length > 600000) {
     return json({ error: "The scenario card is empty or too large to render." }, 400);
   }
 
   const safeBody = sanitizeShareHtml(raw);
-  const page = shareCardDocument(safeBody);
+  const exact=payload?.exact===true;
+  const requestedWidth=Math.max(480,Math.min(1100,Number(payload?.width)||760));
+  const scale=Math.max(1,Math.min(2,Number(payload?.scale)||1));
+  const page = exact ? exactShareCardDocument(safeBody,requestedWidth,scale) : shareCardDocument(safeBody);
 
   try {
     const shot = await env.BROWSER.quickAction("screenshot", {
       html: page,
-      viewport: { width: 2080, height: 3400 },
+      viewport: exact ? { width: Math.ceil(requestedWidth*scale)+40, height: 900 } : { width: 2080, height: 3400 },
       screenshotOptions: { fullPage: true, type: "png" }
     });
 
@@ -93,10 +96,16 @@ function sanitizeShareHtml(raw) {
     .replace(/\son[a-z]+\s*=\s*"[^"]*"/gi, "")
     .replace(/\son[a-z]+\s*=\s*'[^']*'/gi, "")
     .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, "")
-    .replace(/\s(?:src|href|srcset|style)\s*=\s*"[^"]*"/gi, "")
-    .replace(/\s(?:src|href|srcset|style)\s*=\s*'[^']*'/gi, "")
+    .replace(/\s(?:src|href|srcset)\s*=\s*"[^"]*"/gi, "")
+    .replace(/\s(?:src|href|srcset)\s*=\s*'[^']*'/gi, "")
     .replace(/\s(?:src|href|srcset|style)\s*=\s*[^\s>]+/gi, "");
   return html;
+}
+
+function exactShareCardDocument(bodyHtml,width,scale){
+  return `<!doctype html><html><head><meta charset="utf-8"><style>
+  *{box-sizing:border-box}html,body{margin:0;padding:0;background:#EBE7DF}body{padding:10px;width:max-content;min-width:0}.exact-generator-view{width:${width}px;zoom:${scale};}
+  </style></head><body><div class="exact-generator-view">${bodyHtml}</div></body></html>`;
 }
 
 function shareCardDocument(bodyHtml) {

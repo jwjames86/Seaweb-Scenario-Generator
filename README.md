@@ -404,3 +404,28 @@ Generated scenarios now follow one consistent, trainee-friendly structure inspir
 - ✅ Final Reservation Check
 
 Sections that do not apply are omitted. Small visual icons are intentionally included to help trainees scan the scenario quickly in the generator, Teams, PNG, PDF, and printed versions.
+
+
+## V1.9.15 – Coupon Sources + Exact Generator Exports
+
+### Credits & Coupons
+Scenarios that use FCC, CruiseNext, CruiseFirst, guest discount coupons or other credits now display a dedicated **Credits & Coupons** setup panel. Trainers can also turn on **Include Credits / Coupons** manually for any scenario.
+
+Trainers can add multiple items to the same scenario and specify for each one:
+- Credit / Coupon Type
+- Source Guest
+- Source Latitudes Number
+- Optional details / value (for example 10% off, $250, or a certificate number)
+
+The generated trainee scenario includes a visual **🎟️ Credits & Coupons** section. Tasks and Final Reservation Check identify the exact credit/coupon, guest and Latitudes profile. The Validator flags missing coupon type, source guest or source Latitudes number.
+
+Saved scenarios preserve these credit/coupon assignments.
+
+### PDF / PNG match the Generator
+Current View PDF and PNG exports now render from the exact Scenario Generator card styling instead of a separate export layout.
+
+- Same spacing, typography, borders, backgrounds, visual icons and section layout as the Generator
+- Same text wrapping by rendering at the current on-screen scenario width
+- 2× render scale for sharper image quality
+- Trainer / Trainee visibility is preserved
+- Unused outer renderer space is cropped automatically
