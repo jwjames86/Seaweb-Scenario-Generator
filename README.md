@@ -567,3 +567,22 @@ The V1.9.22 direct request to NCL's current `/api/v2/vacations/search` endpoint 
 NCL's search XHR can occur roughly 9 seconds after page initialization. Previous versions only waited about 1.8 seconds. The Browser Run results-page fallback now waits **12 seconds** before reading the rendered content.
 
 This keeps the current U.S. NCL source while avoiding reliance on a direct Worker request that NCL may reject.
+
+
+## V1.9.24 – Automatic Exact Sailing Dates
+
+Trainers no longer need to type a sailing date whenever NCL.com U.S. exposes the itinerary's exact departures.
+
+### New behavior
+1. Search for itineraries.
+2. Choose an itinerary.
+3. If exact dates were not included in the first search result, the generator automatically performs a second lookup against NCL.com U.S.
+4. The tool discovers the itinerary's NCL cruise-detail / dates-and-prices page and extracts the exact departure dates.
+5. The **Specific Sailing Date** dropdown is automatically populated.
+
+While the second lookup is running, the dropdown displays **Loading exact sailing dates from NCL.com U.S.…**
+
+### Fallback
+The manual **Verified Sailing Date** field is now only shown when NCL's public pages still do not expose exact dates after the automatic lookup. This avoids inventing dates while still giving trainers a way to use a date that they personally verified in NCL.com U.S. or Seaweb.
+
+The selected sailing also keeps the itinerary's more specific NCL detail URL when one is discovered.

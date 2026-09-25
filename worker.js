@@ -22,6 +22,26 @@ export default {
       return response;
     }
 
+    if (url.pathname === "/api/sailing-dates") {
+      const cache = caches.default;
+      const cacheKey = new Request(url.toString(), { method: "GET" });
+      const cached = await cache.match(cacheKey);
+      if (cached) return cached;
+
+      const response = await handleSailingDates(url, env);
+      if (response.ok) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "public, max-age=600");
+        const cacheable = new Response(response.clone().body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers
+        });
+        ctx.waitUntil(cache.put(cacheKey, cacheable));
+      }
+      return response;
+    }
+
     if (url.pathname === "/api/share-card") {
       return handleShareCard(request, env);
     }
@@ -240,6 +260,272 @@ p,li{font-size:13px;line-height:1.55;color:#273248}
 .adaptive-export.trainer-export .trainer-guide>ul li{break-inside:avoid}
 
 </style></head><body>${bodyHtml}</body></html>`;
+}
+
+async function handleSailingDates(reqUrl, env) {
+  const source = reqUrl.searchParams.get("source") || "";
+  const ship = clean(reqUrl.searchParams.get("ship") || "");
+  const title = clean(reqUrl.searchParams.get("title") || "");
+  const departure = clean(reqUrl.searchParams.get("departure") || "");
+  const duration = Number(reqUrl.searchParams.get("duration") || 0);
+  const from = reqUrl.searchParams.get("from") || "";
+  const to = reqUrl.searchParams.get("to") || "";
+
+  if (!source) return json({ error: "Missing NCL source URL.", dates: [] }, 400);
+
+  let sourceUrl;
+  try {
+    const u = normalizeNclUsUrl(new URL(source));
+    if (!/(^|\.)ncl\.com$/i.test(u.hostname)) {
+      return json({ error: "Sailing dates can only be loaded from ncl.com.", dates: [] }, 400);
+    }
+    sourceUrl = u.toString();
+  } catch {
+    return json({ error: "Invalid NCL source URL.", dates: [] }, 400);
+  }
+
+  let detailUrl = looksLikeNclCruiseDetailUrl(sourceUrl) ? sourceUrl : "";
+  let discovery = { method: detailUrl ? "source-detail-url" : "search-page-link-discovery" };
+
+  if (!detailUrl) {
+    const found = await discoverNclCruiseDetailUrl(env, sourceUrl, {
+      ship, title, departure, duration
+    });
+    detailUrl = found.url || "";
+    discovery = found.diagnostic || discovery;
+  }
+
+  const candidates = [];
+  if (detailUrl) candidates.push(detailUrl);
+  if (!candidates.includes(sourceUrl)) candidates.push(sourceUrl);
+
+  const attempts = [];
+  for (const url of candidates) {
+    const loaded = await loadNclDateText(env, url);
+    attempts.push(loaded.diagnostic || { url });
+
+    if (!loaded.ok) continue;
+
+    let dates = extractExactSailingDates(loaded.text);
+    if (from) dates = dates.filter(d => d >= from);
+    if (to) dates = dates.filter(d => d <= to);
+    dates = [...new Set(dates)].sort();
+
+    if (dates.length) {
+      return json({
+        ok: true,
+        dates,
+        detailUrl: url,
+        sourceMarket: "US",
+        retrievedAt: new Date().toISOString(),
+        diagnostic: {
+          discovery,
+          attempts,
+          exactDates: dates.length
+        }
+      });
+    }
+  }
+
+  return json({
+    ok: true,
+    dates: [],
+    detailUrl: detailUrl || sourceUrl,
+    sourceMarket: "US",
+    retrievedAt: new Date().toISOString(),
+    message: "NCL.com U.S. did not expose exact sailing dates for this itinerary.",
+    diagnostic: { discovery, attempts }
+  });
+}
+
+function looksLikeNclCruiseDetailUrl(value) {
+  try {
+    const u = new URL(value);
+    return /\/cruises?\//i.test(u.pathname) || u.searchParams.has("itineraryCode");
+  } catch {
+    return false;
+  }
+}
+
+async function discoverNclCruiseDetailUrl(env, sourceUrl, target) {
+  if (!env?.BROWSER || typeof env.BROWSER.quickAction !== "function") {
+    return { url: "", diagnostic: { method: "detail-link-discovery", error: "Browser binding unavailable" } };
+  }
+
+  try {
+    const response = await env.BROWSER.quickAction("markdown", {
+      url: sourceUrl,
+      gotoOptions: {
+        waitUntil: "networkidle2",
+        timeout: 30000
+      },
+      waitForTimeout: 12000,
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+    });
+
+    if (!response.ok) {
+      return { url: "", diagnostic: { method: "detail-link-discovery", status: response.status || 0 } };
+    }
+
+    const raw = unwrapQuickActionText(await response.text(), "markdown");
+    const candidates = extractNclCruiseLinks(raw, sourceUrl);
+
+    if (!candidates.length) {
+      return {
+        url: "",
+        diagnostic: {
+          method: "detail-link-discovery",
+          links: 0,
+          textLength: raw.length
+        }
+      };
+    }
+
+    const scored = candidates.map(item => ({
+      ...item,
+      score: scoreNclCruiseLink(item, target)
+    })).sort((a,b) => b.score - a.score);
+
+    const best = scored[0];
+    return {
+      url: best?.url || "",
+      diagnostic: {
+        method: "detail-link-discovery",
+        links: candidates.length,
+        bestScore: best?.score || 0,
+        bestUrl: best?.url || ""
+      }
+    };
+  } catch (e) {
+    return {
+      url: "",
+      diagnostic: {
+        method: "detail-link-discovery",
+        error: String(e?.message || e)
+      }
+    };
+  }
+}
+
+function extractNclCruiseLinks(markdown, baseUrl) {
+  const out = [];
+  const source = String(markdown || "");
+  const linkRe = /\[([^\]]*)\]\(([^)]+)\)/g;
+
+  for (const m of source.matchAll(linkRe)) {
+    const label = clean(m[1] || "");
+    const href = clean(m[2] || "");
+    if (!href) continue;
+
+    let absolute;
+    try {
+      absolute = normalizeNclUsUrl(new URL(href, baseUrl)).toString();
+    } catch {
+      continue;
+    }
+
+    if (!looksLikeNclCruiseDetailUrl(absolute)) continue;
+    const index = m.index ?? 0;
+    const context = clean(
+      source.slice(Math.max(0, index - 1600), Math.min(source.length, index + 500))
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    );
+
+    out.push({ url: absolute, label, context });
+  }
+
+  const map = new Map();
+  for (const item of out) {
+    if (!map.has(item.url)) map.set(item.url, item);
+  }
+  return [...map.values()];
+}
+
+function scoreNclCruiseLink(item, target) {
+  const hay = `${item.label} ${item.context} ${item.url}`.toLowerCase();
+  let score = 0;
+
+  const ship = clean(target.ship || "").toLowerCase();
+  const title = clean(target.title || "").toLowerCase();
+  const departure = clean(target.departure || "").toLowerCase();
+  const duration = Number(target.duration || 0);
+
+  if (ship && hay.includes(ship)) score += 12;
+  if (departure && hay.includes(departure)) score += 7;
+  if (duration && new RegExp(`\\b${duration}\\s*[-–—]?\\s*day\\b`, "i").test(hay)) score += 5;
+
+  const meaningfulTitleWords = title
+    .split(/[^a-z0-9]+/i)
+    .filter(w => w.length >= 5)
+    .slice(0, 8);
+  for (const word of meaningfulTitleWords) {
+    if (hay.includes(word)) score += 2;
+  }
+
+  if (/view dates|dates & prices|view cruise/i.test(item.label)) score += 3;
+  return score;
+}
+
+async function loadNclDateText(env, url) {
+  if (env?.BROWSER && typeof env.BROWSER.quickAction === "function") {
+    for (const mode of ["content", "markdown"]) {
+      try {
+        const response = await env.BROWSER.quickAction(mode, {
+          url,
+          gotoOptions: {
+            waitUntil: "networkidle2",
+            timeout: 30000
+          },
+          waitForTimeout: 8000,
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+        });
+
+        if (!response.ok) continue;
+
+        const body = await response.text();
+        const raw = unwrapQuickActionText(body, mode);
+        const text = mode === "content" ? normalizeHtml(raw) : normalizeMarkdown(raw);
+
+        if (text) {
+          return {
+            ok: true,
+            text,
+            diagnostic: {
+              url,
+              method: `browser-${mode}`,
+              textLength: text.length
+            }
+          };
+        }
+      } catch (_) {}
+    }
+  }
+
+  try {
+    const response = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9"
+      }
+    });
+    if (response.ok) {
+      const html = await response.text();
+      const text = normalizeHtml(html);
+      return {
+        ok: true,
+        text,
+        diagnostic: { url, method: "raw-fetch", textLength: text.length }
+      };
+    }
+  } catch (_) {}
+
+  return {
+    ok: false,
+    text: "",
+    diagnostic: { url, method: "unreadable" }
+  };
 }
 
 async function handleSailings(request, reqUrl, env) {
