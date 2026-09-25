@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.18" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.19" />
 </head>
 <body>
   <header class="topbar">
@@ -100,7 +100,7 @@
             <ul>
               <li>Choose a From date. The To date automatically fills 30 days later; shorten it if needed.</li>
               <li>Use only one main search filter: Destination, Embarkation Port, or Ship. Vacation Length is optional.</li>
-              <li><strong>Step 1:</strong> choose an itinerary from the search results. <strong>Step 2:</strong> choose the specific sailing date in the date-selection panel that opens underneath the results. Then click <strong>Use This Sailing in Scenario</strong>.</li>
+              <li>After the search results load, use the <strong>Choose Itinerary & Specific Sailing Date</strong> section underneath the results. Pick the itinerary from the first dropdown, then pick the exact sailing date from the second dropdown. If NCL does not expose exact dates, a verified date field appears instead.</li>
               <li>Use port-of-call requirements after retrieving results instead of over-filtering the initial search.</li>
               <li>This tab uses the U.S. NCL site at <strong>ncl.com</strong>. Verify cabin inventory, exact pricing, and internal rules in Seaweb.</li>
             </ul>
@@ -169,36 +169,41 @@
 
         <div id="searchResults" class="result-list"></div>
 
-        <section id="selectedItineraryPanel" class="selected-itinerary-panel hidden-field" aria-live="polite">
-          <div class="selected-itinerary-head">
+        <section id="itineraryDateChooser" class="itinerary-date-chooser">
+          <div class="chooser-head">
             <div>
-              <span class="eyebrow">STEP 2</span>
-              <h3>Choose a Specific Sailing Date</h3>
-              <p>Select the exact departure date for the itinerary you chose before sending it to Scenario Generator.</p>
+              <span class="eyebrow">SELECT YOUR SAILING</span>
+              <h3>Choose Itinerary & Specific Sailing Date</h3>
+              <p>After searching, choose the itinerary first, then choose the exact departure date for that itinerary.</p>
             </div>
-            <button id="changeItineraryBtn" type="button" class="secondary tiny">Choose Different Itinerary</button>
           </div>
 
-          <div id="selectedItinerarySummary" class="selected-itinerary-summary"></div>
-
-          <div class="specific-date-grid">
-            <label>Specific Sailing Date
-              <input id="selectedItineraryDate" type="date" />
-              <span class="field-hint">This exact date will be used everywhere in the generated scenario.</span>
+          <div class="itinerary-date-grid">
+            <label>Itinerary
+              <select id="itinerarySelect" disabled>
+                <option value="">Search itineraries first…</option>
+              </select>
             </label>
 
-            <div id="nclExactDatesBox" class="ncl-exact-dates-box hidden-field">
-              <span class="exact-date-label">Dates found on NCL.com U.S.</span>
-              <div id="nclExactDateChoices" class="exact-date-choices"></div>
-              <small>Select one of these dates or use the date field above after verifying another eligible sailing.</small>
-            </div>
+            <label id="exactDateSelectField">Specific Sailing Date
+              <select id="exactSailingDateSelect" disabled>
+                <option value="">Choose an itinerary first…</option>
+              </select>
+            </label>
+
+            <label id="manualDateField" class="hidden-field">Verified Sailing Date
+              <input id="manualSailingDate" type="date" />
+              <span class="field-hint">Use this only when the public NCL result does not expose exact dates. Verify the date on NCL.com U.S. or in Seaweb.</span>
+            </label>
           </div>
 
-          <div id="specificDateNotice" class="notice info">Choose the exact sailing date for this itinerary.</div>
+          <div id="itineraryChooserNotice" class="notice info">
+            Search for itineraries to populate the dropdown.
+          </div>
 
-          <div class="actions selected-itinerary-actions">
-            <button id="useSelectedItineraryBtn" type="button" class="primary">Use This Sailing in Scenario</button>
-            <button id="clearSelectedItineraryBtn" type="button" class="secondary">Clear Selection</button>
+          <div class="actions">
+            <button id="useItineraryDateBtn" type="button" class="primary" disabled>Use This Sailing in Scenario</button>
+            <button id="clearItineraryChooserBtn" type="button" class="secondary">Clear Selection</button>
           </div>
         </section>
 
@@ -646,6 +651,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.18"></script>
+  <script src="/app.js?v=1.9.19"></script>
 </body>
 </html>

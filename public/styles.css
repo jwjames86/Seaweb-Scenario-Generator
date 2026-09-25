@@ -1185,3 +1185,54 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
   .selected-itinerary-head button{width:100%}
   .specific-date-grid{grid-template-columns:1fr}
 }
+
+
+/* V1.9.19 • Always-visible itinerary/date selector */
+.itinerary-date-chooser{
+  margin:18px 0;
+  padding:17px;
+  background:#F8FBFC;
+  border:1px solid #B9D8E4;
+  border-left:5px solid #0A84BD;
+  border-radius:9px;
+}
+.chooser-head{margin-bottom:13px}
+.chooser-head .eyebrow{
+  display:block;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1.2px;
+  color:#006099;
+}
+.chooser-head h3{
+  margin:3px 0 4px;
+  font-size:18px;
+  color:#101828;
+}
+.chooser-head p{
+  margin:0;
+  font-size:11px;
+  line-height:1.45;
+  color:#667085;
+}
+.itinerary-date-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.25fr) minmax(220px,.75fr);
+  gap:12px;
+  align-items:start;
+}
+.itinerary-date-grid label{
+  min-width:0;
+}
+.itinerary-date-grid select,
+.itinerary-date-grid input{
+  width:100%;
+  min-width:0;
+}
+.result-card.itinerary-selected{
+  border:2px solid #0A84BD;
+  box-shadow:0 0 0 3px rgba(10,132,189,.10);
+}
+@media(max-width:760px){
+  .itinerary-date-grid{grid-template-columns:1fr}
+}
