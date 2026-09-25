@@ -1416,6 +1416,34 @@ $("searchFrom").addEventListener("change",()=>{
 });
 $("searchTo").addEventListener("change",updateDateHint);
 
+function formatSailingDate(iso){
+  if(!iso)return "";
+  const d=parseIsoLocal(iso);
+  if(!d)return iso;
+  return d.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+}
+
+function sailingDateText(s){
+  if(!s)return "";
+  if(s.sailingDate)return formatSailingDate(s.sailingDate);
+  return (s.sailingMonths||[]).join(", ");
+}
+
+function sailingDateControlHtml(s,i){
+  const exact=(s.sailingDates||[]).filter(Boolean);
+  if(exact.length){
+    return `<label class="result-sailing-date"><span>Specific Sailing Date</span><select id="sailingDate-${i}">
+      <option value="">Choose a sailing date…</option>
+      ${exact.map(d=>`<option value="${escapeAttr(d)}">${escapeHtml(formatSailingDate(d))}</option>`).join("")}
+    </select><small>Exact date exposed by NCL.com U.S.</small></label>`;
+  }
+
+  const min=$("searchFrom")?.value||"";
+  const max=$("searchTo")?.value||"";
+  return `<label class="result-sailing-date"><span>Specific Sailing Date</span><input id="sailingDate-${i}" type="date"${min?` min="${escapeAttr(min)}"`:""}${max?` max="${escapeAttr(max)}"`:""} />
+    <small>NCL's public card did not expose an exact date. Enter the sailing date after verifying it on NCL.com U.S. or in Seaweb.</small></label>`;
+}
+
 function queryParams(){
   const p=new URLSearchParams();
   const from=$("searchFrom").value,to=$("searchTo").value,anchor=currentAnchor(),value=$("searchAnchorValue").value.trim();
@@ -1456,7 +1484,7 @@ $("searchSailingsBtn").onclick=async()=>{
 
   const btn=$("searchSailingsBtn"); btn.disabled=true; btn.textContent="Searching…";
   $("searchNotice").className="notice info";
-  $("searchNotice").textContent=`Searching ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
+  $("searchNotice").textContent=`Searching NCL.com U.S. from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
   $("searchResults").innerHTML="";
   try{
     const r=await fetch(`/api/sailings?${queryParams()}`);
@@ -1487,13 +1515,16 @@ function renderSearchResults(){
   if(!state.sailings.length){$("searchResults").innerHTML=`<div class="panel muted">No matching sailings were found in the retrieved NCL results.</div>`;return}
   $("searchResults").innerHTML=state.sailings.map((s,i)=>`
     <div class="result-card">
-      <div class="verified">● Verified from NCL.com</div>
+      <div class="verified">● Verified from NCL.com U.S.</div>
       <h3>${escapeHtml(s.duration ? `${s.duration}-day Cruise on ${s.ship}` : s.ship||"NCL Sailing")}</h3>
       <strong>${escapeHtml(s.title||"")}</strong>
       <div class="meta">
         ${s.departure?`<span class="chip">From ${escapeHtml(s.departure)}</span>`:""}
-        ${(s.sailingMonths||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join("")}
+        ${(s.sailingDates||[]).length
+          ? (s.sailingDates||[]).map(x=>`<span class="chip">${escapeHtml(formatSailingDate(x))}</span>`).join("")
+          : (s.sailingMonths||[]).map(x=>`<span class="chip">${escapeHtml(x)}</span>`).join("")}
       </div>
+      ${sailingDateControlHtml(s,i)}
       ${s.ports?.length?`<div class="port-list"><strong>Ports:</strong> ${s.ports.map(escapeHtml).join(" • ")}</div>`:""}
       <div class="meta">
         ${s.price?`<span class="price">${escapeHtml(s.price)}</span>`:""}
@@ -1508,7 +1539,30 @@ function renderSearchResults(){
     </div>`).join("");
 }
 window.useSailing=(i)=>{
-  state.selectedSailing=state.sailings[i];
+  const source=state.sailings[i];
+  const dateEl=$(`sailingDate-${i}`);
+  const sailingDate=dateEl?.value||"";
+  if(!sailingDate){
+    alert("Choose the specific sailing date before using this itinerary in a scenario.");
+    dateEl?.focus();
+    return;
+  }
+
+  const from=$("searchFrom")?.value||"";
+  const to=$("searchTo")?.value||"";
+  if(from && sailingDate<from || to && sailingDate>to){
+    alert("The selected sailing date must be inside the current search window.");
+    dateEl?.focus();
+    return;
+  }
+
+  const exactDates=source.sailingDates||[];
+  state.selectedSailing={
+    ...source,
+    sailingDate,
+    sailingDateVerified:exactDates.includes(sailingDate),
+    sailingDateSource:exactDates.includes(sailingDate)?"NCL.com U.S.":"Trainer verified"
+  };
   renderSelectedSailing();
   go("generator");
 };
@@ -1516,7 +1570,7 @@ function renderSelectedSailing(){
   const s=state.selectedSailing;
   if(!s){$("selectedSailingSummary").className="selected-sailing empty";$("selectedSailingSummary").textContent="No real sailing selected yet.";return}
   $("selectedSailingSummary").className="selected-sailing";
-  $("selectedSailingSummary").innerHTML=`<div class="verified">● Verified from NCL.com</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${escapeHtml((s.sailingMonths||[]).join(", "))}${s.departure?" • From "+escapeHtml(s.departure):""}${s.duration?" • "+s.duration+" days":""}</span>`;
+  $("selectedSailingSummary").innerHTML=`<div class="verified">● Itinerary verified from NCL.com U.S.${s.sailingDateVerified?" • Exact date from NCL":""}</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${s.sailingDate?`<strong>${escapeHtml(formatSailingDate(s.sailingDate))}</strong> • `:""}${s.departure?"From "+escapeHtml(s.departure)+" • ":""}${s.duration?s.duration+" days":""}</span>${s.sailingDate&&!s.sailingDateVerified?`<div class="selected-date-note">Exact date entered by trainer — verify in NCL.com U.S. / Seaweb before class.</div>`:""}`;
 }
 
 function selectedMarketLabel(){
@@ -2026,7 +2080,7 @@ function trainerGuideHtml(d,meta,approachText,s){
     <h4>Trainer check / answer guide</h4>
     <ul>${considerations.map(x=>`<li>${escapeHtml(x)}</li>`).join("")}</ul>
     ${d.trainerNotes?`<h4>Trainer notes</h4><p>${escapeHtml(d.trainerNotes)}</p>`:""}
-    ${s?`<h4>Public source metadata</h4><p><span class="verified">Verified from NCL.com</span><br>${escapeHtml(s.sourceUrl||"")}<br>Retrieved ${new Date(s.retrievedAt||Date.now()).toLocaleString()}</p>`:""}
+    ${s?`<h4>Public source metadata</h4><p><span class="verified">Verified from NCL.com U.S.</span><br>${escapeHtml(s.sourceUrl||"")}<br>Retrieved ${new Date(s.retrievedAt||Date.now()).toLocaleString()}</p>`:""}
   </section>`;
 }
 
@@ -2069,7 +2123,7 @@ function referenceDetailsHtml(d,agencyDisplay,pricing,paymentInstruction,addOns,
         <li><strong>Department:</strong> ${escapeHtml(d.department)}</li>
         <li><strong>Reservation Workflow:</strong> Create New Reservation</li>
         <li><strong>Booking Source:</strong> ${escapeHtml(agencyDisplay)}</li>
-        ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sailing:</strong> ${escapeHtml((s.sailingMonths||[]).join(", ")||"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
+        ${s?`<li><strong>Ship:</strong> ${escapeHtml(s.ship||"Verify")}</li><li><strong>Itinerary:</strong> ${escapeHtml(s.title||"Verify")}</li><li><strong>Sail Date:</strong> ${escapeHtml(s.sailingDate?formatSailingDate(s.sailingDate):"Verify exact date in Seaweb")}</li><li><strong>Departure:</strong> ${escapeHtml(s.departure||"Verify")}</li><li><strong>Duration:</strong> ${escapeHtml(String(s.duration||"Verify"))}${s.duration?" days":""}</li>`:`<li><strong>Real Sailing:</strong> Not selected — trainer must provide/verify sailing details.</li>`}
         <li><strong>Total Guests:</strong> ${d.guestCount}</li>
       </ul>
 
@@ -2187,7 +2241,7 @@ function sailingDetailsVisualHtml(d,pricing){
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🚢','Sailing Details')}<div class="scenario-detail-grid">
     <div><span>Sailing</span><strong>${escapeHtml(s?`${s.ship||'NCL Ship'}${s.title?` • ${s.title}`:''}`:'Trainer-selected NCL sailing')}</strong></div>
     <div><span>Departure</span><strong>${escapeHtml(s?.departure||'Verify in Seaweb')}</strong></div>
-    <div><span>Duration / Date</span><strong>${escapeHtml(s?(s.sailingMonths||[]).join(', ')||`${s.duration||'Verify'} days`:'Verify in Seaweb')}</strong></div>
+    <div><span>Sail Date</span><strong>${escapeHtml(s?.sailingDate?formatSailingDate(s.sailingDate):'Select / verify exact date')}</strong></div>
     <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}</strong></div>
   </div><h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}</section>`;
 }
@@ -2268,7 +2322,7 @@ function generateScenario(){
   const guestNames=[d.guest1,d.guest2].filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
-  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:""}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
   const addOns=[];if(d.fas)addOns.push("Free at Sea");if(d.travel)addOns.push("Travel Protection");if(d.psc)addOns.push("Prepaid Service Charges");
   const pricing=d.pricing?`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>${escapeHtml(d.pricing)}. Reconfirm current Seaweb pricing before class.</span></div>`:`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>Review the current Seaweb pricing and practice quoting what Seaweb displays. Do not use a fabricated amount.</span></div>`;
   const paymentInstruction={
@@ -2403,6 +2457,9 @@ function runValidator(){
   }else{
     if(s){
       add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
+      if(!s.sailingDate)add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
+      else if(s.sailingDateVerified)add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
+      else add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer because the public NCL card did not expose an exact date. Verify it in NCL.com U.S. or Seaweb before class.`);
       if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
       if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
       else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
@@ -2754,7 +2811,7 @@ async function downloadAdaptivePdf(){
 function onePageSailText(d){
   const s=d.sailing;
   if(!s)return "Trainer-selected Norwegian Cruise Line sailing";
-  return `${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}${s.departure?` • From ${s.departure}`:""}${s.sailingMonths?.length?` • ${s.sailingMonths.join(", ")}`:""}`;
+  return `${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}${s.sailingDate?` • ${formatSailingDate(s.sailingDate)}`:""}${s.departure?` • From ${s.departure}`:""}`;
 }
 
 function onePageGuestStatusHtml(d){
@@ -2809,7 +2866,7 @@ function makeOnePageTraineeClone(){
   const primary=guestNames[0]||"the guest";
   const companion=guestNames[1]||"";
   const s=d.sailing;
-  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:""}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
   const tasks=traineeTaskList(d,meta);
   const finalChecks=beforeEndItems(d);
   const page=document.createElement("article");

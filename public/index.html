@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.15" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.16" />
 </head>
 <body>
   <header class="topbar">
@@ -90,8 +90,8 @@
 
       <section id="search" class="page">
         <div class="section-head">
-          <div><h2>Real Sailing Search</h2><p>Public NCL.com data only. Exact cabin inventory and internal Seaweb fields are never inferred.</p></div>
-          <span class="status-badge">Live NCL Adapter</span>
+          <div><h2>Real Sailing Search</h2><p>Public NCL.com U.S. data only. Exact cabin inventory and internal Seaweb fields are never inferred.</p></div>
+          <span class="status-badge">NCL.com U.S. • Live</span>
         </div>
 
         <details class="trainer-instructions tab-instructions trainer-only">
@@ -100,9 +100,9 @@
             <ul>
               <li>Choose a From date. The To date automatically fills 30 days later; shorten it if needed.</li>
               <li>Use only one main search filter: Destination, Embarkation Port, or Ship. Vacation Length is optional.</li>
-              <li>Select <strong>Use in Scenario</strong> on the sailing you want. The sailing will appear at the top of Scenario Generator.</li>
+              <li>Choose the itinerary, then select a <strong>specific sailing date</strong> before clicking <strong>Use in Scenario</strong>. If NCL exposes exact dates, they appear in a dropdown. Otherwise, enter the exact date you verified on NCL.com U.S. or in Seaweb.</li>
               <li>Use port-of-call requirements after retrieving results instead of over-filtering the initial search.</li>
-              <li>This tab uses public NCL.com information only. Verify cabin inventory, exact pricing, and internal rules in Seaweb.</li>
+              <li>This tab uses the U.S. NCL site at <strong>ncl.com</strong>. Verify cabin inventory, exact pricing, and internal rules in Seaweb.</li>
             </ul>
           </div>
         </details>
@@ -164,7 +164,7 @@
             <button id="searchSailingsBtn" class="primary">Search Itineraries</button>
             <button id="clearSearchBtn" class="secondary">Clear</button>
           </div>
-          <div id="searchNotice" class="notice info">Enter a date range of 30 days or less, then choose one search option. Broader searches return more itinerary choices.</div>
+          <div id="searchNotice" class="notice info">Enter a date range of 30 days or less, then choose one search option. After results load, select the exact sailing date you want to use.</div>
         </div>
 
         <div id="searchResults" class="result-list"></div>
@@ -613,6 +613,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.15"></script>
+  <script src="/app.js?v=1.9.16"></script>
 </body>
 </html>
