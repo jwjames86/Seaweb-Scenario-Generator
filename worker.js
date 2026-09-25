@@ -292,8 +292,36 @@ async function handleSailings(request, reqUrl, env) {
   }
 
   const wantedMonths = from && to ? monthsInWindow(from, to) : [];
+
+  // NCL's U.S. vacation page is JavaScript-driven. Pull the structured
+  // itinerary inventory first so the search is not dependent on rendered
+  // result cards appearing in the page HTML.
+  const apiAttempt = await fetchNclUsInventory(criterion, value, from, to, duration);
+  if (apiAttempt.ok && apiAttempt.results.length) {
+    const sourceUrl = buildNclSearchUrls(criterion, value, from, to)[0];
+    return json({
+      live: true,
+      sourceUrl,
+      sourceMarket: "US",
+      retrievedAt: new Date().toISOString(),
+      message: `Found ${apiAttempt.results.length} NCL.com U.S. itinerary option${apiAttempt.results.length === 1 ? "" : "s"} with specific sailing dates.`,
+      results: apiAttempt.results.slice(0, 40),
+      diagnostic: {
+        method: apiAttempt.diagnostic?.method || "ncl-us-inventory-api",
+        inventoryCount: apiAttempt.diagnostic?.inventoryCount || 0,
+        matchedCount: apiAttempt.results.length,
+        currency: apiAttempt.diagnostic?.currency || "",
+        criterion,
+        value,
+        wantedMonths
+      }
+    });
+  }
+
   const candidateUrls = buildNclSearchUrls(criterion, value, from, to);
 
+  // Page parsing remains as a public NCL fallback if the inventory API is
+  // temporarily unavailable.
   // NCL currently exposes more than one public URL vocabulary depending on
   // which page generated the link (for example cruise-ship vs ships). Try the
   // current canonical form first, then known public fallbacks until cards parse.
@@ -371,7 +399,9 @@ async function handleSailings(request, reqUrl, env) {
       ? `Found ${results.length} public NCL U.S. itinerary option${results.length === 1 ? "" : "s"}. Select a specific sailing date before using an itinerary. When NCL does not expose an exact date on the public card, verify the date on NCL.com U.S. or in Seaweb.`
       : parsed.results.length
         ? "NCL.com U.S. itineraries loaded, but no visible public card matched this 30-day window and optional vacation length. Try Any Length or another single search option."
-        : "NCL.com loaded, but no readable itinerary cards were returned from the public page.",
+        : apiAttempt?.error
+          ? `NCL.com U.S. loaded, but the itinerary inventory service did not return usable results (${apiAttempt.error}).`
+          : "NCL.com U.S. loaded, but no readable itinerary data was returned.",
     results,
     diagnostic: {
       ...parsed.diagnostic,
@@ -380,9 +410,335 @@ async function handleSailings(request, reqUrl, env) {
       criterion,
       value,
       wantedMonths,
+      apiAttempt: apiAttempt?.diagnostic || { error: apiAttempt?.error || "" },
       attempts
     }
   });
+}
+
+async function fetchNclUsInventory(criterion, value, from, to, duration) {
+  const apiUrls = [
+    "https://www.ncl.com/api/vacations/v1/itineraries?guests=2",
+    "https://www.ncl.com/api/vacations/v1/itineraries?guests=2&currency=USD&locale=en-US"
+  ];
+
+  const attempts = [];
+  for (const apiUrl of apiUrls) {
+    try {
+      const response = await fetch(apiUrl, {
+        redirect: "follow",
+        headers: {
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Language": "en-US,en;q=0.9",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
+          "Referer": "https://www.ncl.com/vacations",
+          "Cookie": "NCL_LOCALE=en-US; MP_COUNTRY=us; MP_LANG=en"
+        },
+        cf: { cacheTtl: 300, cacheEverything: true }
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      attempts.push({ url: apiUrl, status: response.status, contentType });
+
+      if (!response.ok || !/json/i.test(contentType)) continue;
+
+      const data = await response.json();
+      const rawItineraries = Array.isArray(data?.itineraries)
+        ? data.itineraries
+        : Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data)
+            ? data
+            : [];
+
+      if (!rawItineraries.length) continue;
+
+      const parsed = rawItineraries
+        .map(x => normalizeNclApiItinerary(x))
+        .filter(Boolean);
+
+      if (!parsed.length) continue;
+
+      const explicitCurrencies = [...new Set(parsed.map(x => x.currencyCode).filter(Boolean))];
+      // The U.S. endpoint should quote USD when currency is present. If NCL
+      // returns another storefront, do not mislabel it as U.S. data.
+      if (explicitCurrencies.length && !explicitCurrencies.includes("USD")) {
+        attempts[attempts.length - 1].currencyMismatch = explicitCurrencies.join(",");
+        continue;
+      }
+
+      const results = filterNclInventory(parsed, criterion, value, from, to, duration);
+      return {
+        ok: true,
+        results,
+        diagnostic: {
+          method: "ncl-us-inventory-api",
+          inventoryCount: parsed.length,
+          currency: explicitCurrencies.join(",") || "USD requested",
+          attempts
+        }
+      };
+    } catch (e) {
+      attempts.push({ url: apiUrl, error: String(e?.message || e) });
+    }
+  }
+
+  return {
+    ok: false,
+    results: [],
+    error: "U.S. itinerary inventory unavailable",
+    diagnostic: { method: "ncl-us-inventory-api", attempts }
+  };
+}
+
+function normalizeNclApiItinerary(raw) {
+  if (!raw || typeof raw !== "object") return null;
+
+  const title = clean(
+    raw?.title?.fullTitle ||
+    raw?.title?.title ||
+    raw?.fullTitle ||
+    raw?.itineraryTitle ||
+    raw?.name ||
+    raw?.title ||
+    ""
+  );
+
+  const ship = apiLabel(
+    raw.ship ||
+    raw.shipName ||
+    raw.cruiseDetails?.ship ||
+    raw.vessel
+  );
+
+  let duration = Number(
+    raw.duration ??
+    raw.days ??
+    raw.nights ??
+    raw.cruiseLength ??
+    raw.length ??
+    0
+  );
+  if (!duration && title) {
+    const m = title.match(/(\d{1,2})\s*[-–—]?\s*day/i);
+    if (m) duration = Number(m[1]);
+  }
+
+  const destinations = apiList(raw.destination || raw.destinations)
+    .map(apiLabel)
+    .filter(Boolean);
+
+  const rawPorts =
+    raw.portsOfCall ||
+    raw.ports ||
+    raw.itineraryPorts ||
+    raw.cruiseDetails?.portsOfCall ||
+    [];
+  const ports = apiList(rawPorts).map(apiLabel).filter(Boolean);
+
+  const embarkation =
+    apiLabel(raw.embarkationPort) ||
+    apiLabel(raw.departurePort) ||
+    apiLabel(raw.embarkPort) ||
+    apiLabel(raw.originPort) ||
+    ports[0] ||
+    "";
+
+  const sailings = apiList(
+    raw.sailings ||
+    raw.cruiseDetails?.sailings ||
+    raw.departures ||
+    []
+  );
+
+  const sailingDates = [...new Set(
+    sailings
+      .map(s => normalizeNclApiDate(
+        s?.departureDate ??
+        s?.sailDate ??
+        s?.startDate ??
+        s?.embarkDate ??
+        s?.date
+      ))
+      .filter(Boolean)
+  )].sort();
+
+  const sailingMonths = [...new Set(
+    sailingDates.map(d => {
+      const dt = new Date(d + "T12:00:00Z");
+      return dt.toLocaleString("en-US", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC"
+      });
+    })
+  )];
+
+  const currencyCode = clean(
+    raw?.currency?.code ||
+    raw?.currency?.currencyCode ||
+    raw?.currencyCode ||
+    ""
+  ).toUpperCase();
+
+  const currencySymbol = clean(
+    raw?.currency?.symbol ||
+    raw?.currencySymbol ||
+    ""
+  );
+
+  let lowestPrice = null;
+  for (const sailing of sailings) {
+    for (const pricing of apiList(sailing?.pricing || sailing?.prices || sailing?.staterooms)) {
+      const candidate = Number(
+        pricing?.combinedPrice ??
+        pricing?.price ??
+        pricing?.totalPrice ??
+        pricing?.fare
+      );
+      if (Number.isFinite(candidate) && (lowestPrice === null || candidate < lowestPrice)) {
+        lowestPrice = candidate;
+      }
+    }
+  }
+
+  const code = clean(
+    raw.itineraryCode ||
+    raw.code ||
+    raw.id ||
+    raw.cruiseDetails?.itineraryCode ||
+    ""
+  );
+
+  const sourceUrl = nclApiDetailUrl(raw, code, title);
+
+  return {
+    duration,
+    ship,
+    title: title || "NCL itinerary",
+    departure: embarkation,
+    destinations,
+    sailingMonths,
+    sailingDates,
+    hasMoreDates: false,
+    ports,
+    price: lowestPrice !== null
+      ? `${currencySymbol || (currencyCode === "USD" ? "$" : "")}${lowestPrice.toLocaleString("en-US")} PP${currencyCode ? ` / ${currencyCode}` : ""}`
+      : "",
+    taxes: "",
+    offers: [],
+    sourceUrl,
+    currencyCode,
+    itineraryCode: code,
+    retrievedAt: new Date().toISOString()
+  };
+}
+
+function filterNclInventory(items, criterion, value, from, to, duration) {
+  const wanted = clean(value).toLowerCase();
+
+  return items.filter(r => {
+    const haystack = criterion === "destination"
+      ? `${r.destinations.join(" ")} ${r.title} ${r.ports.join(" ")}`.toLowerCase()
+      : criterion === "departure"
+        ? `${r.departure} ${embarkationCode((r.departure || "").toLowerCase())}`.toLowerCase()
+        : `${r.ship}`.toLowerCase();
+
+    const criterionNeedle = criterion === "departure"
+      ? `${wanted} ${embarkationCode(wanted)}`.trim()
+      : wanted;
+
+    const matchesCriterion = criterionNeedle
+      .split(/\s+/)
+      .filter(Boolean)
+      .some(part => haystack.includes(part));
+
+    if (!matchesCriterion) return false;
+
+    const d = Number(r.duration || 0);
+    if (duration === "1-4" && !(d >= 1 && d <= 4)) return false;
+    if (duration === "5-8" && !(d >= 5 && d <= 8)) return false;
+    if (duration === "9-14" && !(d >= 9 && d <= 14)) return false;
+    if (duration === "15+" && !(d >= 15)) return false;
+
+    if (from && to) {
+      r.sailingDates = (r.sailingDates || []).filter(date => date >= from && date <= to);
+      if (!r.sailingDates.length) return false;
+      r.sailingMonths = [...new Set(r.sailingDates.map(date => {
+        const dt = new Date(date + "T12:00:00Z");
+        return dt.toLocaleString("en-US", {
+          month: "long",
+          year: "numeric",
+          timeZone: "UTC"
+        });
+      }))];
+    }
+
+    return true;
+  }).slice(0, 40);
+}
+
+function apiList(value) {
+  if (Array.isArray(value)) return value;
+  if (value == null) return [];
+  return [value];
+}
+
+function apiLabel(value) {
+  if (value == null) return "";
+  if (typeof value === "string" || typeof value === "number") return clean(value);
+  if (typeof value !== "object") return "";
+  return clean(
+    value.title?.fullTitle ||
+    value.title ||
+    value.name ||
+    value.fullTitle ||
+    value.displayName ||
+    value.description ||
+    value.label ||
+    value.code ||
+    ""
+  );
+}
+
+function normalizeNclApiDate(value) {
+  if (value == null || value === "") return "";
+
+  if (typeof value === "number" || /^\d{10,13}$/.test(String(value))) {
+    let n = Number(value);
+    if (!Number.isFinite(n)) return "";
+    if (n < 100000000000) n *= 1000;
+    const dt = new Date(n);
+    return Number.isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10);
+  }
+
+  const text = String(value).trim();
+  const iso = text.match(/^(20\d{2})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const dt = new Date(text);
+  return Number.isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10);
+}
+
+function nclApiDetailUrl(raw, code, title) {
+  const direct =
+    raw?.detailUrl ||
+    raw?.url ||
+    raw?.bookingUrl ||
+    raw?.cruiseUrl ||
+    raw?.cruiseDetails?.url ||
+    "";
+  if (direct) {
+    try {
+      return normalizeNclUsUrl(new URL(direct, "https://www.ncl.com")).toString();
+    } catch (_) {}
+  }
+
+  if (code) {
+    const titleSlug = slug(title || "cruise");
+    return `https://www.ncl.com/cruises/${titleSlug}-${encodeURIComponent(code)}?itineraryCode=${encodeURIComponent(code)}`;
+  }
+  return "https://www.ncl.com/vacations";
 }
 
 function normalizeNclUsUrl(input) {

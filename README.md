@@ -507,3 +507,30 @@ The V1.9.16–V1.9.19 builds could fail during Wrangler deployment because the e
 - Removes the Wrangler / esbuild syntax error reported at `worker.js:758`.
 - Keeps the V1.9.19 always-visible **Itinerary** and **Specific Sailing Date** selectors.
 - No feature rollback: all V1.9.19, coupon, NCL.com U.S., export, caller-type, Air, and multi-focus updates remain included.
+
+
+## V1.9.21 – NCL U.S. Inventory API Search
+
+The U.S. `ncl.com/vacations` page is JavaScript-driven and can return only the page shell to an automated browser even when the page itself loads normally for a guest. This caused the Scenario Generator to report that NCL loaded but no readable itinerary cards were found.
+
+### New search path
+Real Sailing Search now requests NCL's structured public itinerary inventory first:
+
+`https://www.ncl.com/api/vacations/v1/itineraries`
+
+The request explicitly asks for the U.S. / English storefront. The app then filters the returned NCL inventory locally by:
+
+- Destination
+- Embarkation Port
+- Ship
+- 30-day date window
+- Optional vacation length
+
+### Exact sailing dates
+Structured inventory includes the sailing records for each itinerary, so the **Specific Sailing Date** dropdown can now be populated from exact departure dates instead of trying to infer dates from the public result card.
+
+### U.S. market protection
+When NCL returns an explicit currency, the API result is only accepted as U.S. inventory when USD is present. This prevents another market from silently being labeled as U.S.
+
+### Fallback
+The Browser Rendering / public-page parser remains in place as a fallback if the itinerary inventory endpoint is temporarily unavailable.
