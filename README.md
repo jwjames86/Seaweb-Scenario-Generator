@@ -448,3 +448,13 @@ Every real itinerary must now have a **specific sailing date** before it can be 
 - Trainer-entered dates are clearly marked for verification in NCL.com U.S. / Seaweb.
 - Selected sailing summaries, the visual Sailing Details section, reference details, customer-story wording, saved scenarios, PDF/PNG exports, and Scenario Validator use the exact selected date.
 - The Validator blocks a real-sailing scenario that does not have a specific date.
+
+
+## V1.9.17 – Credits & Coupons Layout Fix
+
+- Fixed the Credits & Coupons editor overflowing the Scenario Generator column.
+- Coupon rows now use a responsive 12-column layout.
+- Credit/Coupon Type, Source Guest, and Source Latitudes # stay on a clean first row at desktop widths.
+- Details / Value and Remove use a second row so fields remain readable without extending beyond the panel.
+- Inputs are constrained to the panel width.
+- Narrow screens progressively reflow and mobile stacks to one column.
