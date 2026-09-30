@@ -280,13 +280,38 @@ async function handleSailingDates(reqUrl, env) {
   try {
     const u = normalizeNclUsUrl(new URL(source));
     if (!/(^|\.)ncl\.com$/i.test(u.hostname)) {
-      return json({ error: "Sailing dates can only be loaded from ncl.com.", dates: [] }, 400);
+      return json({ error: "Sailing dates can only be attached to an ncl.com itinerary.", dates: [] }, 400);
     }
     sourceUrl = u.toString();
   } catch {
     return json({ error: "Invalid NCL source URL.", dates: [] }, 400);
   }
 
+  // Hybrid source strategy:
+  // 1) NCL remains the itinerary source.
+  // 2) CruiseMapper is used only to supply candidate sailing dates when NCL's
+  //    public cards do not expose the exact departures.
+  const publicSchedule = await loadCruiseMapperSchedule(env, {
+    ship, title, departure, duration, ports, from, to
+  });
+
+  if (publicSchedule.dates.length) {
+    return json({
+      ok: true,
+      dates: publicSchedule.dates,
+      sourceType: "public-schedule",
+      sourceLabel: "CruiseMapper public schedule",
+      scheduleSourceUrl: publicSchedule.sourceUrl,
+      verificationRequired: true,
+      sourceMarket: "US",
+      retrievedAt: new Date().toISOString(),
+      message: "Candidate sailing dates loaded from a public cruise schedule. Verify the selected date in NCL.com U.S. or Seaweb before class.",
+      diagnostic: publicSchedule.diagnostic
+    });
+  }
+
+  // If the public schedule cannot resolve the selected ship / itinerary, keep
+  // the previous NCL browser capture as a secondary fallback.
   const liveCapture = await captureNclSailingDatesFromBrowser(env, sourceUrl, {
     ship, title, departure, duration, ports, from, to
   });
@@ -296,75 +321,336 @@ async function handleSailingDates(reqUrl, env) {
       ok: true,
       dates: liveCapture.dates,
       detailUrl: liveCapture.detailUrl || sourceUrl,
+      sourceType: "ncl",
+      sourceLabel: "NCL.com U.S.",
+      verificationRequired: false,
       sourceMarket: "US",
       retrievedAt: new Date().toISOString(),
       diagnostic: {
         method: "puppeteer-network-capture",
+        publicSchedule: publicSchedule.diagnostic,
         browser: liveCapture.diagnostic
       }
     });
   }
 
-  let detailUrl = looksLikeNclCruiseDetailUrl(sourceUrl) ? sourceUrl : "";
-  let discovery = {
-    method: detailUrl ? "source-detail-url" : "search-page-link-discovery",
-    browserCapture: liveCapture.diagnostic
-  };
+  return json({
+    ok: true,
+    dates: [],
+    detailUrl: sourceUrl,
+    sourceType: "manual",
+    sourceLabel: "Trainer verified",
+    verificationRequired: true,
+    sourceMarket: "US",
+    retrievedAt: new Date().toISOString(),
+    message: "Neither NCL.com U.S. nor the public schedule exposed usable dates for this itinerary.",
+    diagnostic: {
+      method: "hybrid-date-lookup",
+      publicSchedule: publicSchedule.diagnostic,
+      browser: liveCapture.diagnostic
+    }
+  });
+}
 
-  if (!detailUrl) {
-    const found = await discoverNclCruiseDetailUrl(env, sourceUrl, {
-      ship, title, departure, duration
-    });
-    detailUrl = found.url || "";
-    discovery = found.diagnostic || discovery;
+const CRUISEMAPPER_NCL_SHIPS = {
+  "norwegian aqua": "https://www.cruisemapper.com/ships/Norwegian-Aqua-2218",
+  "norwegian luna": "https://www.cruisemapper.com/ships/Norwegian-Luna-2219",
+  "norwegian prima": "https://www.cruisemapper.com/ships/Norwegian-Prima-2216",
+  "norwegian viva": "https://www.cruisemapper.com/ships/Norwegian-Viva-2217",
+  "norwegian aura": "https://www.cruisemapper.com/ships/Norwegian-Aura-2220",
+  "norwegian encore": "https://www.cruisemapper.com/ships/Norwegian-Encore-1518",
+  "norwegian bliss": "https://www.cruisemapper.com/ships/Norwegian-Bliss-1454",
+  "norwegian joy": "https://www.cruisemapper.com/ships/Norwegian-Joy-1166",
+  "norwegian breakaway": "https://www.cruisemapper.com/ships/Norwegian-Breakaway-584",
+  "norwegian getaway": "https://www.cruisemapper.com/ships/Norwegian-Getaway-793",
+  "norwegian escape": "https://www.cruisemapper.com/ships/Norwegian-Escape-878",
+  "norwegian epic": "https://www.cruisemapper.com/ships/Norwegian-Epic-642",
+  "norwegian gem": "https://www.cruisemapper.com/ships/Norwegian-Gem-573",
+  "norwegian jade": "https://www.cruisemapper.com/ships/Norwegian-Jade-639",
+  "norwegian jewel": "https://www.cruisemapper.com/ships/Norwegian-Jewel-583",
+  "norwegian pearl": "https://www.cruisemapper.com/ships/Norwegian-Pearl-693",
+  "norwegian dawn": "https://www.cruisemapper.com/ships/Norwegian-Dawn-699",
+  "norwegian star": "https://www.cruisemapper.com/ships/Norwegian-Star-706",
+  "norwegian sun": "https://www.cruisemapper.com/ships/Norwegian-Sun-735",
+  "norwegian spirit": "https://www.cruisemapper.com/ships/Norwegian-Spirit-702",
+  "pride of america": "https://www.cruisemapper.com/ships/Pride-of-America-594"
+};
+
+async function loadCruiseMapperSchedule(env, target) {
+  const shipKey = clean(target.ship || "").toLowerCase();
+  const sourceUrl = CRUISEMAPPER_NCL_SHIPS[shipKey] || "";
+
+  if (!sourceUrl) {
+    return {
+      dates: [],
+      sourceUrl: "",
+      diagnostic: {
+        method: "cruisemapper-public-schedule",
+        error: `No public-schedule mapping for ${target.ship || "this ship"}`
+      }
+    };
   }
 
-  const candidates = [];
-  if (detailUrl) candidates.push(detailUrl);
-  if (!candidates.includes(sourceUrl)) candidates.push(sourceUrl);
-
   const attempts = [];
-  for (const url of candidates) {
-    const loaded = await loadNclDateText(env, url);
-    attempts.push(loaded.diagnostic || { url });
 
-    if (!loaded.ok) continue;
+  // Static HTML first — CruiseMapper itinerary tables are server-rendered.
+  try {
+    const response = await fetch(sourceUrl, {
+      redirect: "follow",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+        "Accept-Language": "en-US,en;q=0.9"
+      },
+      cf: { cacheTtl: 1800, cacheEverything: true }
+    });
 
-    let dates = [
-      ...(loaded.dates || []),
-      ...extractContextualSailingDates(loaded.raw || ""),
-      ...extractExactSailingDates(loaded.text || "")
-    ];
-    dates = [...new Set(dates)].sort();
-    if (from) dates = dates.filter(d => d >= from);
-    if (to) dates = dates.filter(d => d <= to);
+    const html = await response.text();
+    const rows = response.ok ? parseCruiseMapperHtmlRows(html) : [];
+    attempts.push({
+      method: "fetch-html",
+      status: response.status,
+      bytes: html.length,
+      rows: rows.length
+    });
 
+    const dates = selectCruiseMapperDates(rows, target);
     if (dates.length) {
-      return json({
-        ok: true,
+      return {
         dates,
-        detailUrl: url,
-        sourceMarket: "US",
-        retrievedAt: new Date().toISOString(),
+        sourceUrl,
         diagnostic: {
-          discovery,
-          attempts,
-          exactDates: dates.length
+          method: "cruisemapper-public-schedule",
+          transport: "fetch-html",
+          rows: rows.length,
+          matchedDates: dates.length,
+          attempts
         }
+      };
+    }
+  } catch (e) {
+    attempts.push({
+      method: "fetch-html",
+      error: String(e?.message || e)
+    });
+  }
+
+  // Browser-rendered Markdown is the fallback if direct HTML is challenged.
+  if (env?.BROWSER && typeof env.BROWSER.quickAction === "function") {
+    try {
+      const response = await env.BROWSER.quickAction("markdown", {
+        url: sourceUrl,
+        gotoOptions: {
+          waitUntil: "networkidle2",
+          timeout: 30000
+        },
+        waitForTimeout: 2500,
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
+      });
+
+      if (response.ok) {
+        const raw = unwrapQuickActionText(await response.text(), "markdown");
+        const rows = parseCruiseMapperMarkdownRows(raw);
+        attempts.push({
+          method: "browser-markdown",
+          bytes: raw.length,
+          rows: rows.length
+        });
+
+        const dates = selectCruiseMapperDates(rows, target);
+        if (dates.length) {
+          return {
+            dates,
+            sourceUrl,
+            diagnostic: {
+              method: "cruisemapper-public-schedule",
+              transport: "browser-markdown",
+              rows: rows.length,
+              matchedDates: dates.length,
+              attempts
+            }
+          };
+        }
+      }
+    } catch (e) {
+      attempts.push({
+        method: "browser-markdown",
+        error: String(e?.message || e)
       });
     }
   }
 
-  return json({
-    ok: true,
+  return {
     dates: [],
-    detailUrl: detailUrl || sourceUrl,
-    sourceMarket: "US",
-    retrievedAt: new Date().toISOString(),
-    message: "NCL.com U.S. did not expose exact sailing dates for this itinerary.",
-    diagnostic: { discovery, attempts }
-  });
+    sourceUrl,
+    diagnostic: {
+      method: "cruisemapper-public-schedule",
+      matchedDates: 0,
+      attempts
+    }
+  };
 }
+
+function parseCruiseMapperMarkdownRows(markdown) {
+  const rows = [];
+  const text = String(markdown || "");
+  const monthNumbers = {
+    jan:1,feb:2,mar:3,apr:4,may:5,jun:6,
+    jul:7,aug:8,sep:9,oct:10,nov:11,dec:12
+  };
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || !line.includes("|")) continue;
+
+    const m = line.match(
+      /^\|?\s*(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})\s*\|\s*(\d+)\s+nights?\s*,\s*([^|]+?)\s*\|\s*([^|]+?)\s*(?:\||$)/i
+    );
+    if (!m) continue;
+
+    const month = monthNumbers[m[2].toLowerCase()];
+    const date = month ? isoDate(Number(m[1]), month, Number(m[3])) : "";
+    if (!date) continue;
+
+    rows.push({
+      date,
+      duration: Number(m[4]),
+      itinerary: clean(m[5]),
+      departure: clean(m[6])
+    });
+  }
+
+  return rows;
+}
+
+function parseCruiseMapperHtmlRows(html) {
+  const rows = [];
+  const source = String(html || "");
+  const monthNumbers = {
+    jan:1,feb:2,mar:3,apr:4,may:5,jun:6,
+    jul:7,aug:8,sep:9,oct:10,nov:11,dec:12
+  };
+
+  for (const rowMatch of source.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
+    const cells = [...rowMatch[1].matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)]
+      .map(m => clean(decode(
+        m[1]
+          .replace(/<script[\s\S]*?<\/script>/gi, "")
+          .replace(/<style[\s\S]*?<\/style>/gi, "")
+          .replace(/<br\s*\/?>/gi, " ")
+          .replace(/<[^>]+>/g, " ")
+      )));
+
+    if (cells.length < 3) continue;
+
+    const dateMatch = cells[0].match(/^(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})$/i);
+    const itineraryMatch = cells[1].match(/^(\d+)\s+nights?\s*,\s*(.+)$/i);
+    if (!dateMatch || !itineraryMatch) continue;
+
+    const month = monthNumbers[dateMatch[2].toLowerCase()];
+    const date = month
+      ? isoDate(Number(dateMatch[1]), month, Number(dateMatch[3]))
+      : "";
+    if (!date) continue;
+
+    rows.push({
+      date,
+      duration: Number(itineraryMatch[1]),
+      itinerary: clean(itineraryMatch[2]),
+      departure: clean(cells[2])
+    });
+  }
+
+  return rows;
+}
+
+function selectCruiseMapperDates(rows, target) {
+  const from = target.from || "";
+  const to = target.to || "";
+  const duration = Number(target.duration || 0);
+  const targetDeparture = canonicalSchedulePort(target.departure || "");
+  const targetTitle = clean(target.title || "").toLowerCase();
+
+  let matches = rows.filter(row => {
+    if (from && row.date < from) return false;
+    if (to && row.date > to) return false;
+    if (duration && Number(row.duration) !== duration) return false;
+
+    if (targetDeparture) {
+      const rowDeparture = canonicalSchedulePort(row.departure || "");
+      if (rowDeparture && rowDeparture !== targetDeparture) return false;
+    }
+
+    return true;
+  });
+
+  // If multiple same-duration sailings depart from the same port inside the
+  // 30-day window, keep them all as candidate public-schedule dates. The UI
+  // clearly tells the trainer to verify the final selected date in NCL/Seaweb.
+  return [...new Set(matches.map(row => row.date))].sort();
+}
+
+function canonicalSchedulePort(value) {
+  const text = clean(value || "").toLowerCase();
+  if (!text) return "";
+
+  const aliases = [
+    ["port canaveral", "port canaveral"],
+    ["orlando", "port canaveral"],
+    ["miami", "miami"],
+    ["seattle", "seattle"],
+    ["new york", "new york"],
+    ["nyc", "new york"],
+    ["san juan", "san juan"],
+    ["los angeles", "los angeles"],
+    ["long beach", "los angeles"],
+    ["san pedro", "los angeles"],
+    ["boston", "boston"],
+    ["new orleans", "new orleans"],
+    ["tampa", "tampa"],
+    ["honolulu", "honolulu"],
+    ["barcelona", "barcelona"],
+    ["civitavecchia", "civitavecchia"],
+    ["rome", "civitavecchia"],
+    ["ravenna", "ravenna"],
+    ["southampton", "southampton"],
+    ["copenhagen", "copenhagen"],
+    ["istanbul", "istanbul"],
+    ["piraeus", "piraeus"],
+    ["athens", "piraeus"],
+    ["reykjavik", "reykjavik"],
+    ["galveston", "galveston"],
+    ["jacksonville", "jacksonville"],
+    ["philadelphia", "philadelphia"],
+    ["quebec city", "quebec city"],
+    ["vancouver", "vancouver"],
+    ["whittier", "whittier"],
+    ["helsinki", "helsinki"],
+    ["trieste", "trieste"],
+    ["tarragona", "tarragona"],
+    ["lisbon", "lisbon"],
+    ["auckland", "auckland"],
+    ["sydney", "sydney"],
+    ["papeete", "papeete"],
+    ["yokohama", "yokohama"],
+    ["tokyo", "yokohama"],
+    ["hong kong", "hong kong"],
+    ["incheon", "incheon"],
+    ["seoul", "incheon"]
+  ];
+
+  for (const [needle, canonical] of aliases) {
+    if (text.includes(needle)) return canonical;
+  }
+
+  return text
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\b(usa|united states|florida|california|washington|massachusetts|texas|louisiana|hawaii|spain|italy|england|greece|denmark|iceland|canada|puerto rico)\b/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 
 async function captureNclSailingDatesFromBrowser(env, sourceUrl, target) {
   if (!env?.BROWSER) {

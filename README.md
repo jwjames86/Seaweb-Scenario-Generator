@@ -626,3 +626,133 @@ This update adds Cloudflare's supported Puppeteer package:
 The ZIP therefore includes **package.json** and **wrangler.toml** in addition to the normal five files. Upload all seven files for this version.
 
 The manual Verified Sailing Date field remains only as a fallback if NCL's live browser session truly returns no selectable dates.
+
+
+## V1.9.27 – Hybrid Public Sailing Schedule
+
+NCL.com U.S. remains the authoritative source used by Real Sailing Search for the **itinerary itself**: ship, route, embarkation port, duration, ports and public offers.
+
+NCL's public pages do not consistently expose every exact departure date to automated browser sessions. V1.9.27 therefore uses a second public source only for the **date dropdown**.
+
+### Sailing-date source
+When an NCL itinerary does not already contain exact dates, the generator checks the corresponding ship's published itinerary schedule on **CruiseMapper** and filters it by:
+
+- ship
+- departure port
+- cruise duration
+- the trainer's original 30-day From/To window
+
+The returned dates populate **Specific Sailing Date** automatically.
+
+### Source transparency
+The interface keeps the sources separate:
+
+- **Itinerary verified from NCL.com U.S.**
+- **Sailing date source: CruiseMapper public schedule — verify in NCL.com U.S. / Seaweb before class**
+
+A CruiseMapper date is never labeled as NCL-verified.
+
+### Supported NCL ships
+The public-schedule lookup includes Norwegian Aqua, Luna, Prima, Viva, Aura, Encore, Bliss, Joy, Breakaway, Getaway, Escape, Epic, Gem, Jade, Jewel, Pearl, Dawn, Star, Sun, Spirit and Pride of America.
+
+### Fallback
+If neither NCL nor the public schedule returns a usable date, the **Verified Sailing Date** field remains available for a trainer-entered date that has been personally confirmed in NCL.com U.S. or Seaweb.
+
+
+## V1.9.28 – Reinstate Cancelled Reservation Roleplay
+
+A new Guest Services Scenario Focus is available:
+
+**Reinstate Cancelled Reservation – Roleplay**
+
+### Automatic setup
+Selecting this focus automatically:
+- switches to **Modify Existing Reservation**
+- selects **Cancel / Reinstate Reservation**
+- sets **Refund / Reinstate**
+- enables **Comments**
+- enables **Confirmation**
+- adds the reinstatement request to the servicing instructions
+
+### Roleplay
+- One trainee is the **Cruise Specialist**
+- One trainee is the **Direct Guest or Travel Agent**, depending on the cancelled reservation being used
+- Use a training reservation from **yesterday that was cancelled**
+- After the first interaction, **switch roles and repeat**
+
+### Required workflow
+The generated scenario requires:
+1. GDPR verification before servicing.
+2. **Reservation Number — REQUIRED**.
+3. Travel Agent agency identifier when the Travel Agent GDPR path applies.
+4. Verify the reservation was cancelled within the **last 24 hours**.
+5. Verify the **previous stateroom** is still available.
+6. Verify the **pricing is the same as before**.
+7. Reinstate the reservation when it qualifies.
+8. **Store Changes**.
+9. Recap everything with the caller.
+10. Add reservation **Comments**.
+11. Send the appropriate **Confirmation**.
+12. Complete the call closing.
+13. Switch roles and repeat.
+
+The generated Trainee and Trainer views include a visual **Partner Roleplay** section.
+
+
+## V1.9.29 – Roleplay Builder + Solo Practice
+
+### New Scenario Focus: Solo Guest / Studio Booking
+Guest Services now includes **Solo Guest / Studio Booking**. Selecting it automatically configures:
+- Create New Reservation
+- Travel Agent caller
+- Norwegian Training Travel / 305-436-1000
+- Kyle James as the Travel Agent in the generated scenario
+- Tom Holland as the solo guest
+- Guest search by Last Name + DOB 06/01/1996
+- Studio / Solo category
+- Free at Sea
+- Pre-Paid Service Charges
+- Norwegian Care
+- Kosher Meals reminder
+- Minimum Deposit
+- training card 4917 6100 0000 0000 / 04-2027 / 123 / 123 Sesame Street
+- Guest + Travel Agent confirmations to training123@ncl.com
+- Compass comments
+
+The generated card includes the required advertised-pricing script.
+
+### New Scenario Focus: Add Guest & Upgrade Stateroom – Roleplay
+Guest Services now includes **Add Guest & Upgrade Stateroom – Roleplay** as the servicing follow-up to the Solo practice.
+
+Selecting it automatically configures:
+- Modify Existing Reservation
+- Travel Agent GDPR
+- Add Guest
+- Taylor as the guest being added
+- Latitudes #272279126
+- Upgrade from Studio to a category accommodating two guests
+- Near elevators / stairs preference
+- Twin Beds
+- retain Tom's Kosher Meals
+- Taylor mushroom allergy
+- verify Free at Sea, Pre-Paid Service Charges and Norwegian Care for both
+- check for additional deposit and collect only when due
+- Store Changes
+- Guest + Travel Agent confirmations
+- Compass comments
+- partner roleplay / switch roles
+
+### Make Any Scenario a Roleplay
+After any standard scenario has been generated, a new **Make Roleplay** button appears in the Generator output toolbar.
+
+Selecting it:
+- keeps the existing sailing, guests, focuses, payment requirements and scenario instructions
+- converts the card into a two-person **Cruise Specialist + Caller** roleplay
+- automatically labels the caller as Direct Guest, Travel Agent, Guest, or the selected GDPR caller type
+- tells the Caller to reveal information naturally rather than giving every detail at once
+- adds a role-switch instruction so both trainees practice the Cruise Specialist role
+- updates the final checklist for the roleplay format
+
+Select **Standard Scenario** to change a manually converted roleplay back to the normal individual-practice version.
+
+Dedicated roleplay Scenario Focuses remain locked as roleplays.
