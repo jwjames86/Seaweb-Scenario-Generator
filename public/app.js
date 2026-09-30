@@ -1765,10 +1765,10 @@ async function updateDateChooserForItinerary(){
     $("exactDateSelectField").classList.remove("hidden-field");
     $("manualDateField").classList.add("hidden-field");
     exactSelect.disabled=true;
-    exactSelect.innerHTML='<option value="">Loading exact sailing dates from NCL.com U.S.…</option>';
+    exactSelect.innerHTML='<option value="">Loading specific sailing dates from the public schedule…</option>';
     $("useItineraryDateBtn").disabled=true;
     $("itineraryChooserNotice").className="notice info";
-    $("itineraryChooserNotice").textContent="Opening the live NCL itinerary and loading its available departure dates…";
+    $("itineraryChooserNotice").textContent="Loading the matching departure dates for this itinerary…";
 
     try{
       const params=new URLSearchParams({
@@ -1781,8 +1781,19 @@ async function updateDateChooserForItinerary(){
         from:$("searchFrom")?.value||"",
         to:$("searchTo")?.value||""
       });
-      const res=await fetch(`/api/sailing-dates?${params.toString()}`,{cache:"no-store"});
-      const data=await res.json().catch(()=>({}));
+      const controller=new AbortController();
+      const timeoutId=setTimeout(()=>controller.abort(),18000);
+      let res;
+      let data={};
+      try{
+        res=await fetch(`/api/sailing-dates?${params.toString()}&_v=1.9.30`,{
+          cache:"no-store",
+          signal:controller.signal
+        });
+        data=await res.json().catch(()=>({}));
+      }finally{
+        clearTimeout(timeoutId);
+      }
 
       // Ignore a response if the trainer selected a different itinerary while
       // this lookup was running.
@@ -1797,7 +1808,13 @@ async function updateDateChooserForItinerary(){
         s.scheduleVerificationRequired=data.verificationRequired!==false;
         exact=s.sailingDates;
       }
-    }catch(_){}
+    }catch(err){
+      if(state.pendingSailingIndex!==selectedIndex)return;
+      $("itineraryChooserNotice").className="notice warning";
+      $("itineraryChooserNotice").textContent=err?.name==="AbortError"
+        ?"The sailing-date lookup took too long. Use the verified date field or choose the itinerary again to retry."
+        :"The sailing-date lookup could not be completed. Use the verified date field or choose the itinerary again to retry.";
+    }
   }
 
   if(state.pendingSailingIndex!==selectedIndex)return;
@@ -1820,7 +1837,7 @@ async function updateDateChooserForItinerary(){
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="Neither NCL.com U.S. nor the public sailing schedule returned usable dates. Use the verified date field only as a fallback.";
+    $("itineraryChooserNotice").textContent="No matching public schedule dates were returned within this search window. You can use the verified date field, or adjust the search dates and try again.";
   }
 
   updateUseSailingButton();
