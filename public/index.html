@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.30" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.31" />
 </head>
 <body>
   <header class="topbar">
@@ -235,6 +235,7 @@
               <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
               <li>Select <strong>Generate Scenario</strong>, then review the card on the right. Trainer View includes coaching information; Trainee View hides trainer-only content.</li>
               <li>After a scenario is created, select <strong>Make Roleplay</strong> to instantly convert it into a two-person Cruise Specialist / Caller roleplay. Select <strong>Standard Scenario</strong> to change it back.</li>
+              <li>Select <strong>Create Follow-Up Roleplay</strong> to turn the completed reservation into a new servicing call. Choose the changes the caller wants to make, add your own custom instructions, and the generator creates a separate GDPR-based servicing roleplay.</li>
               <li>Use <strong>Start New Scenario</strong> to clear the current setup and generated scenario before building a completely different exercise.</li>
             </ul>
           </div>
@@ -588,6 +589,7 @@
                   </div>
                 </div>
                 <button id="roleplayScenarioBtn" class="tiny roleplay-toggle-btn" type="button" disabled>Make Roleplay</button>
+                <button id="followUpRoleplayBtn" class="tiny followup-roleplay-btn" type="button" disabled>Create Follow-Up Roleplay</button>
                 <button id="printScenarioBtn" class="tiny">Print</button>
                 <button id="saveScenarioBtn" class="tiny primary">Save</button>
               </div>
@@ -652,7 +654,71 @@
     </main>
   </div>
 
+  <dialog id="followUpRoleplayDialog" class="followup-dialog">
+    <form method="dialog" class="followup-dialog-card" id="followUpRoleplayForm">
+      <div class="followup-dialog-head">
+        <div>
+          <div class="eyebrow">FOLLOW-UP SERVICING ROLEPLAY</div>
+          <h2>Create a Call-Back Scenario</h2>
+          <p>Use the reservation from the scenario you just created, then choose what the Guest or Travel Agent is calling back to change.</p>
+        </div>
+        <button id="closeFollowUpRoleplayBtn" class="dialog-close" value="cancel" type="submit" aria-label="Close">×</button>
+      </div>
+      <div class="followup-source-card" id="followUpSourceSummary"></div>
+      <div class="followup-form-grid">
+        <label>Caller for the follow-up
+          <select id="followUpCallerType">
+            <option value="same">Same caller / booking source as original scenario</option>
+            <option value="direct_guest">Direct Guest</option>
+            <option value="travel_agent">Travel Agent</option>
+          </select>
+          <span class="field-hint">The generated servicing roleplay automatically uses the correct GDPR path. Reservation Number is always required.</span>
+        </label>
+        <label id="followUpAgencyField">Travel Agency ID or Phone Number
+          <input id="followUpAgency" type="text" placeholder="Use original agency or enter a training Agency ID / phone number" />
+          <span class="field-hint">Used when the follow-up caller is a Travel Agent.</span>
+        </label>
+      </div>
+      <div class="followup-change-section">
+        <div class="followup-change-head">
+          <div><strong>What does the caller want to change?</strong><small>Select as many servicing requests as you want in the same roleplay.</small></div>
+          <button id="clearFollowUpChangesBtn" class="secondary tiny" type="button">Clear</button>
+        </div>
+        <div class="followup-change-grid" id="followUpChangeOptions">
+          <label><input type="checkbox" value="add_guest" /> <span><strong>Add a Guest</strong><small>Add another guest to the reservation.</small></span></label>
+          <label><input type="checkbox" value="remove_guest" /> <span><strong>Remove a Guest</strong><small>Remove an existing guest and review pricing.</small></span></label>
+          <label><input type="checkbox" value="stateroom" /> <span><strong>Change / Upgrade Stateroom</strong><small>Category, stateroom number, location or capacity change.</small></span></label>
+          <label><input type="checkbox" value="guest_info" /> <span><strong>Update Guest Information</strong><small>Name, contact or other permitted guest-information change.</small></span></label>
+          <label><input type="checkbox" value="special_request" /> <span><strong>Special Request / Allergy</strong><small>Add or update a special request, meal need or allergy.</small></span></label>
+          <label><input type="checkbox" value="bed_config" /> <span><strong>Bed Configuration</strong><small>Change bed setup when supported by the stateroom.</small></span></label>
+          <label><input type="checkbox" value="fas" /> <span><strong>Free at Sea</strong><small>Add, remove or verify applicable Free at Sea selections.</small></span></label>
+          <label><input type="checkbox" value="ppsrvc" /> <span><strong>Pre-Paid Service Charges</strong><small>Add, remove or update PPSRVCHG.</small></span></label>
+          <label><input type="checkbox" value="care" /> <span><strong>Norwegian Care</strong><small>Add, remove or review Travel Protection.</small></span></label>
+          <label><input type="checkbox" value="air_transfer" /> <span><strong>Air / Transfers</strong><small>Add or modify air, deviations, ground transfers or related details.</small></span></label>
+          <label><input type="checkbox" value="dining_amenity" /> <span><strong>Dining / Entertainment / Amenity</strong><small>Add or change a reservation-level amenity or onboard item.</small></span></label>
+          <label><input type="checkbox" value="coupon_credit" /> <span><strong>Coupon / Credit</strong><small>Apply or review an eligible coupon, FCC, CruiseNext or other credit.</small></span></label>
+          <label><input type="checkbox" value="price_drop" /> <span><strong>Price Drop</strong><small>Research the current pricing and follow the applicable price-drop workflow.</small></span></label>
+          <label><input type="checkbox" value="payment" /> <span><strong>Payment / Additional Deposit</strong><small>Review or collect an amount due after servicing changes.</small></span></label>
+          <label><input type="checkbox" value="cancel_reinstate" /> <span><strong>Cancel / Reinstate</strong><small>Practice the applicable cancellation or reinstatement workflow.</small></span></label>
+        </div>
+      </div>
+      <label class="followup-custom-field">Specific changes / caller details
+        <textarea id="followUpCustomChanges" rows="5" placeholder="Example: Add Taylor using Latitudes #272279126, upgrade from Studio to a Balcony near the elevators, set Twin Beds, and add a mushroom allergy."></textarea>
+        <span class="field-hint">Use this for names, Latitudes numbers, preferred category/location, special requests, amounts, or any other details the trainee should discover during the call.</span>
+      </label>
+      <div class="followup-options-row">
+        <label class="check-line"><input id="followUpIncludeCard" type="checkbox" checked /> Include the training credit card in case an additional payment is due</label>
+        <label class="check-line"><input id="followUpKeepBenefits" type="checkbox" checked /> Tell trainee to verify existing promotions / add-ons after the changes</label>
+      </div>
+      <div id="followUpBuilderNotice" class="notice warning hidden-field"></div>
+      <div class="followup-dialog-actions">
+        <button class="secondary" value="cancel" type="submit">Cancel</button>
+        <button id="buildFollowUpRoleplayBtn" class="primary" type="button">Create Follow-Up Roleplay</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.30"></script>
+  <script src="/app.js?v=1.9.31"></script>
 </body>
 </html>

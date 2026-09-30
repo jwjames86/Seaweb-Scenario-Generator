@@ -2710,6 +2710,7 @@ function resetScenarioForm(){
   $("scenarioStatus").className="status-badge neutral";
   $("scenarioStatus").textContent="Draft";
   updateRoleplayScenarioButton();
+  updateFollowUpRoleplayButton();
   clearValidationDisplay();
   setMode("trainer");
   flash("Scenario cleared. You can start a brand-new exercise.");
@@ -2894,6 +2895,152 @@ function finalReservationCheckHtml(d,meta){
     : [...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
   return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
 }
+const FOLLOW_UP_CHANGE_LIBRARY={
+  add_guest:{label:"Add a Guest",trainee:"Add the requested guest. Confirm required guest information, occupancy, pricing, promotions and deposit implications before saving.",caller:"You want to add another guest. Provide the new guest information only as the Cruise Specialist asks for it."},
+  remove_guest:{label:"Remove a Guest",trainee:"Remove the requested guest only after reviewing the reservation impact, updated pricing, occupancy, promotions and any applicable refund or amount due.",caller:"You want to remove a guest. Allow the Cruise Specialist to review the impact before agreeing to proceed."},
+  stateroom:{label:"Change / Upgrade Stateroom",trainee:"Research an appropriate category and available stateroom, review occupancy and location, quote updated advertised pricing and the reservation total, then receive approval before changing the room.",caller:"You want to change the category or stateroom. Give your room preferences as the Cruise Specialist asks about them."},
+  guest_info:{label:"Update Guest Information",trainee:"Review the requested guest-information change and follow the applicable Seaweb / NCLHelp workflow before saving it.",caller:"You need information on a guest updated. Provide the details only when the Cruise Specialist asks the appropriate questions."},
+  special_request:{label:"Special Request / Allergy",trainee:"Add or update the requested special request, meal need or allergy and make sure it is associated with the correct guest.",caller:"You need a special request, meal need or allergy added or updated."},
+  bed_config:{label:"Bed Configuration",trainee:"Review the requested bed setup and update it when supported by the assigned stateroom.",caller:"You want the bed setup changed. Let the Cruise Specialist determine whether the stateroom supports the request."},
+  fas:{label:"Free at Sea",trainee:"Review the applicable Free at Sea selections and complete the requested addition, removal or verification using the approved workflow.",caller:"You are calling about the Free at Sea selections on the reservation."},
+  ppsrvc:{label:"Pre-Paid Service Charges",trainee:"Review and complete the requested Pre-Paid Service Charges change, then verify the updated reservation total.",caller:"You want to add, remove or review Pre-Paid Service Charges."},
+  care:{label:"Norwegian Care",trainee:"Review the Travel Protection request and complete the applicable Norwegian Care workflow, including any required pricing or eligibility discussion.",caller:"You want to add, remove or discuss Norwegian Care."},
+  air_transfer:{label:"Air / Transfers",trainee:"Review the applicable air or transfer request in the approved guidance and complete the requested servicing changes, including any payment or transfer implications.",caller:"You want to make a change involving air or transfers. Provide the trip details as the Cruise Specialist asks."},
+  dining_amenity:{label:"Dining / Entertainment / Amenity",trainee:"Review availability and complete the requested dining, entertainment, spa or amenity action, including any payment or confirmation required.",caller:"You want to add or change an onboard dining, entertainment, spa or amenity item."},
+  coupon_credit:{label:"Coupon / Credit",trainee:"Review the requested coupon or credit for eligibility, apply it in the correct order when eligible, and verify the updated balance.",caller:"You have a coupon, FCC, CruiseNext or other credit you want reviewed or applied."},
+  price_drop:{label:"Price Drop",trainee:"Research current pricing and follow the approved price-drop workflow. Explain the outcome and any effect on the reservation before making changes.",caller:"You noticed a different price and want the reservation reviewed."},
+  payment:{label:"Payment / Additional Deposit",trainee:"Review the amount due and collect the requested payment or additional deposit using training payment information when appropriate.",caller:"You are prepared to make any required payment after the servicing changes are reviewed."},
+  cancel_reinstate:{label:"Cancel / Reinstate",trainee:"Follow the applicable cancellation or reinstatement workflow, including eligibility, pricing, stateroom availability, refund or amount-due information and documentation.",caller:"You are calling about cancelling or reinstating the reservation. Allow the Cruise Specialist to determine the applicable workflow."}
+};
+
+function followUpOriginalCallerType(source){
+  if(!source)return "direct_guest";
+  if(source.followUpRoleplay&&source.sourceScenarioSnapshot)return source.sourceScenarioSnapshot.originalCaller||"direct_guest";
+  if(source.reservationWorkflow==="modify"){
+    if(["travel_agent","ta_group"].includes(source.gdprCallerType))return "travel_agent";
+    if(source.gdprCallerType==="direct_guest")return "direct_guest";
+  }
+  if(source.department==="Guest Services"&&source.reservationWorkflow==="new")return source.newCallerType==="travel_agent"?"travel_agent":"direct_guest";
+  return "direct_guest";
+}
+function followUpResolvedCaller(source,selection){return selection==="same"?followUpOriginalCallerType(source):selection}
+function followUpSelectedChanges(){return [...document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]:checked')].map(x=>x.value)}
+
+function followUpSourceSnapshot(source){
+  const sailing=source.sailing||{};
+  return {
+    sourceTitle:source.title||focusTitle(source),
+    focuses:focusNamesForData(source),
+    guests:[source.guest1,source.guest2].filter(Boolean),
+    ship:sailing.ship||"",sailDate:sailing.sailingDate||"",itinerary:sailing.title||"",departure:sailing.departure||"",duration:sailing.duration||"",
+    category:source.category||"",location:source.location||"",side:source.side||"",agency:source.agency||"",market:source.market||"",
+    originalCaller:followUpOriginalCallerType(source),fas:!!source.fas,travel:!!source.travel,psc:!!source.psc,airEnabled:!!source.airEnabled,
+    confirmationEmail:source.email||"training123@ncl.com"
+  };
+}
+
+function followUpSourceSummaryHtml(source){
+  const snap=source.followUpRoleplay&&source.sourceScenarioSnapshot?source.sourceScenarioSnapshot:followUpSourceSnapshot(source);
+  const guests=(snap.guests||[]).length?snap.guests.join(" + "):"Guest(s) from the original reservation";
+  const sail=snap.ship?`${snap.ship}${snap.sailDate?` • ${formatSailingDate(snap.sailDate)}`:""}`:"Use the original practice reservation";
+  return `<div class="followup-source-label">ORIGINAL PRACTICE RESERVATION</div><strong>${escapeHtml(snap.sourceTitle||"Previous Scenario")}</strong><span>${escapeHtml(guests)} • ${escapeHtml(sail)}</span><small>The follow-up uses this same reservation after the original practice has been completed.</small>`;
+}
+
+function updateFollowUpAgencyField(){
+  const source=state.currentScenario;
+  const resolved=followUpResolvedCaller(source,$("followUpCallerType")?.value||"same");
+  $("followUpAgencyField")?.classList.toggle("hidden-field",resolved!=="travel_agent");
+}
+
+function openFollowUpRoleplayBuilder(){
+  const current=state.currentScenario;if(!current)return;
+  const cfg=current.followUpRoleplay?(current.followUpConfig||{}):{};
+  $("followUpSourceSummary").innerHTML=followUpSourceSummaryHtml(current);
+  $("followUpCallerType").value=cfg.callerSelection||"same";
+  $("followUpAgency").value=cfg.agency||(followUpOriginalCallerType(current)==="travel_agent"?String(current.agency||current.sourceScenarioSnapshot?.agency||""):"");
+  document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]').forEach(cb=>cb.checked=(cfg.changes||[]).includes(cb.value));
+  $("followUpCustomChanges").value=cfg.customChanges||"";
+  $("followUpIncludeCard").checked=cfg.includeCard!==false;
+  $("followUpKeepBenefits").checked=cfg.keepBenefits!==false;
+  $("followUpBuilderNotice").className="notice warning hidden-field";
+  $("followUpBuilderNotice").textContent="";
+  updateFollowUpAgencyField();
+  $("followUpRoleplayDialog").showModal();
+}
+function closeFollowUpRoleplayBuilder(){if($("followUpRoleplayDialog")?.open)$("followUpRoleplayDialog").close()}
+
+function followUpGdprHtml(d){
+  const ta=d.gdprCallerType==="travel_agent";
+  return `<section class="scenario-section visual-section gdpr-section"><div class="section-label">VERIFY BEFORE SERVICING</div>${scenarioIconHeading('🔐','GDPR Verification')}<div class="critical-callout"><strong>Reservation Number is REQUIRED.</strong><span>Do not discuss or modify the reservation until the appropriate verification has been completed.</span></div><div class="gdpr-grid"><div><span>Caller Type</span><strong>${ta?"Travel Agent":"Direct Guest"}</strong></div><div><span>Required First</span><strong>Reservation Number</strong></div>${ta?`<div><span>Travel Agent Identifier</span><strong>Agency ID / Agency Phone Number</strong><small>${d.followUpConfig?.agency?escapeHtml(d.followUpConfig.agency):"Caller must provide the appropriate agency identifier"}</small></div>`:""}<div><span>Reservation Verification</span><strong>Guest Full Name</strong><small>Use the guest(s) on the original practice reservation</small></div><div><span>Sailing Verification</span><strong>Ship & Full Sail Date</strong><small>Confirm against the existing reservation</small></div></div></section>`;
+}
+
+function followUpSnapshotHtml(d){
+  const s=d.sourceScenarioSnapshot||{};
+  const guests=(s.guests||[]).length?s.guests.join(" + "):"Use guest(s) from original practice";
+  const benefits=[s.fas?"Free at Sea":null,s.psc?"Pre-Paid Service Charges":null,s.travel?"Norwegian Care":null,s.airEnabled?"Air / Transfers":null].filter(Boolean);
+  return `<section class="scenario-section visual-section followup-snapshot-section"><div class="section-label">EXISTING RESERVATION</div>${scenarioIconHeading('🗂️','Use the Reservation from the Previous Practice')}<div class="scenario-detail-grid"><div><span>Original Scenario</span><strong>${escapeHtml(s.sourceTitle||"Previous Scenario")}</strong><small>${escapeHtml((s.focuses||[]).join(" + "))}</small></div><div><span>Guest(s)</span><strong>${escapeHtml(guests)}</strong><small>Use the reservation created by the trainee</small></div><div><span>Sailing</span><strong>${escapeHtml(s.ship||"Original sailing")}</strong><small>${s.sailDate?escapeHtml(formatSailingDate(s.sailDate)):escapeHtml(s.itinerary||"Use original reservation")}</small></div><div><span>Current Stateroom / Category</span><strong>${escapeHtml(s.category||"Review in Seaweb")}</strong><small>Verify the actual reservation before servicing</small></div><div><span>Existing Benefits</span><strong>${escapeHtml(benefits.join(" • ")||"Review existing reservation")}</strong><small>Do not assume they remain unchanged after servicing</small></div><div><span>Reservation Number</span><strong>Use the reservation created in the original practice</strong><small>The caller must provide it during GDPR</small></div></div></section>`;
+}
+
+function followUpChangesHtml(d){
+  const cfg=d.followUpConfig||{};
+  const changes=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]).filter(Boolean);
+  const cards=changes.map((item,i)=>`<div class="followup-change-card"><span>${String(i+1).padStart(2,"0")}</span><div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.trainee)}</small></div></div>`).join("");
+  const custom=cfg.customChanges?`<div class="instruction-strip followup-custom-request"><strong>Caller-Specific Details</strong><span>${escapeHtml(cfg.customChanges).replace(/\n/g,"<br>")}</span></div>`:"";
+  return `<section class="scenario-section visual-section followup-request-section"><div class="section-label">SERVICING REQUEST</div>${scenarioIconHeading('🛠️','Changes Requested by the Caller')}<p>Listen to the caller, research the request, explain any impact, and receive approval before completing changes that affect pricing or the reservation.</p><div class="followup-change-card-list">${cards}</div>${custom}${cfg.keepBenefits?`<div class="instruction-strip"><strong>Verify Existing Benefits</strong><span>After making the requested changes, verify that the reservation's existing promotions, add-ons, service charges, protection and other applicable items remain correct.</span></div>`:""}</section>`;
+}
+
+function followUpCallerRoleHtml(d){
+  const cfg=d.followUpConfig||{};
+  const prompts=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]).filter(Boolean).map(item=>`<li>${escapeHtml(item.caller)}</li>`).join("");
+  return `<section class="scenario-section visual-section caller-role-section"><div class="section-label">CALLER ROLE CARD</div>${scenarioIconHeading('☎️',d.gdprCallerType==="travel_agent"?"Travel Agent":"Direct Guest")}<div class="roleplay-caller-rule"><strong>Do not give the Cruise Specialist everything at once.</strong><span>Respond naturally. Let the Cruise Specialist ask questions, complete GDPR, research the reservation and control the servicing flow.</span></div><ul class="scenario-bullets">${prompts}</ul>${cfg.customChanges?`<div class="caller-private-note"><strong>Use these details during the call:</strong><span>${escapeHtml(cfg.customChanges).replace(/\n/g,"<br>")}</span></div>`:""}</section>`;
+}
+
+function followUpPaymentHtml(d){
+  const cfg=d.followUpConfig||{};
+  if(!cfg.includeCard)return `<section class="scenario-section visual-section payment-section"><div class="section-label">PAYMENT REVIEW</div>${scenarioIconHeading('💳','Check the Updated Amount Due')}<p>After servicing the reservation, review whether the changes create an additional deposit, payment, refund or other balance impact. Advise the caller before completing the transaction.</p></section>`;
+  const card=d.card||currentTrainingCard();
+  return `<section class="scenario-section visual-section payment-section"><div class="section-label">PAYMENT REVIEW</div>${scenarioIconHeading('💳','Check for Additional Payment')}<p>Review whether the servicing changes create an additional deposit or other amount due. If payment is required and the caller agrees to proceed, use the training card below.</p><div class="scenario-payment-card"><div class="training-only-label">TRAINING / TEST DATA ONLY</div><p><strong>Card #:</strong> ${escapeHtml(card?.number||"4917 6100 0000 0000")}<br><strong>Expiration:</strong> ${escapeHtml(card?.expiration||"04/2027")}<br><strong>CCV:</strong> ${escapeHtml(card?.ccv||"123")}<br><strong>Billing Address:</strong> ${escapeHtml(card?.address||"123 Sesame Street, Miami, FL 33126")}</p></div></section>`;
+}
+
+function followUpRequiredActionsHtml(d){
+  const email=d.sourceScenarioSnapshot?.confirmationEmail||d.email||"training123@ncl.com";
+  return `<section class="scenario-section visual-section required-actions-section"><div class="section-label">REQUIRED ACTIONS</div>${scenarioIconHeading('✅','Complete the Servicing Call')}${checklistHtml(["Go into Edit and make the approved servicing changes.","Review the updated pricing / reservation total and any amount due or refund before finalizing the changes.","Store Changes after all approved updates are complete.","Leave the appropriate reservation comments using Compass.",`Send the appropriate updated confirmation${d.gdprCallerType==="travel_agent"?"s to the Guest and Travel Agent":""} to ${email}.`,"Recap every completed change and any important reservation information with the caller.","Complete the appropriate customer-satisfaction question and Norwegian Cruise Line closing.","Switch roles and repeat the exercise so both trainees practice the Cruise Specialist role."])}</section>`;
+}
+
+function followUpFinalCheckHtml(d){
+  const cfg=d.followUpConfig||{};
+  const selected=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean);
+  const checks=["Reservation Number obtained",d.gdprCallerType==="travel_agent"?"Travel Agent GDPR completed":"Direct Guest GDPR completed","Willingness to assist expressed",...selected.map(x=>`${x} request addressed`),cfg.customChanges?"Caller-specific change instructions completed":null,"Updated pricing / reservation impact reviewed",cfg.keepBenefits?"Existing promotions / add-ons verified after changes":null,"Any additional payment / refund requirement checked","Store Changes completed","Compass reservation comments added","Updated confirmation sent","Full reservation recap completed","Proper closing completed","Trainees switched roles and repeated the exercise"].filter(Boolean);
+  return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Roleplay Check')}${checklistHtml(checks)}</section>`;
+}
+
+function buildFollowUpRoleplayHtml(d){
+  const source=d.sourceScenarioSnapshot||{};
+  const callerLabel=d.gdprCallerType==="travel_agent"?"Travel Agent":"Direct Guest";
+  return `<div class="scenario-meta-row"><span class="chip">Guest Services</span><span class="chip">Follow-Up Servicing</span><span class="chip">Roleplay</span><span class="chip">${escapeHtml(callerLabel)}</span></div><h2 class="scenario-main-title">🎭 SEAweb Follow-Up Servicing Roleplay – ${escapeHtml(source.sourceTitle||"Existing Reservation")}</h2><p class="scenario-intro">Use the reservation completed during the original practice scenario. One trainee will be the <strong>Cruise Specialist</strong> and the other will be the <strong>${escapeHtml(callerLabel)}</strong>. The caller is contacting Norwegian Cruise Line again to make changes to the existing reservation.</p><div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Store all approved changes, complete comments and confirmations, recap the reservation, then switch roles and repeat.</span></div>${roleplaySetupHtml(d)}${followUpSnapshotHtml(d)}${followUpGdprHtml(d)}${followUpCallerRoleHtml(d)}${followUpChangesHtml(d)}${followUpPaymentHtml(d)}${followUpRequiredActionsHtml(d)}${followUpFinalCheckHtml(d)}<section class="scenario-section visual-section trainer-only"><div class="section-label">TRAINER GUIDE</div>${scenarioIconHeading('🧭','Follow-Up Roleplay Coaching')}<p>This roleplay intentionally follows the original practice reservation. Allow the caller to reveal the requested changes naturally. The Cruise Specialist should complete GDPR first, research each change rather than assuming the outcome, explain pricing / reservation impact, obtain approval, Store Changes, document, confirm and recap.</p><div class="instruction-strip"><strong>Original Scenario</strong><span>${escapeHtml(source.sourceTitle||"Previous practice")} • ${escapeHtml((source.focuses||[]).join(" + "))}</span></div></section>`;
+}
+
+function createFollowUpRoleplay(){
+  const current=state.currentScenario;if(!current)return;
+  const base=current.followUpRoleplay?current.sourceScenarioSnapshot:followUpSourceSnapshot(current);
+  const changes=followUpSelectedChanges();
+  const customChanges=$("followUpCustomChanges").value.trim();
+  if(!changes.length&&!customChanges){const n=$("followUpBuilderNotice");n.className="notice warning";n.textContent="Select at least one servicing change or enter the caller's custom change request.";return}
+  const callerSelection=$("followUpCallerType").value;
+  const resolvedCaller=callerSelection==="same"?(base.originalCaller||followUpOriginalCallerType(current)):callerSelection;
+  const agency=$("followUpAgency").value.trim()||(resolvedCaller==="travel_agent"?String(base.agency||""):"");
+  const config={callerSelection,callerType:resolvedCaller,agency,changes,customChanges,includeCard:$("followUpIncludeCard").checked,keepBenefits:$("followUpKeepBenefits").checked};
+  const sourceCard=current.card||currentTrainingCard();
+  const now=new Date().toISOString();
+  const d={...current,id:crypto.randomUUID(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
+  d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();runValidator();$("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";$("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
+}
+
+function updateFollowUpRoleplayButton(){
+  const btn=$("followUpRoleplayBtn");if(!btn)return;const d=state.currentScenario;btn.disabled=!d;btn.textContent=d?.followUpRoleplay?"Edit Follow-Up Roleplay":"Create Follow-Up Roleplay";btn.title=d?"Build a new servicing callback using this reservation and choose the changes the caller wants to make.":"Generate a scenario first.";
+}
+
+
 function generateScenario(){
   const focusRecords=selectedFocusRecords();
   if(!focusRecords.length){
@@ -2957,6 +3104,7 @@ function generateScenario(){
   $("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
   updateRoleplayScenarioButton();
+  updateFollowUpRoleplayButton();
 }
 
 function updateRoleplayScenarioButton(){
@@ -2969,9 +3117,9 @@ function updateRoleplayScenarioButton(){
     btn.title="Generate a scenario first.";
     return;
   }
-  if(isDedicatedRoleplay(d)){
-    btn.textContent="Roleplay Scenario";
-    btn.title="This Scenario Focus is designed as a roleplay.";
+  if(isDedicatedRoleplay(d)||d.followUpRoleplay){
+    btn.textContent=d.followUpRoleplay?"Follow-Up Roleplay":"Roleplay Scenario";
+    btn.title=d.followUpRoleplay?"This callback scenario is already a roleplay.":"This Scenario Focus is designed as a roleplay.";
     btn.disabled=true;
     btn.classList.add("active");
     return;
@@ -2990,6 +3138,12 @@ $("roleplayScenarioBtn").onclick=()=>{
   flash(state.currentScenario.roleplayMode?"Roleplay version created.":"Returned to the standard scenario.");
 };
 
+$("followUpRoleplayBtn").onclick=openFollowUpRoleplayBuilder;
+$("followUpCallerType").onchange=updateFollowUpAgencyField;
+$("clearFollowUpChangesBtn").onclick=()=>document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]').forEach(cb=>cb.checked=false);
+$("buildFollowUpRoleplayBtn").onclick=createFollowUpRoleplay;
+$("followUpRoleplayDialog").addEventListener("click",e=>{if(e.target===$("followUpRoleplayDialog"))closeFollowUpRoleplayBuilder()});
+
 $("generateBtn").onclick=generateScenario;
 $("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
 
@@ -2998,6 +3152,22 @@ function runValidator(){
   const add=(severity,title,detail)=>checks.push({severity,title,detail});
   const meta=currentFocusMeta()||{};
   const metas=selectedFocusMetas();
+
+  if(d.followUpRoleplay){
+    const cfg=d.followUpConfig||{};
+    add("passed","Follow-up servicing roleplay","Uses the reservation created in the original practice scenario.");
+    add("passed","Reservation verification rule","Reservation Number is REQUIRED before discussing or servicing the reservation.");
+    add("passed","GDPR caller path",d.gdprCallerType==="travel_agent"?"Travel Agent GDPR":"Direct Guest GDPR");
+    if(d.gdprCallerType==="travel_agent"&&!cfg.agency)add("warning","Travel Agency identifier not entered","Provide an Agency ID or agency phone number for the Travel Agent GDPR path.");
+    if(!(cfg.changes||[]).length&&!cfg.customChanges)add("error","No servicing change selected","Choose at least one follow-up change or enter a custom caller request.");
+    else add("passed","Servicing request configured",[...(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),cfg.customChanges?"Custom request details":null].filter(Boolean).join(" • "));
+    if(d.cardRequired&&d.card)add("passed","Training payment fallback included",`${d.card.label||"Training Card"} • TRAINING / TEST DATA ONLY`);
+    if(d.confirmation&&d.email)add("passed","Updated confirmation required",d.email);
+    if(d.commenting)add("passed","Compass comments required","The generated roleplay requires reservation comments.");
+    state.validation=checks;
+    renderValidator();
+    return checks;
+  }
 
   if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
   else add("passed","Department selected",`${d.department} • ${focusNamesForData(d).join(" + ")}`);
@@ -4258,7 +4428,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();go("generator");
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();go("generator");
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -4275,4 +4445,4 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();

@@ -1330,3 +1330,33 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .curriculum-specific-section .scenario-detail-grid{
   margin-top:10px;
 }
+
+/* V1.9.31 • Follow-Up Servicing Roleplay Builder */
+.followup-roleplay-btn{background:#EEF8F7;border-color:#68ACAA;color:#00484F;font-weight:750}
+.followup-roleplay-btn:not(:disabled):hover{background:#DDEEEE}
+.followup-dialog{width:min(1040px,calc(100vw - 28px));max-height:92vh;padding:0;border:0;border-radius:14px;box-shadow:0 24px 70px rgba(16,24,40,.24);background:#fff}
+.followup-dialog::backdrop{background:rgba(16,24,40,.58);backdrop-filter:blur(2px)}
+.followup-dialog-card{display:flex;flex-direction:column;gap:18px;padding:22px;max-height:92vh;overflow:auto}
+.followup-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid #E4E7EC;padding-bottom:16px}
+.followup-dialog-head h2{margin:2px 0 5px}.followup-dialog-head p{margin:0;color:#667085;max-width:720px}
+.dialog-close{min-width:38px;width:38px;height:38px;border-radius:50%;padding:0;font-size:24px;line-height:1;background:#F2F4F7;border:1px solid #EAECF0}
+.followup-source-card{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-left:5px solid #0A84BD;background:#F7FBFD;border-radius:0 8px 8px 0}
+.followup-source-card strong{font-size:15px}.followup-source-card span,.followup-source-card small{color:#475467}
+.followup-source-label{font-size:9px;letter-spacing:1.1px;font-weight:850;color:#006099}
+.followup-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.followup-change-section{border:1px solid #E4E7EC;border-radius:10px;padding:14px}
+.followup-change-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.followup-change-head>div{display:flex;flex-direction:column;gap:2px}.followup-change-head small{color:#667085}
+.followup-change-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.followup-change-grid>label{display:flex;flex-direction:row;align-items:flex-start;gap:9px;min-height:70px;padding:10px;border:1px solid #D0D5DD;border-radius:8px;background:#fff;cursor:pointer}
+.followup-change-grid>label:has(input:checked){border-color:#68ACAA;background:#F2FAF9;box-shadow:inset 0 0 0 1px #68ACAA}
+.followup-change-grid input{width:auto;margin-top:3px}.followup-change-grid span{display:flex;flex-direction:column;gap:2px}.followup-change-grid strong{font-size:11px}.followup-change-grid small{font-size:9px;line-height:1.35;color:#667085}
+.followup-custom-field textarea{min-height:110px;resize:vertical}
+.followup-options-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.followup-options-row .check-line{display:flex;flex-direction:row;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid #D0D5DD;border-radius:8px;background:#FCFCFD}.followup-options-row input{width:auto;margin-top:2px}
+.followup-dialog-actions{display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #E4E7EC;padding-top:16px}
+.followup-snapshot-section{background:#F8FBFC;border-left:5px solid #0A84BD}.critical-callout{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:10px 0 12px;background:#FFF6E0;border-left:4px solid #F0C24B;border-radius:0 7px 7px 0}.critical-callout strong{white-space:nowrap}
+.gdpr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.gdpr-grid>div{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid #E4E7EC;border-radius:7px}.gdpr-grid span{font-size:9px;font-weight:800;color:#006099;text-transform:uppercase;letter-spacing:.5px}.gdpr-grid small{color:#667085}
+.followup-change-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}.followup-change-card{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid #D6E5EB;background:#fff;border-radius:8px}.followup-change-card>span{display:grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:#EAF4F6;color:#006099;font-size:9px;font-weight:850}.followup-change-card>div{display:flex;flex-direction:column;gap:3px}.followup-change-card small{font-size:10px;line-height:1.4;color:#667085}
+.roleplay-caller-rule,.caller-private-note{display:flex;flex-direction:column;gap:4px;padding:11px 13px;border-radius:8px;margin:10px 0}.roleplay-caller-rule{background:#EEF8F7;border:1px solid #C6DFDC}.caller-private-note{background:#FFF6E0;border:1px solid #F2D789}
+@media(max-width:900px){.followup-change-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.followup-form-grid,.followup-options-row,.followup-change-grid,.gdpr-grid,.followup-change-card-list{grid-template-columns:1fr}.followup-dialog-card{padding:16px}.followup-dialog-actions{position:sticky;bottom:0;background:#fff;padding-bottom:2px}}
