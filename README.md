@@ -778,3 +778,27 @@ The Worker Cache API could also retain an earlier empty response for the same it
 - Loading copy now accurately says the app is loading dates from the public schedule.
 
 NCL.com U.S. remains the source of the selected itinerary. Public-schedule dates are still labeled separately and must be verified in NCL.com U.S. or Seaweb before class.
+
+## V1.9.31 – Follow-Up Servicing Roleplay Builder
+
+Every generated scenario can now become the starting reservation for a separate callback / servicing roleplay.
+
+### New button
+After a scenario is generated, the Generator toolbar includes **Create Follow-Up Roleplay**.
+
+This is different from **Make Roleplay**:
+- **Make Roleplay** converts the current exercise itself into a two-person roleplay.
+- **Create Follow-Up Roleplay** treats the current exercise as already completed and creates a new call in which the Guest or Travel Agent calls back to make changes to that reservation.
+
+### Follow-Up Roleplay Builder
+The trainer can choose the callback caller: Same caller / booking source, Direct Guest, or Travel Agent. The generated roleplay automatically uses the appropriate GDPR path and makes **Reservation Number REQUIRED**. Travel Agent follow-ups also use the Travel Agency ID / phone-number requirement.
+
+### Trainer-selectable servicing changes
+Any combination can be selected: Add Guest, Remove Guest, Change / Upgrade Stateroom, Update Guest Information, Special Request / Allergy, Bed Configuration, Free at Sea, Pre-Paid Service Charges, Norwegian Care, Air / Transfers, Dining / Entertainment / Amenity, Coupon / Credit, Price Drop, Payment / Additional Deposit, or Cancel / Reinstate.
+
+A free-text **Specific changes / caller details** field lets the trainer add names, Latitudes numbers, categories, stateroom preferences, special requests, amounts or any other custom servicing instruction.
+
+### Generated roleplay
+The follow-up card includes an Existing Reservation snapshot, GDPR verification, Caller Role Card, trainer-selected servicing changes, custom caller details, optional training payment card, verification of existing benefits, Store Changes, Compass comments, updated confirmation(s), full recap, closing, role switch and a Final Roleplay Check.
+
+The follow-up roleplay receives a new scenario ID and can be saved independently in the Saved Scenario Library. The original Generator form remains in place; selecting **Generate Scenario** again recreates the original scenario.
