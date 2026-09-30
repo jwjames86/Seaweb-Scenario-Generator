@@ -25,23 +25,17 @@ export default {
     }
 
     if (url.pathname === "/api/sailing-dates") {
-      const cache = caches.default;
-      const cacheKey = new Request(url.toString(), { method: "GET" });
-      const cached = await cache.match(cacheKey);
-      if (cached) return cached;
-
+      // V1.9.30: do not use the Worker Cache API here. Earlier empty date
+      // responses could survive a deployment and keep the dropdown blank.
+      // The public schedule fetch has its own short edge cache.
       const response = await handleSailingDates(url, env);
-      if (response.ok) {
-        const headers = new Headers(response.headers);
-        headers.set("Cache-Control", "public, max-age=600");
-        const cacheable = new Response(response.clone().body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers
-        });
-        ctx.waitUntil(cache.put(cacheKey, cacheable));
-      }
-      return response;
+      const headers = new Headers(response.headers);
+      headers.set("Cache-Control", "no-store");
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+      });
     }
 
     if (url.pathname === "/api/share-card") {
@@ -276,21 +270,18 @@ async function handleSailingDates(reqUrl, env) {
 
   if (!source) return json({ error: "Missing NCL source URL.", dates: [] }, 400);
 
-  let sourceUrl;
   try {
     const u = normalizeNclUsUrl(new URL(source));
     if (!/(^|\.)ncl\.com$/i.test(u.hostname)) {
       return json({ error: "Sailing dates can only be attached to an ncl.com itinerary.", dates: [] }, 400);
     }
-    sourceUrl = u.toString();
   } catch {
     return json({ error: "Invalid NCL source URL.", dates: [] }, 400);
   }
 
-  // Hybrid source strategy:
-  // 1) NCL remains the itinerary source.
-  // 2) CruiseMapper is used only to supply candidate sailing dates when NCL's
-  //    public cards do not expose the exact departures.
+  // NCL remains the source of the itinerary. When its search result does not
+  // expose exact dates, use the ship's public CruiseMapper itinerary table
+  // only to populate candidate departure dates.
   const publicSchedule = await loadCruiseMapperSchedule(env, {
     ship, title, departure, duration, ports, from, to
   });
@@ -310,70 +301,46 @@ async function handleSailingDates(reqUrl, env) {
     });
   }
 
-  // If the public schedule cannot resolve the selected ship / itinerary, keep
-  // the previous NCL browser capture as a secondary fallback.
-  const liveCapture = await captureNclSailingDatesFromBrowser(env, sourceUrl, {
-    ship, title, departure, duration, ports, from, to
-  });
-
-  if (liveCapture.dates.length) {
-    return json({
-      ok: true,
-      dates: liveCapture.dates,
-      detailUrl: liveCapture.detailUrl || sourceUrl,
-      sourceType: "ncl",
-      sourceLabel: "NCL.com U.S.",
-      verificationRequired: false,
-      sourceMarket: "US",
-      retrievedAt: new Date().toISOString(),
-      diagnostic: {
-        method: "puppeteer-network-capture",
-        publicSchedule: publicSchedule.diagnostic,
-        browser: liveCapture.diagnostic
-      }
-    });
-  }
-
+  // Return quickly instead of leaving the UI waiting on another long browser
+  // session. The manual verified-date field becomes available immediately.
   return json({
     ok: true,
     dates: [],
-    detailUrl: sourceUrl,
     sourceType: "manual",
     sourceLabel: "Trainer verified",
     verificationRequired: true,
     sourceMarket: "US",
     retrievedAt: new Date().toISOString(),
-    message: "Neither NCL.com U.S. nor the public schedule exposed usable dates for this itinerary.",
+    message: "The public sailing schedule did not return a matching date for this itinerary.",
     diagnostic: {
-      method: "hybrid-date-lookup",
-      publicSchedule: publicSchedule.diagnostic,
-      browser: liveCapture.diagnostic
+      method: "public-schedule-only",
+      publicSchedule: publicSchedule.diagnostic
     }
   });
 }
 
 const CRUISEMAPPER_NCL_SHIPS = {
-  "norwegian aqua": "https://www.cruisemapper.com/ships/Norwegian-Aqua-2218",
-  "norwegian luna": "https://www.cruisemapper.com/ships/Norwegian-Luna-2219",
-  "norwegian prima": "https://www.cruisemapper.com/ships/Norwegian-Prima-2216",
-  "norwegian viva": "https://www.cruisemapper.com/ships/Norwegian-Viva-2217",
-  "norwegian aura": "https://www.cruisemapper.com/ships/Norwegian-Aura-2220",
-  "norwegian encore": "https://www.cruisemapper.com/ships/Norwegian-Encore-1518",
-  "norwegian bliss": "https://www.cruisemapper.com/ships/Norwegian-Bliss-1454",
-  "norwegian joy": "https://www.cruisemapper.com/ships/Norwegian-Joy-1166",
-  "norwegian breakaway": "https://www.cruisemapper.com/ships/Norwegian-Breakaway-584",
-  "norwegian getaway": "https://www.cruisemapper.com/ships/Norwegian-Getaway-793",
-  "norwegian escape": "https://www.cruisemapper.com/ships/Norwegian-Escape-878",
-  "norwegian epic": "https://www.cruisemapper.com/ships/Norwegian-Epic-642",
-  "norwegian gem": "https://www.cruisemapper.com/ships/Norwegian-Gem-573",
-  "norwegian jade": "https://www.cruisemapper.com/ships/Norwegian-Jade-639",
-  "norwegian jewel": "https://www.cruisemapper.com/ships/Norwegian-Jewel-583",
-  "norwegian pearl": "https://www.cruisemapper.com/ships/Norwegian-Pearl-693",
-  "norwegian dawn": "https://www.cruisemapper.com/ships/Norwegian-Dawn-699",
-  "norwegian star": "https://www.cruisemapper.com/ships/Norwegian-Star-706",
-  "norwegian sun": "https://www.cruisemapper.com/ships/Norwegian-Sun-735",
-  "norwegian spirit": "https://www.cruisemapper.com/ships/Norwegian-Spirit-702",
-  "pride of america": "https://www.cruisemapper.com/ships/Pride-of-America-594"
+  "norwegian aqua": "https://www.cruisemapper.com/ships/Norwegian-Aqua-2218?tab=itinerary",
+  "norwegian luna": "https://www.cruisemapper.com/ships/Norwegian-Luna-2219?tab=itinerary",
+  "norwegian prima": "https://www.cruisemapper.com/ships/Norwegian-Prima-2216?tab=itinerary",
+  "norwegian viva": "https://www.cruisemapper.com/ships/Norwegian-Viva-2217?tab=itinerary",
+  "norwegian aura": "https://www.cruisemapper.com/ships/Norwegian-Aura-2220?tab=itinerary",
+  "norwegian encore": "https://www.cruisemapper.com/ships/Norwegian-Encore-1518?tab=itinerary",
+  "norwegian bliss": "https://www.cruisemapper.com/ships/Norwegian-Bliss-1454?tab=itinerary",
+  "norwegian joy": "https://www.cruisemapper.com/ships/Norwegian-Joy-1166?tab=itinerary",
+  "norwegian breakaway": "https://www.cruisemapper.com/ships/Norwegian-Breakaway-584?tab=itinerary",
+  "norwegian getaway": "https://www.cruisemapper.com/ships/Norwegian-Getaway-793?tab=itinerary",
+  "norwegian escape": "https://www.cruisemapper.com/ships/Norwegian-Escape-878?tab=itinerary",
+  "norwegian epic": "https://www.cruisemapper.com/ships/Norwegian-Epic-642?tab=itinerary",
+  "norwegian gem": "https://www.cruisemapper.com/ships/Norwegian-Gem-573?tab=itinerary",
+  "norwegian jade": "https://www.cruisemapper.com/ships/Norwegian-Jade-639?tab=itinerary",
+  "norwegian jewel": "https://www.cruisemapper.com/ships/Norwegian-Jewel-583?tab=itinerary",
+  "norwegian pearl": "https://www.cruisemapper.com/ships/Norwegian-Pearl-693?tab=itinerary",
+  "norwegian dawn": "https://www.cruisemapper.com/ships/Norwegian-Dawn-699?tab=itinerary",
+  "norwegian star": "https://www.cruisemapper.com/ships/Norwegian-Star-706?tab=itinerary",
+  "norwegian sun": "https://www.cruisemapper.com/ships/Norwegian-Sun-735?tab=itinerary",
+  "norwegian spirit": "https://www.cruisemapper.com/ships/Norwegian-Spirit-702?tab=itinerary",
+  "pride of america": "https://www.cruisemapper.com/ships/Pride-of-America-594?tab=itinerary"
 };
 
 async function loadCruiseMapperSchedule(env, target) {
@@ -441,10 +408,10 @@ async function loadCruiseMapperSchedule(env, target) {
       const response = await env.BROWSER.quickAction("markdown", {
         url: sourceUrl,
         gotoOptions: {
-          waitUntil: "networkidle2",
-          timeout: 30000
+          waitUntil: "domcontentloaded",
+          timeout: 15000
         },
-        waitForTimeout: 2500,
+        waitForTimeout: 1200,
         userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/153 Safari/537.36"
       });
 
@@ -493,30 +460,42 @@ async function loadCruiseMapperSchedule(env, target) {
 
 function parseCruiseMapperMarkdownRows(markdown) {
   const rows = [];
-  const text = String(markdown || "");
   const monthNumbers = {
     jan:1,feb:2,mar:3,apr:4,may:5,jun:6,
     jul:7,aug:8,sep:9,oct:10,nov:11,dec:12
   };
 
+  // Browser markdown can wrap the date or itinerary in links. Strip the link
+  // target while retaining its visible text before parsing table rows.
+  const text = String(markdown || "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/&nbsp;/gi, " ");
+
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
     if (!line || !line.includes("|")) continue;
 
-    const m = line.match(
-      /^\|?\s*(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})\s*\|\s*(\d+)\s+nights?\s*,\s*([^|]+?)\s*\|\s*([^|]+?)\s*(?:\||$)/i
-    );
-    if (!m) continue;
+    const cells = line
+      .replace(/^\|/, "")
+      .replace(/\|$/, "")
+      .split("|")
+      .map(x => clean(x));
 
-    const month = monthNumbers[m[2].toLowerCase()];
-    const date = month ? isoDate(Number(m[1]), month, Number(m[3])) : "";
+    if (cells.length < 3) continue;
+
+    const dateMatch = cells[0].match(/\b(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})\b/i);
+    const itineraryMatch = cells[1].match(/\b(\d+)\s+nights?\s*,?\s*(.*)$/i);
+    if (!dateMatch || !itineraryMatch) continue;
+
+    const month = monthNumbers[dateMatch[2].toLowerCase()];
+    const date = month ? isoDate(Number(dateMatch[1]), month, Number(dateMatch[3])) : "";
     if (!date) continue;
 
     rows.push({
       date,
-      duration: Number(m[4]),
-      itinerary: clean(m[5]),
-      departure: clean(m[6])
+      duration: Number(itineraryMatch[1]),
+      itinerary: clean(itineraryMatch[2]),
+      departure: clean(cells[2])
     });
   }
 
@@ -543,8 +522,10 @@ function parseCruiseMapperHtmlRows(html) {
 
     if (cells.length < 3) continue;
 
-    const dateMatch = cells[0].match(/^(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})$/i);
-    const itineraryMatch = cells[1].match(/^(\d+)\s+nights?\s*,\s*(.+)$/i);
+    // Current CruiseMapper itinerary rows render like:
+    // 2027 Jan 23 | 7 nights, round-trip from Galveston, USA | Galveston | $789
+    const dateMatch = cells[0].match(/\b(20\d{2})\s+([A-Za-z]{3})\s+(\d{1,2})\b/i);
+    const itineraryMatch = cells[1].match(/\b(\d+)\s+nights?\s*,?\s*(.*)$/i);
     if (!dateMatch || !itineraryMatch) continue;
 
     const month = monthNumbers[dateMatch[2].toLowerCase()];

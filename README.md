@@ -756,3 +756,25 @@ Selecting it:
 Select **Standard Scenario** to change a manually converted roleplay back to the normal individual-practice version.
 
 Dedicated roleplay Scenario Focuses remain locked as roleplays.
+
+
+## V1.9.30 – Sailing Date Dropdown Fix
+
+This update fixes the Specific Sailing Date selector.
+
+### Root cause
+The hybrid public-schedule code was requesting each CruiseMapper ship's general profile URL. The exact departure table is exposed on the **Itinerary** tab (`?tab=itinerary`). Because the wrong page variant was being parsed, the date endpoint frequently returned no usable rows and then fell into a slow NCL browser fallback.
+
+The Worker Cache API could also retain an earlier empty response for the same itinerary query, so a new deployment could still appear broken for several minutes.
+
+### Changes
+- CruiseMapper ship URLs now request `?tab=itinerary`.
+- The HTML and Markdown parsers now match the current itinerary-table format more flexibly.
+- Sailing-date API responses are no longer stored in the Worker Cache API.
+- The NCL browser fallback was removed from this second-stage date lookup so the UI does not remain stuck loading.
+- The browser-rendered public-schedule fallback has a shorter timeout.
+- The frontend aborts a date lookup after 18 seconds and exposes the verified-date fallback rather than spinning indefinitely.
+- A version parameter is attached to the sailing-date request to avoid stale edge/browser responses.
+- Loading copy now accurately says the app is loading dates from the public schedule.
+
+NCL.com U.S. remains the source of the selected itinerary. Public-schedule dates are still labeled separately and must be verified in NCL.com U.S. or Seaweb before class.
