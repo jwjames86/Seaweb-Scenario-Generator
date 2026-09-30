@@ -35,6 +35,7 @@ const trainingCards = {
   standardSesame:{label:"Standard Training Card – Sesame St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"123 Sesame Street, Miami, FL 33126"},
   standardMain:{label:"Standard Training Card – Main St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
   alternateMain:{label:"Alternate Training Card – Main St.",number:"4917 6100 0000 0000",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
+  alternateSesame:{label:"4917 Training Card – Sesame St.",number:"4917 6100 0000 0000",expiration:"04/2027",ccv:"123",address:"123 Sesame Street, Miami, FL 33126"},
   obSpecial:{label:"OB Special Requests Training Card",number:"4444 3333 2222 1111",expiration:"05/2028",ccv:"456",address:"123 Sesame Street, Miami, FL 33126"}
 };
 
@@ -249,11 +250,14 @@ const scenarioCatalog = {
     ],
     10: [
       {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
+      {name:"Solo Guest / Studio Booking",payment:"Minimum Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Intermediate",kind:"solo_studio",objective:"Travel Agent Kyle James with Norwegian Training Travel books Tom Holland as a solo guest on the June 27, 2027 Norwegian Aqua sailing. Search the guest by last name and date of birth, select a Studio, quote advertised pricing, include applicable Free at Sea, Pre-Paid Service Charges, Kosher Meals, Norwegian Care, collect the minimum deposit, send guest and agent confirmations, and add Compass comments."},
       {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
       {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an NCL Air reservation with ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
       {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
+      {name:"Reinstate Cancelled Reservation – Roleplay",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"roleplay",objective:"Two-person servicing roleplay using a reservation cancelled yesterday. Complete GDPR with Reservation Number required, verify cancellation occurred within the last 24 hours, confirm the previous stateroom and pricing are still available, reinstate when eligible, Store Changes, add comments, send confirmation, recap, then switch roles."},
+      {name:"Add Guest & Upgrade Stateroom – Roleplay",payment:"No Payment / Service Only",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"add_guest_upgrade_roleplay",objective:"Two-person servicing roleplay using today's Solo Guest / Studio Booking reservation. Travel Agent Kyle James calls to add Taylor using Latitudes #272279126. Complete GDPR with Reservation Number required, upgrade the Studio to a category for two guests near elevators/stairs when possible, quote new pricing, preserve Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, set Twin Beds, add Taylor's mushroom allergy while retaining Tom's Kosher Meals, check for additional deposit, Store Changes, add Compass comments, send guest and agent confirmations, recap, then switch roles."},
       {name:"Price Drops - TRAINER DEMO",payment:"No Payment / Service Only",cardRequired:false,commenting:false,difficulty:"Advanced",kind:"demo",objective:"Trainer-led demonstration of the price-drop workflow and the required Seaweb/NCLHelp checks."},
       {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."}
     ]
@@ -365,6 +369,50 @@ function focusNamesForData(d){
 
 function focusSearchText(d){
   return `${focusNamesForData(d).join(' ')} ${(d.curriculumObjectives||[]).join(' ')} ${d.curriculumObjective||''}`.toLowerCase();
+}
+
+function isReinstateRoleplay(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>{
+    const n=String(name||"").toLowerCase();
+    return n.includes("reinstate cancelled reservation") && n.includes("roleplay");
+  });
+}
+
+function isSoloStudioScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("solo guest / studio booking"));
+}
+
+function isAddGuestUpgradeRoleplay(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("add guest & upgrade stateroom"));
+}
+
+function isDedicatedRoleplay(d){
+  if(!d)return false;
+  if(isReinstateRoleplay(d)||isAddGuestUpgradeRoleplay(d))return true;
+  return Array.isArray(d.curriculumKinds)&&d.curriculumKinds.some(k=>String(k).includes("roleplay"));
+}
+
+function isRoleplayScenario(d){
+  return !!d && (Boolean(d.roleplayMode)||isDedicatedRoleplay(d));
+}
+
+function roleplayCallerLabel(d){
+  if(isAddGuestUpgradeRoleplay(d)||isSoloStudioScenario(d))return "Travel Agent — Kyle James";
+  if(d.gdprCallerType==="travel_agent"||d.gdprCallerType==="ta_group")return "Travel Agent";
+  if(d.gdprCallerType==="direct_guest")return "Direct Guest";
+  if(d.gdprCallerType){
+    const profile=gdprProfile(d.gdprCallerType);
+    if(profile?.label)return profile.label;
+  }
+  if(d.department==="Guest Services"&&d.reservationWorkflow==="new"){
+    const caller=newReservationCallerInfo(d.newCallerType);
+    return caller.type==="travel_agent"?"Travel Agent":caller.label.replace(" — US","").replace(" — Canada","");
+  }
+  if(d.department==="Outbound Sales")return "Guest";
+  return "Caller";
 }
 
 function focusTitle(d){return focusNamesForData(d).join(' + ')||'SEAweb Practice'}
@@ -1111,17 +1159,86 @@ function applyFocusDefaults(){
 
   $("difficulty").value=difficulty||"Intermediate";
   $("paymentAction").value=payment;
+
+  const reinstateRoleplay=metas.some(m=>m.kind==="roleplay" || m.name==="Reinstate Cancelled Reservation – Roleplay");
+  const soloStudio=metas.some(m=>m.kind==="solo_studio" || m.name==="Solo Guest / Studio Booking");
+  const addGuestUpgrade=metas.some(m=>m.kind==="add_guest_upgrade_roleplay" || m.name==="Add Guest & Upgrade Stateroom – Roleplay");
+
+  if(reinstateRoleplay && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="modify";
+    updateWorkflowUI(false);
+    $("modificationType").value="cancel_reinstate";
+    if(!$("modificationRequest").value.trim()){
+      $("modificationRequest").value="Reinstate a training reservation that was cancelled yesterday. Verify it was cancelled within the last 24 hours, confirm the previous stateroom is still available, verify pricing is the same as before, then Store Changes.";
+    }
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("paymentAction").value="Refund / Reinstate";
+    updateModificationTypeUI(false);
+    syncAgencyCallerLogic();
+  }
+
+  if(soloStudio && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="new";
+    updateWorkflowUI(false);
+    $("newCallerType").value="travel_agent";
+    syncAgencyCallerLogic();
+    $("agency").value="305-436-1000";
+    $("guestCount").value="1";
+    $("guest1").value="Tom Holland";
+    $("guest2").value="";
+    $("category").value="Studio / Solo";
+    $("locationPref").value="Any";
+    $("sidePref").value="Any";
+    $("paymentAction").value="Minimum Deposit";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("latitudesToggle").checked=false;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+  }
+
+  if(addGuestUpgrade && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="modify";
+    updateWorkflowUI(false);
+    $("agency").value="305-436-1000";
+    $("gdprCallerType").value="travel_agent";
+    $("modificationType").value="add_guest";
+    $("modificationTarget").value="Taylor";
+    $("modificationGuestStatus").value="past";
+    $("modificationLatitudes").value="272279126";
+    $("modificationRequest").value="Use today's Solo Guest / Studio Booking reservation. Add Taylor, upgrade the Studio to a category that accommodates two guests, find a stateroom as close as possible to elevators/stairs, set Twin Beds, retain Tom's Kosher Meal request, add Taylor's mushroom allergy, verify Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, quote the new pricing/reservation total, check for any additional deposit due, then Store Changes.";
+    $("category").value="Balcony";
+    $("locationPref").value="Near stairs/elevators";
+    $("sidePref").value="Any";
+    $("paymentAction").value="No Payment / Service Only";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+    updateModificationTypeUI(false);
+    syncAgencyCallerLogic();
+  }
+
   if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && metas.some(m=>m.name==="Agencies: TA Booking")){
     $("newCallerType").value="travel_agent";
     syncAgencyCallerLogic();
   }
   $("commentToggle").checked=metas.some(m=>m.commenting);
   $("confirmToggle").checked=true;
-  $("fasToggle").checked=/\bfas\b|free at sea/.test(focusText);
-  $("travelToggle").checked=/norwegian care|travel protection/.test(focusText);
-  $("pscToggle").checked=/ppsrvchg|prepaid service charge/.test(focusText);
+  $("fasToggle").checked=soloStudio||addGuestUpgrade||/\bfas\b|free at sea/.test(focusText);
+  $("travelToggle").checked=soloStudio||addGuestUpgrade||/norwegian care|travel protection/.test(focusText);
+  $("pscToggle").checked=soloStudio||addGuestUpgrade||/ppsrvchg|prepaid service charge/.test(focusText);
   $("couponToggle").checked=/fcc|cruisenext|cruise first|coupon|credit/.test(focusText);
-  $("latitudesToggle").checked=!/\bnew guest\b/.test(focusText);
+  $("latitudesToggle").checked=soloStudio?false:(!/\bnew guest\b/.test(focusText));
   refreshLatitudesPanel();
 
   if(/\bada\b|accessible/.test(focusText)){
@@ -1131,9 +1248,17 @@ function applyFocusDefaults(){
   }
 
   if($("reservationWorkflow")?.value==="modify" && $("modificationType")){
-    const modMeta=metas.find(m=>m.kind==='followup')||meta;
-    $("modificationType").value=inferModificationType(modMeta);
-    updateModificationTypeUI(true);
+    if(addGuestUpgrade){
+      $("modificationType").value="add_guest";
+      updateModificationTypeUI(false);
+    }else if(reinstateRoleplay){
+      $("modificationType").value="cancel_reinstate";
+      updateModificationTypeUI(false);
+    }else{
+      const modMeta=metas.find(m=>m.kind==='followup')||meta;
+      $("modificationType").value=inferModificationType(modMeta);
+      updateModificationTypeUI(true);
+    }
   }else updateWorkflowUI(false);
 
   refreshTrainingCardPanel(cardMeta.cardProfile);
@@ -1569,6 +1694,13 @@ function resetItineraryChooser(){
     exact.disabled=true;
   }
   if(manual)manual.value="";
+  if(state.pendingSailingIndex!==null && state.sailings[state.pendingSailingIndex]){
+    const s=state.sailings[state.pendingSailingIndex];
+    delete s.scheduleDateSource;
+    delete s.scheduleDateSourceType;
+    delete s.scheduleSourceUrl;
+    delete s.scheduleVerificationRequired;
+  }
   $("manualDateField")?.classList.add("hidden-field");
   $("exactDateSelectField")?.classList.remove("hidden-field");
   $("useItineraryDateBtn").disabled=true;
@@ -1659,6 +1791,10 @@ async function updateDateChooserForItinerary(){
       if(res.ok && Array.isArray(data.dates) && data.dates.length){
         s.sailingDates=[...new Set(data.dates)].sort();
         if(data.detailUrl)s.detailSourceUrl=data.detailUrl;
+        s.scheduleDateSource=data.sourceLabel||"Public sailing schedule";
+        s.scheduleDateSourceType=data.sourceType||"public-schedule";
+        s.scheduleSourceUrl=data.scheduleSourceUrl||"";
+        s.scheduleVerificationRequired=data.verificationRequired!==false;
         exact=s.sailingDates;
       }
     }catch(_){}
@@ -1672,15 +1808,19 @@ async function updateDateChooserForItinerary(){
     exactSelect.disabled=false;
     exactSelect.innerHTML='<option value="">Choose a specific sailing date…</option>'+
       exact.map(d=>`<option value="${escapeAttr(d)}">${escapeHtml(formatSailingDate(d))}</option>`).join("");
-    $("itineraryChooserNotice").className="notice success";
-    $("itineraryChooserNotice").textContent=`${exact.length} exact sailing date${exact.length===1?"":"s"} loaded for this itinerary from NCL.com U.S.`;
+    const sourceLabel=s.scheduleDateSource||"NCL.com U.S.";
+    const verify=s.scheduleVerificationRequired
+      ?" Verify the final selection in NCL.com U.S. or Seaweb before class."
+      :"";
+    $("itineraryChooserNotice").className=s.scheduleVerificationRequired?"notice info":"notice success";
+    $("itineraryChooserNotice").textContent=`${exact.length} sailing date${exact.length===1?"":"s"} loaded from ${sourceLabel}.${verify}`;
   }else{
     $("exactDateSelectField").classList.add("hidden-field");
     $("manualDateField").classList.remove("hidden-field");
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="The live NCL itinerary did not return selectable dates. Use the verified date field only as a fallback.";
+    $("itineraryChooserNotice").textContent="Neither NCL.com U.S. nor the public sailing schedule returned usable dates. Use the verified date field only as a fallback.";
   }
 
   updateUseSailingButton();
@@ -1711,8 +1851,13 @@ $("exactSailingDateSelect").addEventListener("change",()=>{
   updateUseSailingButton();
   const value=$("exactSailingDateSelect").value;
   if(value){
-    $("itineraryChooserNotice").className="notice success";
-    $("itineraryChooserNotice").textContent=`Selected ${formatSailingDate(value)} from NCL.com U.S.`;
+    const s=Number.isInteger(state.pendingSailingIndex)?state.sailings[state.pendingSailingIndex]:null;
+    const sourceLabel=s?.scheduleDateSource||"NCL.com U.S.";
+    const verify=s?.scheduleVerificationRequired
+      ?" • Verify this date in NCL.com U.S. or Seaweb before class."
+      :"";
+    $("itineraryChooserNotice").className=s?.scheduleVerificationRequired?"notice info":"notice success";
+    $("itineraryChooserNotice").textContent=`Selected ${formatSailingDate(value)} from ${sourceLabel}${verify}`;
   }
 });
 $("manualSailingDate").addEventListener("change",()=>{
@@ -1748,12 +1893,21 @@ $("useItineraryDateBtn").addEventListener("click",()=>{
   }
 
   const exactDates=source.sailingDates||[];
+  const cameFromLoadedSchedule=exactDates.includes(sailingDate);
   state.selectedSailing={
     ...source,
     sourceUrl:source.detailSourceUrl||source.sourceUrl,
     sailingDate,
-    sailingDateVerified:exactDates.includes(sailingDate),
-    sailingDateSource:exactDates.includes(sailingDate)?"NCL.com U.S.":"Trainer verified"
+    sailingDateVerified:cameFromLoadedSchedule,
+    sailingDateSource:cameFromLoadedSchedule
+      ? (source.scheduleDateSource||"NCL.com U.S.")
+      : "Trainer verified",
+    sailingDateSourceType:cameFromLoadedSchedule
+      ? (source.scheduleDateSourceType||"ncl")
+      : "manual",
+    sailingDateVerificationRequired:cameFromLoadedSchedule
+      ? Boolean(source.scheduleVerificationRequired)
+      : true
   };
 
   renderSelectedSailing();
@@ -1765,7 +1919,13 @@ function renderSelectedSailing(){
   const s=state.selectedSailing;
   if(!s){$("selectedSailingSummary").className="selected-sailing empty";$("selectedSailingSummary").textContent="No real sailing selected yet.";return}
   $("selectedSailingSummary").className="selected-sailing";
-  $("selectedSailingSummary").innerHTML=`<div class="verified">● Itinerary verified from NCL.com U.S.${s.sailingDateVerified?" • Exact date from NCL":""}</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${s.sailingDate?`<strong>${escapeHtml(formatSailingDate(s.sailingDate))}</strong> • `:""}${s.departure?"From "+escapeHtml(s.departure)+" • ":""}${s.duration?s.duration+" days":""}</span>${s.sailingDate&&!s.sailingDateVerified?`<div class="selected-date-note">Exact date entered by trainer — verify in NCL.com U.S. / Seaweb before class.</div>`:""}`;
+  const dateSource=s.sailingDateSource||"";
+  const dateNote=s.sailingDate
+    ? (s.sailingDateSourceType==="ncl"
+        ? `<div class="selected-date-source ncl-date-source">Sailing date: ${escapeHtml(dateSource)}</div>`
+        : `<div class="selected-date-note">Sailing date source: ${escapeHtml(dateSource||"Trainer verified")} — verify in NCL.com U.S. / Seaweb before class.</div>`)
+    : "";
+  $("selectedSailingSummary").innerHTML=`<div class="verified">● Itinerary verified from NCL.com U.S.</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${s.sailingDate?`<strong>${escapeHtml(formatSailingDate(s.sailingDate))}</strong> • `:""}${s.departure?"From "+escapeHtml(s.departure)+" • ":""}${s.duration?s.duration+" days":""}</span>${dateNote}`;
 }
 
 function selectedMarketLabel(){
@@ -1824,6 +1984,7 @@ function scenarioData(){
     curriculumObjectives:metas.map(m=>m.objective),
     curriculumKind:meta.kind||"",
     curriculumKinds:metas.map(m=>m.kind),
+    roleplayMode:Boolean(state.currentScenario?.roleplayMode),
     createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),favorite:state.currentScenario?.favorite||false,archived:false
   };
 }
@@ -1856,7 +2017,45 @@ function focusConsiderations(d){
     if(d.airProgram==="bundled")items.push("Verify that the selected sailing is one of the select Pride of America sailings eligible for Bundled Air / AIRPROM3.");
     if(airMeta?.nclAir)items.push("Verify the trainee removes the pre-cruise transfer because the NCL Air arrival is at least one day prior.");
   }else if(name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable land terms, deposit requirements, confirmation timing, and transfer details.");
-  if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
+  if(isSoloStudioScenario(d)){
+    items.push(
+      "Did the Cruise Specialist confirm Kyle's information without making him repeat himself?",
+      "Was Tom searched by Last Name and Date of Birth?",
+      "Does the Studio selection support the solo occupancy?",
+      "Was the advertised price quoted using the required wording?",
+      "Were Free at Sea, Pre-Paid Service Charges and Norwegian Care handled correctly?",
+      "Was Tom's Kosher Meals request added and the capacity-controlled reminder provided when applicable?",
+      "Was the minimum deposit collected?",
+      "Were both Guest and Travel Agent confirmations sent and Compass comments added?"
+    );
+  }
+  if(isAddGuestUpgradeRoleplay(d)){
+    items.push(
+      "Was Travel Agent GDPR completed before discussing the reservation, with Reservation Number required?",
+      "Did the Cruise Specialist explain why the Studio must be changed for two guests?",
+      "Does the selected category and stateroom accommodate two guests and address the elevators/stairs request?",
+      "Was Taylor located using Latitudes #272279126?",
+      "Were Twin Beds selected?",
+      "Did Tom retain Kosher Meals while Taylor received only the mushroom allergy request?",
+      "Were Free at Sea, Pre-Paid Service Charges and Norwegian Care verified for both guests?",
+      "Was any additional deposit due checked and collected when applicable?",
+      "Were changes stored, comments added, both confirmations sent, and the reservation fully recapped?"
+    );
+  }
+
+  if(isReinstateRoleplay(d)){
+    items.push(
+      "Was the Reservation Number obtained before servicing the reservation?",
+      "Was the correct GDPR path completed for the Direct Guest or Travel Agent?",
+      "Was the reservation cancelled within the last 24 hours?",
+      "Is the previous stateroom still available?",
+      "Is the pricing the same as it was before cancellation?",
+      "If the stateroom or pricing changed, what must be explained to the caller before proceeding?",
+      "Were all completed changes stored in Seaweb?",
+      "Were reservation comments added and the updated confirmation sent?",
+      "Did the Cruise Specialist complete a full recap before closing the call?"
+    );
+  }else if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
   if(name.includes("amenities")||name.includes("dining")) items.push("Is payment due immediately for the selected add-on?","Which confirmation or amenity invoice must be sent after the transaction?");
   if(name.includes("cruise first")) items.push("What are the CruiseFirst terms and where is the credit purchased/applied?");
   if(name.includes("gty")) items.push("What expectations must be set for a Guarantee category, including stateroom assignment and location?");
@@ -1953,6 +2152,14 @@ function focusStoryDetail(d,meta){
 function customerStoryHtml(d,meta,sailText,guestNames){
   const modifying=d.reservationWorkflow==="modify";
 
+  if(isSoloStudioScenario(d)){
+    return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls to book a new cruise for his client <strong>Tom Holland</strong>, who will be traveling alone. Kyle already knows exactly what he is looking for because he called earlier in the day for pricing and options. Express your willingness to assist, confirm the information Kyle provides without making him repeat himself, quote the booking as you would for any new reservation, and complete a full recap.</p>`;
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls regarding the reservation created during today's <strong>Solo Guest / Studio Booking</strong> practice. He wants to add a second guest. Complete Travel Agent GDPR verification first — <strong>Reservation Number is REQUIRED.</strong> Kyle advises the reservation is currently in a Studio, so explain that the category must be upgraded to one that can accommodate two guests before the second guest can be added.</p>`;
+  }
+
   if(meta.kind==="demo"){
     return `<p>This is a <strong>trainer-led demonstration</strong>. Use the selected or trainer-provided reservation/sailing to demonstrate the ${escapeHtml(d.type)} workflow.</p>`;
   }
@@ -1985,6 +2192,10 @@ function customerStoryHtml(d,meta,sailText,guestNames){
       callerLead="A Direct Group caller contacts Norwegian Cruise Line";
     }else if(d.gdprCallerType==="charter_sixthman"){
       callerLead="A Charter / Sixthman guest contacts Norwegian Cruise Line";
+    }
+
+    if(isReinstateRoleplay(d)){
+      return `<p>Use one of the training reservations from <strong>yesterday that was cancelled</strong>. One trainee will act as the <strong>Cruise Specialist</strong> and the other will act as the <strong>${escapeHtml(roleplayCallerLabel(d))}</strong>. The caller contacts Norwegian Cruise Line because they want the reservation <strong>reinstated</strong>. Before discussing or servicing the reservation, complete the correct GDPR verification. <strong>Reservation Number is REQUIRED.</strong> Use the guest name(s) and booking details already on the selected training reservation.</p>`;
     }
 
     return `<p>${callerLead} about an existing training reservation${reservation}. They want to <strong>${escapeHtml(modificationLabel(d.modificationType).toLowerCase())}</strong>.${target}${request}${gdpr} Use the guest name(s) already on the existing training reservation.</p>`;
@@ -2080,6 +2291,72 @@ function latitudesScenarioHtml(d){
 function fullTaskList(d,meta){
   const name=focusSearchText(d);
   const tasks=[];
+
+  if(isSoloStudioScenario(d)){
+    return [
+      "Express willingness to assist and follow the Recipe for Success without making Kyle repeat information he already provided.",
+      "Identify Kyle James as the Travel Agent with Norwegian Training Travel (305-436-1000).",
+      "Book Tom Holland as one solo guest and search for him using Last Name + Date of Birth (06/01/1996).",
+      "Use the June 27, 2027 Norwegian Aqua 7-Day Caribbean sailing.",
+      "Book a Studio category and assign any available Studio stateroom.",
+      "Quote the advertised Studio pricing using the required cruise fare, taxes, fees, and port expenses wording.",
+      "Include all applicable Free at Sea offers and Pre-Paid Service Charges.",
+      "Add Tom's Kosher Meals request and, when applicable, advise that the option is capacity controlled.",
+      "Include Norwegian Care.",
+      "Collect the minimum required deposit using the training credit card.",
+      "Send both the Guest and Travel Agent confirmations to training123@ncl.com.",
+      "Leave the appropriate reservation comments using Compass.",
+      "Complete a full reservation recap and proper closing.",
+      "Save and post the reservation number in the class chat."
+    ];
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return [
+      "Use the reservation created during today's Solo Guest / Studio Booking practice.",
+      "Assign roles: one trainee is the Cruise Specialist and the other is Travel Agent Kyle James.",
+      "Express willingness to assist.",
+      "Complete Travel Agent GDPR verification before discussing the reservation. Reservation Number is REQUIRED.",
+      "Explain that the existing Studio must be upgraded because the reservation will now have two guests.",
+      "Go into Edit and upgrade to a category that can accommodate two guests.",
+      "Select an available stateroom as close as possible to elevators / stairs.",
+      "Quote the updated advertised pricing and new reservation total using the required pricing wording.",
+      "Verify the applicable Free at Sea promotions remain correct.",
+      "Include Pre-Paid Service Charges for both guests.",
+      "Keep Norwegian Care for both guests.",
+      "Add Taylor using Latitudes #272279126.",
+      "Set the bed configuration to Twin Beds.",
+      "Retain Tom's Kosher Meal request.",
+      "Add Taylor's mushroom allergy; Taylor does not need Kosher Meals.",
+      "Check whether an additional deposit is due. If so, advise Kyle and collect the additional deposit using the training card.",
+      "Store Changes after all updates are complete.",
+      "Send both the Guest and Travel Agent confirmations to training123@ncl.com.",
+      "Leave the appropriate reservation comments using Compass.",
+      "Complete a full recap and proper closing.",
+      "Switch roles and repeat so both trainees practice the Cruise Specialist role."
+    ];
+  }
+
+  if(isReinstateRoleplay(d)){
+    const profile=gdprProfile(d.gdprCallerType);
+    tasks.push("Use one of the training reservations from yesterday that was cancelled.");
+    tasks.push(`Assign roles: one trainee is the Cruise Specialist and the other is the ${roleplayCallerLabel(d)}.`);
+    tasks.push(profile
+      ? `Complete GDPR verification for the ${profile.label}. Reservation Number is REQUIRED.${["travel_agent","ta_group"].includes(d.gdprCallerType)?" The Agency ID / ABTA # / Travel Agency phone number is also mandatory for the Travel Agent path.":""}`
+      : "Complete the correct Guest Services GDPR verification before discussing the reservation. Reservation Number is REQUIRED.");
+    tasks.push("Verify the reservation was cancelled within the last 24 hours and qualifies for reinstatement.");
+    tasks.push("Verify whether the previous stateroom is still available.");
+    tasks.push("Verify whether the pricing is the same as it was before cancellation.");
+    tasks.push("If the reservation qualifies, reinstate it using the appropriate Seaweb workflow.");
+    tasks.push("Store Changes after the reinstatement and any required updates are complete.");
+    tasks.push("Recap the reinstated reservation and any differences with the caller.");
+    tasks.push("Add the appropriate reservation comments.");
+    tasks.push(`Send the appropriate updated confirmation${d.email?` to ${d.email}`:""}.`);
+    tasks.push("Complete the appropriate call closing.");
+    tasks.push("Switch roles and repeat the roleplay so both trainees practice the Cruise Specialist role.");
+    return [...new Set(tasks)];
+  }
+
   if(d.reservationWorkflow==="modify"){
     if(d.department==="Guest Services"){
       const profile=gdprProfile(d.gdprCallerType);
@@ -2241,11 +2518,21 @@ function commonMistakes(d,meta){
     if(d.airProgram==="bundled")items.unshift("Using Bundled Air / AIRPROM3 on a sailing that has not been verified as an eligible Pride of America sailing.");
     if(airMeta?.nclAir)items.unshift("Leaving a pre-cruise transfer on an NCL Air reservation even though the flight is scheduled to arrive one day before embarkation.");
   }
-  if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
+  if(isReinstateRoleplay(d)){
+    items.unshift(
+      "Beginning to discuss the reservation before GDPR is complete or without obtaining the required Reservation Number.",
+      "Assuming the reservation qualifies without confirming it was cancelled within the last 24 hours.",
+      "Assuming the previous stateroom is still available.",
+      "Assuming the previous pricing will automatically return.",
+      "Forgetting to Store Changes after the reinstatement.",
+      "Missing reservation comments, confirmation, recap, or the role switch."
+    );
+  }else if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
   return [...new Set(items)];
 }
 
 function expectedCompletionState(d,meta){
+  if(isReinstateRoleplay(d))return "If eligible, the cancelled training reservation is active/booked again; previous stateroom and pricing are verified, changes are stored, comments are added, confirmation is sent, and the caller receives a full recap.";
   if(d.payment==="Offer / Hold only")return "Offer / Hold — verify the first deposit deadline before ending the call.";
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
   if(d.payment==="FCC / CruiseNext")return "Use Offer/status sequencing while applying credits/coupons; verify the final saved status after the exercise.";
@@ -2405,6 +2692,7 @@ function resetScenarioForm(){
   $("scenarioOutput").innerHTML='<p class="empty-copy">Start a new scenario by choosing your options, then click <strong>Generate Scenario</strong>.</p>';
   $("scenarioStatus").className="status-badge neutral";
   $("scenarioStatus").textContent="Draft";
+  updateRoleplayScenarioButton();
   clearValidationDisplay();
   setMode("trainer");
   flash("Scenario cleared. You can start a brand-new exercise.");
@@ -2417,8 +2705,78 @@ function focusSummaryHtml(d){
   return `<section class="scenario-section visual-section focus-summary-section"><div class="section-label">SCENARIO FOCUS</div>${scenarioIconHeading('🎯','Skills Included')}<div class="scenario-focus-badges">${focusNamesForData(d).map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></section>`;
 }
 
-function completionInstructionsHtml(){
+function roleplaySetupHtml(d){
+  if(!isRoleplayScenario(d))return "";
+
+  let specialistText="Lead the call naturally, express willingness to assist, ask the right questions, complete the required Seaweb workflow, recap, document and close.";
+  let callerText="Respond naturally to the Cruise Specialist. Do not volunteer every detail at once; provide information as the Cruise Specialist asks the appropriate questions.";
+  let useText="Use the scenario details below as the caller's information and requests.";
+  if(isReinstateRoleplay(d)){
+    specialistText="Lead the call, complete GDPR, research eligibility, reinstate when appropriate, Store Changes, document, confirm and recap.";
+    callerText="Use the caller type that matches the cancelled reservation. Respond naturally and allow the Cruise Specialist to guide the interaction.";
+    useText="Use one of the training reservations from yesterday that was cancelled. Do not create a new reservation for this exercise.";
+  }else if(isAddGuestUpgradeRoleplay(d)){
+    specialistText="Express willingness to assist, complete Travel Agent GDPR, identify the Studio occupancy issue, service the reservation, quote the new price, check additional deposit, Store Changes, document, confirm and recap.";
+    callerText="You are Kyle James with Norwegian Training Travel. Reveal the requests naturally as the Cruise Specialist asks questions. Do not give every detail at the beginning of the call.";
+    useText="Use the reservation created during today's Solo Guest / Studio Booking practice.";
+  }
+
+  return `<section class="scenario-section visual-section roleplay-setup-section">
+    <div class="section-label">ROLEPLAY SETUP</div>
+    ${scenarioIconHeading('🎭','Partner Roleplay')}
+    <div class="roleplay-role-grid">
+      <div class="roleplay-role-card"><span>🎧 ROLE 1</span><strong>Cruise Specialist</strong><small>${escapeHtml(specialistText)}</small></div>
+      <div class="roleplay-role-card"><span>☎️ ROLE 2</span><strong>${escapeHtml(roleplayCallerLabel(d))}</strong><small>${escapeHtml(callerText)}</small></div>
+    </div>
+    <div class="instruction-strip"><strong>Scenario to use</strong><span>${escapeHtml(useText)}</span></div>
+    <div class="roleplay-switch-banner"><strong>🔄 Switch Roles</strong><span>After the first interaction is complete, switch roles and repeat the exercise so both trainees practice the Cruise Specialist role.</span></div>
+  </section>`;
+}
+
+function completionInstructionsHtml(d){
+  if(isRoleplayScenario(d)){
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the reinstatement workflow is complete, comments were added, and the confirmation was sent.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
+  }
   return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
+}
+
+function curriculumScenarioDetailsHtml(d){
+  if(isSoloStudioScenario(d)){
+    return `<section class="scenario-section visual-section curriculum-specific-section">
+      <div class="section-label">SCENARIO DETAILS</div>
+      ${scenarioIconHeading('🧾','Solo Guest / Studio Booking')}
+      <div class="scenario-detail-grid">
+        <div><span>Travel Agency</span><strong>Norwegian Training Travel</strong><small>305-436-1000</small></div>
+        <div><span>Travel Agent</span><strong>Kyle James</strong><small>Caller</small></div>
+        <div><span>Guest</span><strong>Tom Holland</strong><small>DOB: 06/01/1996</small></div>
+        <div><span>Guest Search</span><strong>Last Name + Date of Birth</strong><small>Use the training profile found in Seaweb</small></div>
+        <div><span>Category</span><strong>Studio</strong><small>Assign any available Studio stateroom</small></div>
+        <div><span>Special Request</span><strong>Kosher Meals</strong><small>If available, remind the caller this option is capacity controlled</small></div>
+      </div>
+      <div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>“The pricing for your Studio stateroom is $_____ per person, which includes the cruise fare, taxes, fees, and port expenses for a reservation total of $_____. How does that sound?”</span></div>
+      <div class="instruction-strip"><strong>Offers / Protection</strong><span>Include all applicable Free at Sea offers, Pre-Paid Service Charges, and Norwegian Care.</span></div>
+    </section>`;
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return `<section class="scenario-section visual-section curriculum-specific-section">
+      <div class="section-label">ROLEPLAY DETAILS</div>
+      ${scenarioIconHeading('🛏️','Add Guest & Upgrade Stateroom')}
+      <div class="scenario-detail-grid">
+        <div><span>Reservation</span><strong>Today's Solo Practice</strong><small>Use the reservation created earlier today</small></div>
+        <div><span>Travel Agent</span><strong>Kyle James</strong><small>Norwegian Training Travel • 305-436-1000</small></div>
+        <div><span>Guest Being Added</span><strong>Taylor</strong><small>Latitudes #272279126</small></div>
+        <div><span>Room Change</span><strong>Upgrade from Studio</strong><small>Choose a category that accommodates two guests</small></div>
+        <div><span>Location Request</span><strong>Near elevators / stairs</strong><small>As close as available</small></div>
+        <div><span>Bed Setup</span><strong>Twin Beds</strong><small>Two separate beds</small></div>
+        <div><span>Tom</span><strong>Keep Kosher Meals</strong><small>Retain his existing request</small></div>
+        <div><span>Taylor</span><strong>Mushroom Allergy</strong><small>Taylor does not need Kosher Meals</small></div>
+      </div>
+      <div class="instruction-strip"><strong>💬 Quote Updated Advertised Pricing</strong><span>“The pricing for your _____ stateroom is $_____ per person, which includes the cruise fare, taxes, fees, and port expenses for a reservation total of $_____. How does that sound?”</span></div>
+      <div class="instruction-strip"><strong>Payment Check</strong><span>Check whether the changes create an additional deposit due. If additional deposit is required, advise Kyle and collect it using the training card.</span></div>
+    </section>`;
+  }
+  return "";
 }
 
 function bookingSourceSectionHtml(d,agencyDisplay){
@@ -2477,15 +2835,28 @@ function paymentVisualHtml(d,paymentInstruction){
 
 function requiredActionsVisualHtml(d){
   const items=[];
-  if(d.confirmation)items.push(`Send the appropriate confirmation to ${d.email||'training123@ncl.com'}.`);
-  if(d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'&&d.confirmation)items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
+  if(isReinstateRoleplay(d))items.push("Store Changes after the reinstatement and all required updates are complete.");
+  if(isAddGuestUpgradeRoleplay(d))items.push("Store Changes after the guest, stateroom, pricing, bed configuration, special requests and any payment are complete.");
+  if(d.confirmation && (isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))){
+    items.push(`Send the Guest confirmation to ${d.email||'training123@ncl.com'}.`);
+    items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
+  }else if(d.confirmation){
+    items.push(`Send the appropriate confirmation to ${d.email||'training123@ncl.com'}.`);
+  }
+  if(d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'&&d.confirmation&&!isSoloStudioScenario(d))items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
   if(d.commenting)items.push('Leave the appropriate reservation comments using Compass / the Commenting Tool.');
   items.push('Complete a full reservation recap with the caller.');
   return `<section class="scenario-section visual-section">${scenarioIconHeading('📧','Required Actions')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul></section>`;
 }
 
 function recapVisualHtml(d){
-  const items=d.reservationWorkflow==='modify'?["Modification completed","Updated pricing / amount due","Promotion or deadline changes","Confirmation / comments","Any next steps"]:["Ship and sailing","Itinerary","Stateroom","Guests","Offers and add-ons",d.airEnabled?'Air / transfer arrangements':null,"Payment / deposit information","Any other important reservation details"].filter(Boolean);
+  const items=isSoloStudioScenario(d)
+    ? ["Norwegian Aqua and June 27, 2027 sail date","7-Day Caribbean itinerary","Tom Holland traveling solo","Studio category and selected stateroom","Reservation pricing / total","Free at Sea","Pre-Paid Service Charges","Kosher Meals","Norwegian Care","Deposit collected","Confirmations and comments"]
+    : isAddGuestUpgradeRoleplay(d)
+      ? ["Tom and Taylor traveling together","New category and stateroom location","Twin-bed configuration","Updated pricing / reservation total","Free at Sea for the updated reservation","Pre-Paid Service Charges for both guests","Norwegian Care for both guests","Tom's Kosher Meals","Taylor's mushroom allergy","Additional deposit collected, if applicable","Confirmations and comments"]
+      : isReinstateRoleplay(d)
+        ? ["Reservation successfully reinstated, if eligible","Ship and sail date","Guests","Stateroom / any stateroom change","Pricing / any pricing change","Any offers or other reservation details affected by reinstatement","Confirmation sent","Any next steps"]
+        : d.reservationWorkflow==='modify'?["Modification completed","Updated pricing / amount due","Promotion or deadline changes","Confirmation / comments","Any next steps"]:["Ship and sailing","Itinerary","Stateroom","Guests","Offers and add-ons",d.airEnabled?'Air / transfer arrangements':null,"Payment / deposit information","Any other important reservation details"].filter(Boolean);
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap the Reservation')}<p>Before ending the call, review the completed reservation or servicing outcome with the caller.</p><ul>${items.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></section>`;
 }
 
@@ -2501,7 +2872,9 @@ function considerationsVisualHtml(d){
 
 function finalReservationCheckHtml(d,meta){
   const items=fullTaskList(d,meta);
-  const core=[...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
+  const core=isRoleplayScenario(d)
+    ? [...items,"Full reservation recap completed","Proper closing statements used","Roles switched and exercise repeated"]
+    : [...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
   return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
 }
 function generateScenario(){
@@ -2536,12 +2909,14 @@ function generateScenario(){
 
   const html=`
     <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip">${d.focuses.length} focus${d.focuses.length===1?'':'es'}</span></div>
-    <h2 class="scenario-main-title">🛳️ SEAweb Practice Scenario – ${escapeHtml(focusTitle(d))}</h2>
-    <p class="scenario-intro">Please complete the following scenario <strong>independently</strong>. If you encounter any difficulties, refer to the <strong>Seaweb User Guide in NCLHelp</strong> for step-by-step guidance.</p>
-    ${completionInstructionsHtml()}
+    <h2 class="scenario-main-title">${isRoleplayScenario(d)?'🎭 SEAweb Roleplay Scenario':'🛳️ SEAweb Practice Scenario'} – ${escapeHtml(focusTitle(d))}</h2>
+    <p class="scenario-intro">${isRoleplayScenario(d)?'Work with a partner and allow the Cruise Specialist to control the call naturally.':'Please complete the following scenario <strong>independently</strong>.'} If you encounter any difficulties, refer to the <strong>Seaweb User Guide in NCLHelp</strong> for step-by-step guidance.</p>
+    ${completionInstructionsHtml(d)}
     ${focusSummaryHtml(d)}
+    ${roleplaySetupHtml(d)}
 
     <section class="scenario-section visual-section call-section">${scenarioIconHeading('☎️','Call Scenario')}${customerStoryHtml(d,meta,sailText,guestNames)}</section>
+    ${curriculumScenarioDetailsHtml(d)}
 
     ${bookingSourceSectionHtml(d,agencyDisplay)}
     ${d.reservationWorkflow==='modify'?gdprScenarioHtml(d):''}
@@ -2564,7 +2939,39 @@ function generateScenario(){
   d.html=html;state.currentScenario=d;runValidator();
   $("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
+  updateRoleplayScenarioButton();
 }
+
+function updateRoleplayScenarioButton(){
+  const btn=$("roleplayScenarioBtn");
+  if(!btn)return;
+  const d=state.currentScenario;
+  btn.disabled=!d;
+  if(!d){
+    btn.textContent="Make Roleplay";
+    btn.title="Generate a scenario first.";
+    return;
+  }
+  if(isDedicatedRoleplay(d)){
+    btn.textContent="Roleplay Scenario";
+    btn.title="This Scenario Focus is designed as a roleplay.";
+    btn.disabled=true;
+    btn.classList.add("active");
+    return;
+  }
+  btn.disabled=false;
+  btn.classList.toggle("active",isRoleplayScenario(d));
+  btn.textContent=isRoleplayScenario(d)?"Standard Scenario":"Make Roleplay";
+  btn.title=isRoleplayScenario(d)?"Convert this card back to a standard individual practice scenario.":"Convert this completed scenario into a two-person roleplay.";
+}
+
+$("roleplayScenarioBtn").onclick=()=>{
+  if(!state.currentScenario)return;
+  if(isDedicatedRoleplay(state.currentScenario))return;
+  state.currentScenario.roleplayMode=!state.currentScenario.roleplayMode;
+  generateScenario();
+  flash(state.currentScenario.roleplayMode?"Roleplay version created.":"Returned to the standard scenario.");
+};
 
 $("generateBtn").onclick=generateScenario;
 $("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
@@ -2586,6 +2993,22 @@ function runValidator(){
     const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
     if(missing.length)add("warning","Past Guest Latitudes number missing",`Guest ${missing.join(", Guest ")} ${missing.length===1?"is":"are"} marked Past Guest but missing a training Latitudes number.`);
     else add("passed","Guest status configured",`${mix.pastCount} Past Guest${mix.pastCount===1?"":"s"} • ${mix.newCount} New Guest${mix.newCount===1?"":"s"}.`);
+  }
+
+  if(isSoloStudioScenario(d)){
+    if(d.reservationWorkflow!=="new")add("error","Solo practice workflow mismatch","Solo Guest / Studio Booking must use Create New Reservation.");
+    if(d.newCallerType!=="travel_agent")add("error","Solo practice caller mismatch","Kyle James must be set as a Travel Agent caller.");
+    if(d.guestCount!==1)add("error","Solo occupancy mismatch","This practice scenario requires exactly 1 guest.");
+    if(d.category!=="Studio / Solo")add("warning","Studio category not selected","The Solo practice requires a Studio category.");
+    if(d.payment!=="Minimum Deposit")add("warning","Minimum deposit expected","The Solo practice requires taking the minimum deposit.");
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    if(d.reservationWorkflow!=="modify")add("error","Service roleplay workflow mismatch","Add Guest & Upgrade Stateroom – Roleplay must use Modify Existing Reservation.");
+    if(d.gdprCallerType!=="travel_agent")add("error","Travel Agent GDPR required","Kyle James is the Travel Agent caller for this roleplay.");
+    if(d.modificationType!=="add_guest")add("error","Add Guest modification required","The service roleplay must use Add Guest.");
+    if(d.modificationLatitudes!=="272279126")add("warning","Taylor Latitudes number","Expected training Latitudes #272279126 for Taylor.");
+    add("passed","Reservation verification rule","Reservation Number is REQUIRED before servicing the reservation.");
   }
 
   if(d.department==="Guest Services"){
@@ -2631,6 +3054,13 @@ function runValidator(){
   }
 
   if(d.reservationWorkflow==="modify"){
+    if(isReinstateRoleplay(d)){
+      if(d.department!=="Guest Services")add("error","Roleplay department mismatch","Reinstate Cancelled Reservation – Roleplay is designed for Guest Services.");
+      if(d.modificationType!=="cancel_reinstate")add("error","Roleplay workflow mismatch","This roleplay must use Cancel / Reinstate Reservation.");
+      if(!["direct_guest","travel_agent","ta_group"].includes(d.gdprCallerType))add("warning","Select the roleplay caller type","Choose Direct Guest or Travel Agent based on the cancelled reservation being used.");
+      else add("passed","Roleplay caller type selected",gdprProfile(d.gdprCallerType)?.label||d.gdprCallerType);
+      add("passed","Roleplay verification rule","Reservation Number is REQUIRED before servicing the reservation.");
+    }
     if(d.existingReservationNumber)add("passed","Existing reservation identified",d.existingReservationNumber);
     else add("warning","Training reservation number not entered","Enter the previously created training reservation number or provide it to the trainee separately.");
 
@@ -2652,9 +3082,15 @@ function runValidator(){
   }else{
     if(s){
       add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
-      if(!s.sailingDate)add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
-      else if(s.sailingDateVerified)add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
-      else add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer because the public NCL card did not expose an exact date. Verify it in NCL.com U.S. or Seaweb before class.`);
+      if(!s.sailingDate){
+        add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
+      }else if(s.sailingDateSourceType==="ncl"){
+        add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
+      }else if(s.sailingDateSourceType==="public-schedule"){
+        add("warning","Public schedule date selected",`${formatSailingDate(s.sailingDate)} • ${s.sailingDateSource||"Public schedule"}. Verify the final date in NCL.com U.S. or Seaweb before class.`);
+      }else{
+        add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer. Verify it in NCL.com U.S. or Seaweb before class.`);
+      }
       if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
       if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
       else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
@@ -3805,7 +4241,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();go("generator");
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});

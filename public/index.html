@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.26" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.29" />
 </head>
 <body>
   <header class="topbar">
@@ -174,7 +174,7 @@
             <div>
               <span class="eyebrow">SELECT YOUR SAILING</span>
               <h3>Choose Itinerary & Specific Sailing Date</h3>
-              <p>After searching, choose the itinerary first, then choose the exact departure date for that itinerary.</p>
+              <p>Choose the NCL.com U.S. itinerary first, then choose a specific sailing date from the public schedule.</p>
             </div>
           </div>
 
@@ -193,7 +193,7 @@
 
             <label id="manualDateField" class="hidden-field">Verified Sailing Date
               <input id="manualSailingDate" type="date" />
-              <span class="field-hint">This appears only if NCL.com U.S. does not expose exact dates after the automatic date lookup. Verify the date on NCL.com U.S. or in Seaweb.</span>
+              <span class="field-hint">This appears only if neither NCL.com U.S. nor the public sailing schedule returns usable dates. Verify the date in NCL.com U.S. or Seaweb.</span>
             </label>
           </div>
 
@@ -234,6 +234,7 @@
               <li>When applying FCC, CruiseNext, CruiseFirst, discount coupons, or other training credits, use <strong>Credits & Coupons</strong> to identify each item and the Latitudes profile it comes from.</li>
               <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
               <li>Select <strong>Generate Scenario</strong>, then review the card on the right. Trainer View includes coaching information; Trainee View hides trainer-only content.</li>
+              <li>After a scenario is created, select <strong>Make Roleplay</strong> to instantly convert it into a two-person Cruise Specialist / Caller roleplay. Select <strong>Standard Scenario</strong> to change it back.</li>
               <li>Use <strong>Start New Scenario</strong> to clear the current setup and generated scenario before building a completely different exercise.</li>
             </ul>
           </div>
@@ -586,6 +587,7 @@
                     </button>
                   </div>
                 </div>
+                <button id="roleplayScenarioBtn" class="tiny roleplay-toggle-btn" type="button" disabled>Make Roleplay</button>
                 <button id="printScenarioBtn" class="tiny">Print</button>
                 <button id="saveScenarioBtn" class="tiny primary">Save</button>
               </div>
@@ -651,6 +653,6 @@
   </div>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.26"></script>
+  <script src="/app.js?v=1.9.29"></script>
 </body>
 </html>

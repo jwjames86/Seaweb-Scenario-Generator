@@ -1246,3 +1246,87 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .itinerary-date-chooser .notice.info{
   transition:opacity .15s ease;
 }
+
+
+/* V1.9.27 • Hybrid sailing-date source */
+.selected-date-source{
+  margin-top:5px;
+  font-size:9px;
+  line-height:1.4;
+  font-weight:650;
+}
+.ncl-date-source{color:#067647}
+
+
+/* V1.9.28 • Reinstate Cancelled Reservation roleplay */
+.roleplay-setup-section{
+  background:#F8FBFC;
+  border-left:5px solid #0A84BD;
+  padding:16px 18px;
+  border-radius:0 10px 10px 0;
+}
+.roleplay-role-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:12px 0;
+}
+.roleplay-role-card{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:13px 14px;
+  background:#fff;
+  border:1px solid #D6E5EB;
+  border-radius:8px;
+}
+.roleplay-role-card>span{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1px;
+  color:#006099;
+}
+.roleplay-role-card>strong{font-size:13px;color:#101828}
+.roleplay-role-card>small{font-size:10px;line-height:1.45;color:#667085}
+.roleplay-switch-banner{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin-top:10px;
+  padding:11px 12px;
+  background:#EEF8F7;
+  border:1px solid #C6DFDC;
+  border-radius:7px;
+}
+.roleplay-switch-banner strong{white-space:nowrap;color:#00484F}
+.roleplay-switch-banner span{font-size:11px;line-height:1.45;color:#344054}
+@media(max-width:700px){
+  .roleplay-role-grid{grid-template-columns:1fr}
+  .roleplay-switch-banner{flex-direction:column}
+}
+
+
+/* V1.9.29 • post-generation roleplay converter + curriculum roleplays */
+.roleplay-toggle-btn{
+  border-color:#8EBFC2;
+  background:#F0F8F8;
+  color:#00484F;
+  font-weight:700;
+}
+.roleplay-toggle-btn:not(:disabled):hover{
+  background:#DDEEEE;
+}
+.roleplay-toggle-btn.active{
+  background:#00484F;
+  color:#fff;
+  border-color:#00484F;
+}
+.curriculum-specific-section{
+  background:#FCFCFB;
+  border:1px solid #E4E7EC;
+  border-radius:10px;
+  padding:16px 18px;
+}
+.curriculum-specific-section .scenario-detail-grid{
+  margin-top:10px;
+}
