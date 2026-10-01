@@ -1001,3 +1001,18 @@ Multiple-reservation Scenario Focus combinations now provide separate data-entry
 - Saved scenarios restore both reservations and all entered guest names.
 - Validator checks each reservation independently and flags missing primary guest names or incomplete multi-reservation setup.
 - Existing **Multiple Reservations & Authorized Person** scenarios now populate the same two-reservation input structure while keeping their specialized training instructions.
+
+
+## V1.9.37 – Step-by-Step Wizard Generator
+
+The Scenario Generator has been reorganized into a guided 4-step wizard to reduce trainer overwhelm and make the setup flow easier to follow.
+
+### What changed
+- Replaced the dense single-page form with 4 guided steps: **Scenario Type**, **Reservation Details**, **Additional Options**, and **Review & Generate**.
+- Added a clickable progress header so trainers can move between steps more easily.
+- Converted **Scenario Focus** into an always-visible card layout inside Step 1 so trainers can scan the options faster without opening a long dropdown menu.
+- Added a **Review Summary** in Step 4 that recaps the key scenario choices before generation.
+- Preserved the current right-side output preview and all existing generation logic, multiple-reservation setup, and exports.
+
+### Notes
+- The live Cloudflare site must be redeployed with this build for the wizard layout to appear online.
