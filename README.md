@@ -802,3 +802,59 @@ A free-text **Specific changes / caller details** field lets the trainer add nam
 The follow-up card includes an Existing Reservation snapshot, GDPR verification, Caller Role Card, trainer-selected servicing changes, custom caller details, optional training payment card, verification of existing benefits, Store Changes, Compass comments, updated confirmation(s), full recap, closing, role switch and a Final Roleplay Check.
 
 The follow-up roleplay receives a new scenario ID and can be saved independently in the Saved Scenario Library. The original Generator form remains in place; selecting **Generate Scenario** again recreates the original scenario.
+
+
+## V1.9.32 – Multiple Reservations + Authorized Person
+
+Two dedicated Guest Services Scenario Focuses were added.
+
+### Multiple Reservations & Authorized Person
+Automatically configures:
+- Direct Guest — U.S. / Agency 5
+- Maria Lopez as the caller
+- March 1–31, 2027 sailing search preset
+- Embarkation Port = Galveston
+- 4 travelers across 2 reservations
+- Maria Lopez — Latitudes #279019549
+- Sofia, age 4 — Latitudes #279019550
+- Ana Martinez — Latitudes #279019849
+- Luis Martinez — Latitudes #279019848
+- two Balcony staterooms that MUST connect
+- Free at Sea, Pre-Paid Service Charges and Norwegian Care
+- Sofia peanut allergy
+- Ana/Luis beds together + extra pillows
+- separate $250 deposits
+- training card 4917 6100 0000 0000 / 04-2027 / 123 / 123 Sesame Street
+- Authorized Person guidance
+- exact parents' reservation comment: `Authorized Person: Maria Lopez, CC 0000`
+- recap and comments on each reservation
+- confirmation for each reservation
+- TWITH
+- both reservation numbers saved and posted
+
+### Multiple Reservations & Authorized Person – Cruisetour
+Uses the same caller and guests, but automatically presets:
+- Ship = Pride of America
+- March 1–31, 2027
+- Honolulu departure expectation
+- exact package: **11-DAY OAHU EXPLORER HYATT WAIKIKI OCEAN VIEW CRUISETOUR**
+- 4-day pre-cruise Cruisetour
+- package required on BOTH reservations
+
+The generated scenario specifically warns trainees not to substitute a different package or book only the cruise portion.
+
+### Search improvements
+Galveston is now included in the searchable Embarkation Port dropdown.
+
+### Scenario output
+Both dedicated focuses include:
+- separate Reservation 1 and Reservation 2 cards
+- Authorized Person script
+- exact Authorized Person reservation note
+- connecting-stateroom verification
+- advertised-quote wording and identical-booking quote rule
+- separate-deposit reminder
+- detailed Things to Consider
+- dedicated recap for both reservations
+- TWITH and two-confirmation requirements
+- final check requiring both reservation numbers
