@@ -919,3 +919,56 @@ The Trainer version contains everything in the trainee version plus the generate
 
 ### Self-contained
 The NCL brand lockup, Generator styling, scenario content and interactive behavior are packaged into one downloaded HTML file, so trainers can send the file directly to trainees.
+
+
+## V1.9.34 – Portrait Interactive PDF
+
+The interactive scenario's **Print / Save PDF** layout has been rebuilt.
+
+### Portrait by default
+Interactive scenarios now use **Letter – Portrait** when printed or saved as PDF.
+
+The standalone button now reads:
+
+**Print / Save PDF (Portrait)**
+
+### Mirrors the interactive scenario
+The saved PDF retains the same visual hierarchy trainees see in the interactive HTML:
+- NCL header
+- interactive title and instructions
+- progress bar
+- scenario cards
+- step labels
+- scenario-focus callouts
+- roleplay content
+- checklist boxes
+- NCL / Generator styling
+
+Only browser controls such as navigation, reset, export buttons and completion buttons are removed.
+
+### Better page flow
+Large interactive sections are now allowed to continue naturally onto the next page. The previous version attempted to keep entire sections together, which could create large blank areas or awkward page breaks.
+
+Smaller content blocks such as role cards, guest cards, pricing callouts, payment cards and Authorized Person callouts stay together when practical.
+
+### Portrait-friendly sizing
+Typography, margins, cards, icons and scenario grids are automatically resized for an 8.5 × 11 portrait PDF.
+
+Generator elements are constrained to the printable width so they cannot extend beyond the right edge.
+
+### Notes
+Empty Notes / Answers areas are omitted from the PDF.
+
+If the trainee entered notes in a section, those notes are automatically included in the printed PDF.
+
+### Applies to every interactive share
+The new portrait PDF styling works with:
+- standard scenarios
+- multiple-focus scenarios
+- dedicated curriculum scenarios
+- Roleplays
+- Make Roleplay scenarios
+- Follow-Up Servicing Roleplays
+- Multiple Reservations / Authorized Person
+- Cruisetours
+- Trainer interactive scenarios
