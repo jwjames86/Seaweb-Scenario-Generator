@@ -1472,3 +1472,44 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
   letter-spacing:.4px;
   text-transform:uppercase;
 }
+
+/* V1.9.36 • Separate inputs for multiple-reservation scenarios */
+.form-grid-contents{display:contents}
+.guest-count-hidden{display:none!important}
+.multiple-reservation-panel{
+  margin:18px 0;
+  padding:16px;
+  border:1px solid #8EBFC2;
+  border-left:5px solid #006099;
+  border-radius:8px;
+  background:#F7FBFB;
+}
+.multiple-reservation-panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:15px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(0,72,79,.18);
+}
+.multiple-reservation-panel-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.multiple-reservation-panel-head strong{
+  font-size:14px;
+  color:#00484F;
+}
+.multiple-reservation-panel-head>div>span{
+  font-size:11px;
+  line-height:1.5;
+  color:#5E6466;
+  max-width:720px;
+}
+.multiple-reservation-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:850px){
+  .multiple-reservation-form-grid{grid-template-columns:1fr}
+  .multiple-reservation-panel-head{flex-direction:column}
+}

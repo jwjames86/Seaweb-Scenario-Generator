@@ -408,6 +408,103 @@ function isMultipleAuthorizedAny(dOrNames){
   return isMultipleAuthorizedScenario(dOrNames)||isMultipleAuthorizedCruisetourScenario(dOrNames);
 }
 
+function isMultipleReservationScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("multiple reservations"));
+}
+
+function multipleReservationFormActive(){
+  return $("reservationWorkflow")?.value==="new" && isMultipleReservationScenario(selectedFocusNames());
+}
+
+function renderExtraGuestFields(hostId,prefix,count){
+  const host=$(hostId);
+  if(!host)return;
+  const previous={};
+  host.querySelectorAll('input[data-extra-guest-index]').forEach(input=>{previous[input.dataset.extraGuestIndex]=input.value});
+  const rows=[];
+  for(let i=3;i<=count;i++){
+    const id=`${prefix}Guest${i}`;
+    rows.push(`<label><span>Guest ${i}</span><input id="${id}" data-extra-guest-index="${i}" placeholder="Guest ${i} name" value="${escapeAttr(previous[String(i)]||'')}" /></label>`);
+  }
+  host.innerHTML=rows.join('');
+  host.querySelectorAll('input[data-extra-guest-index]').forEach(input=>input.addEventListener('input',()=>{
+    if($("latitudesToggle")?.checked)renderLatitudesFields();
+    refreshCouponGuestOptions();
+  }));
+}
+
+function reservation1GuestNamesFromForm(){
+  const count=+$("guestCount")?.value||1;
+  return Array.from({length:count},(_,i)=>{
+    if(i===0)return $("guest1")?.value.trim()||"";
+    if(i===1)return $("guest2")?.value.trim()||"";
+    return $(`reservation1Guest${i+1}`)?.value.trim()||"";
+  });
+}
+
+function reservation2GuestNamesFromForm(){
+  const count=+$("reservation2GuestCount")?.value||1;
+  return Array.from({length:count},(_,i)=>{
+    if(i===0)return $("reservation2Guest1")?.value.trim()||"";
+    if(i===1)return $("reservation2Guest2")?.value.trim()||"";
+    return $(`reservation2Guest${i+1}`)?.value.trim()||"";
+  });
+}
+
+function formGuestNames(){
+  const names=reservation1GuestNamesFromForm();
+  if(multipleReservationFormActive())names.push(...reservation2GuestNamesFromForm());
+  return names;
+}
+
+function effectiveFormGuestCount(){
+  return formGuestNames().length||1;
+}
+
+function scenarioGuestNames(d){
+  if(Array.isArray(d?.reservations)&&d.reservations.length){
+    return d.reservations.flatMap(r=>Array.isArray(r.guests)?r.guests.slice(0,+r.guestCount||r.guests.length):[]);
+  }
+  const names=[];
+  const count=+d?.guestCount||1;
+  for(let i=0;i<count;i++){
+    if(i===0)names.push(d?.guest1||"");
+    else if(i===1)names.push(d?.guest2||"");
+    else names.push(Array.isArray(d?.guestNames)?(d.guestNames[i]||""):"");
+  }
+  return names;
+}
+
+function updateMultipleReservationUI(){
+  const active=multipleReservationFormActive();
+  $("multipleReservationPanel")?.classList.toggle("hidden-field",!active);
+  const labels={
+    guestCount:active?"Reservation 1 Guests":"Guests",
+    guest1:active?"Reservation 1 Primary Guest":"Primary Guest",
+    guest2:active?"Reservation 1 Guest 2":"Guest 2",
+    category:active?"Reservation 1 Stateroom Category":"Stateroom Category",
+    location:active?"Reservation 1 Location Preference":"Location Preference",
+    side:active?"Reservation 1 Side Preference":"Side Preference",
+    pricing:active?"Reservation 1 Advertised Pricing (optional)":"Advertised Pricing (optional)"
+  };
+  if($("guestCountLabelText"))$("guestCountLabelText").textContent=labels.guestCount;
+  if($("guest1LabelText"))$("guest1LabelText").textContent=labels.guest1;
+  if($("guest2LabelText"))$("guest2LabelText").textContent=labels.guest2;
+  if($("categoryLabelText"))$("categoryLabelText").textContent=labels.category;
+  if($("locationLabelText"))$("locationLabelText").textContent=labels.location;
+  if($("sideLabelText"))$("sideLabelText").textContent=labels.side;
+  if($("pricingLabelText"))$("pricingLabelText").textContent=labels.pricing;
+
+  const count1=+$("guestCount")?.value||1;
+  $("guest2Field")?.classList.toggle("guest-count-hidden",count1<2);
+  renderExtraGuestFields("reservation1ExtraGuests","reservation1",count1);
+
+  const count2=+$("reservation2GuestCount")?.value||1;
+  $("reservation2Guest2Field")?.classList.toggle("guest-count-hidden",count2<2);
+  renderExtraGuestFields("reservation2ExtraGuests","reservation2",count2);
+}
+
 function setSailingSearchPreset(anchor,value,from,to,duration=""){
   const radio=document.querySelector(`input[name="searchAnchor"][value="${anchor}"]`);
   if(radio){
@@ -426,10 +523,18 @@ function setSailingSearchPreset(anchor,value,from,to,duration=""){
 }
 
 function applyMultipleAuthorizedGuests(){
-  $("guestCount").value="4";
+  $("guestCount").value="2";
   $("guest1").value="Maria Lopez";
   $("guest2").value="Sofia";
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value="2";
+  if($("reservation2Guest1"))$("reservation2Guest1").value="Ana Martinez";
+  if($("reservation2Guest2"))$("reservation2Guest2").value="Luis Martinez";
+  if($("reservation2Category"))$("reservation2Category").value="Balcony";
+  if($("reservation2LocationPref"))$("reservation2LocationPref").value="Any";
+  if($("reservation2SidePref"))$("reservation2SidePref").value="Any";
+  if($("reservationRelationship"))$("reservationRelationship").value="Connecting";
   $("latitudesToggle").checked=true;
+  updateMultipleReservationUI();
   renderLatitudesFields(
     ["279019549","279019550","279019849","279019848"],
     [true,true,true,true]
@@ -973,6 +1078,7 @@ function updateWorkflowUI(applyDefaults=false){
   }
   updateModificationTypeUI(applyDefaults);
   syncAgencyCallerLogic();
+  updateMultipleReservationUI();
   updateGdprPreview();
 }
 function paymentActionNeedsCard(){
@@ -993,19 +1099,18 @@ function refreshTrainingCardPanel(preferredProfile){
 }
 
 function collectLatitudesNumbers(){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
 }
 
 function collectPastGuestFlags(){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>!!$(`pastGuest${i+1}`)?.checked);
 }
 
 function guestDisplayName(index){
-  if(index===0)return $('guest1').value.trim()||'Guest 1';
-  if(index===1)return $('guest2').value.trim()||'Guest 2';
-  return `Guest ${index+1}`;
+  const names=formGuestNames();
+  return names[index]||`Guest ${index+1}`;
 }
 
 function normalizeGuestStatusFlags(count,flags,values,hasExistingControls){
@@ -1033,7 +1138,7 @@ function syncGuestStatusCard(card){
 }
 
 function renderLatitudesFields(values,flags){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   const host=$('latitudesGuestFields');
   if(!host)return;
   const hasExistingControls=!!host.querySelector('.guest-status-radio');
@@ -1098,7 +1203,7 @@ function couponWorkflowRequested(){
 }
 
 function couponGuestNames(){
-  const count=+$("guestCount")?.value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>guestDisplayName(i)).filter(Boolean);
 }
 
@@ -1345,6 +1450,7 @@ function applyFocusDefaults(){
     }
   }else updateWorkflowUI(false);
 
+  updateMultipleReservationUI();
   refreshTrainingCardPanel(cardMeta.cardProfile);
   refreshCouponPanel();
   syncAirPanelFromScenario(true);
@@ -1396,14 +1502,24 @@ $("paymentAction").addEventListener("change",()=>{refreshTrainingCardPanel();ref
 $("addCouponBtn").addEventListener("click",()=>addCouponRow());
 $("couponToggle").addEventListener("change",refreshCouponPanel);
 $("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
-$("guestCount").addEventListener("change",()=>{refreshLatitudesPanel();refreshCouponGuestOptions()});
+$("guestCount").addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions()});
 $("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
 $("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
+$("reservation2GuestCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions()});
+$("reservation2Guest1")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshCouponGuestOptions()});
+$("reservation2Guest2")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshCouponGuestOptions()});
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
   $("guest1").value=pair[0]; $("guest2").value=pair[1];
+  if(multipleReservationFormActive()){
+    let pair2=namePairs[Math.floor(Math.random()*namePairs.length)];
+    if(namePairs.length>1 && pair2[0]===pair[0])pair2=namePairs[(namePairs.indexOf(pair2)+1)%namePairs.length];
+    $("reservation2Guest1").value=pair2[0];
+    $("reservation2Guest2").value=pair2[1];
+  }
   if($("latitudesToggle").checked)renderLatitudesFields();
+  refreshCouponGuestOptions();
 };
 
 const anchorSuggestions = {
@@ -2043,6 +2159,17 @@ function scenarioData(){
   const focusDays=records.map(r=>r.day);
   const cardKey=$("trainingCardProfile")?.value||metas.find(m=>m.cardProfile)?.cardProfile||"standardSesame";
   const cardRequired=metas.some(m=>m.cardRequired)||paymentActionNeedsCard();
+  const multipleReservations=$("reservationWorkflow")?.value==="new" && isMultipleReservationScenario(focusNames);
+  const reservation1GuestCount=+$("guestCount")?.value||1;
+  const reservation1Guests=reservation1GuestNamesFromForm();
+  const reservation2GuestCount=multipleReservations?(+$("reservation2GuestCount")?.value||1):0;
+  const reservation2Guests=multipleReservations?reservation2GuestNamesFromForm():[];
+  const reservations=multipleReservations?[
+    {number:1,guestCount:reservation1GuestCount,guests:reservation1Guests,category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,pricing:$("pricing").value.trim()},
+    {number:2,guestCount:reservation2GuestCount,guests:reservation2Guests,category:$("reservation2Category")?.value||$("category").value,location:$("reservation2LocationPref")?.value||"Any",side:$("reservation2SidePref")?.value||"Any",pricing:$("reservation2Pricing")?.value.trim()||""}
+  ]:[];
+  const totalGuestCount=multipleReservations?reservation1GuestCount+reservation2GuestCount:reservation1GuestCount;
+  const flattenedGuestNames=multipleReservations?[...reservation1Guests,...reservation2Guests]:reservation1Guests;
   return {
     id: state.currentScenario?.id || crypto.randomUUID(),
     department:$("department").value,
@@ -2063,7 +2190,13 @@ function scenarioData(){
     gdprCallerType:$("gdprCallerType")?.value||"",
     directGroupMarket:$("directGroupMarket")?.value||"direct_groups_sot",
     difficulty:$("difficulty").value,
-    guestCount:+$("guestCount").value,
+    guestCount:totalGuestCount,
+    reservation1GuestCount,
+    reservation2GuestCount,
+    multipleReservations,
+    reservations,
+    reservationRelationship:multipleReservations?($("reservationRelationship")?.value||"Same Sailing / Linked"):"",
+    guestNames:flattenedGuestNames,
     agency:$("agency").value.trim(),
     bookingSource:$("department").value==="Guest Services"
       ? ($("reservationWorkflow").value==="new"?newReservationCallerInfo($("newCallerType").value).type:guestServicesAgencyInfo($("agency").value).type)
@@ -2289,6 +2422,16 @@ function customerStoryHtml(d,meta,sailText,guestNames){
     return `<p>You receive a call from <strong>Maria Lopez</strong>, who sounds excited but slightly overwhelmed with the website. She is planning a vacation for herself, her daughter Sofia, and her parents Ana and Luis. They live near Galveston and want a <strong>Caribbean cruise in March 2027 departing from Galveston</strong>. Maria will make both reservations and pay both deposits. Confirm all applicable Recipe for Success questions without making her repeat information she has already provided.</p>`;
   }
 
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    const r1=reservationGuestLabel(d.reservations[0],0);
+    const r2=reservationGuestLabel(d.reservations[1],1);
+    const relationship=d.reservationRelationship||"Same Sailing / Linked";
+    if(d.department==="Guest Services" && d.newCallerType==="travel_agent"){
+      return `<p>A travel advisor is calling Norwegian Cruise Line to create <strong>two related reservations</strong> for ${escapeHtml(sailText)}. Reservation 1 is for <strong>${escapeHtml(r1)}</strong> and Reservation 2 is for <strong>${escapeHtml(r2)}</strong>. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    }
+    return `<p>The caller is planning ${escapeHtml(sailText)} and needs <strong>two related reservations</strong>. Reservation 1 is for <strong>${escapeHtml(r1)}</strong> and Reservation 2 is for <strong>${escapeHtml(r2)}</strong>. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+  }
+
   if(isSoloStudioScenario(d)){
     return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls to book a new cruise for his client <strong>Tom Holland</strong>, who will be traveling alone. Kyle already knows exactly what he is looking for because he called earlier in the day for pricing and options. Express your willingness to assist, confirm the information Kyle provides without making him repeat himself, quote the booking as you would for any new reservation, and complete a full recap.</p>`;
   }
@@ -2397,7 +2540,10 @@ function atAGlanceHtml(d,meta){
 
   const s=d.sailing;
   const sailing=s?`${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}`:"Trainer to provide/verify sailing";
-  const stateroom=`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
+  const multiReservations=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
+  const stateroom=multiReservations
+    ? d.reservations.slice(0,2).map((r,i)=>`R${i+1}: ${reservationStateroomLabel(r)}`).join(" • ")
+    : `${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
   const mix=getGuestProfileMix(d);
   const guestStatus=d.latitudes
     ? `${mix.pastCount} Past Guest${mix.pastCount===1?'':'s'}${mix.newCount?` • ${mix.newCount} New Guest${mix.newCount===1?'':'s'}`:''}`
@@ -2406,7 +2552,7 @@ function atAGlanceHtml(d,meta){
     <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${escapeHtml(guestStatus)}</small></div>
     ${d.department==="Guest Services"?`<div class="glance-card"><span>Caller Type</span><strong>${escapeHtml(newReservationCallerLabel(d))}</strong><small>${escapeHtml(d.market||guestServicesAgencyDisplay(d.agency))}</small></div>`:""}
     <div class="glance-card"><span>Sailing</span><strong>${escapeHtml(sailing)}</strong><small>${s?.departure?`From ${escapeHtml(s.departure)}`:"Verify exact date/port in Seaweb"}</small></div>
-    <div class="glance-card"><span>Stateroom</span><strong>${escapeHtml(stateroom)}</strong><small>Use actual available inventory</small></div>
+    <div class="glance-card"><span>${multiReservations?"Reservations / Staterooms":"Stateroom"}</span><strong>${escapeHtml(stateroom)}</strong><small>${multiReservations?escapeHtml(d.reservationRelationship||"Same Sailing / Linked"):"Use actual available inventory"}</small></div>
     <div class="glance-card"><span>Promotions</span><strong>${escapeHtml(promotionSummary(d))}</strong><small>Verify current eligibility and deadlines</small></div>
     <div class="glance-card"><span>Protection</span><strong>${escapeHtml(protectionSummary(d))}</strong><small>Use current approved guidance</small></div>
     <div class="glance-card"><span>Payment / Credit</span><strong>${escapeHtml(d.payment)}</strong><small>${d.cardRequired?"Training card details provided below":"Follow scenario workflow"}</small></div>
@@ -2416,8 +2562,9 @@ function atAGlanceHtml(d,meta){
 function latitudesScenarioHtml(d){
   if(!d.latitudes)return '';
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   const rows=Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||'Guest 1'):i===1?(d.guest2||'Guest 2'):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const isPast=!!mix.flags[i];
     const number=mix.numbers[i]||'';
     return `<div class="latitudes-output-card ${isPast?'past':'new'}"><span>Guest ${i+1} • ${isPast?'PAST GUEST':'NEW GUEST'}</span><strong>${escapeHtml(name)}</strong><small>${isPast?(number?`Latitudes #: ${escapeHtml(number)}`:'Latitudes number not entered — verify in Seaweb'):'Create a new training guest profile in Seaweb.'}</small></div>`;
@@ -2455,6 +2602,18 @@ function fullTaskList(d,meta){
       "Link both reservations with TWITH (Travel With) before ending the call.",
       "Save both reservation numbers and post both reservation numbers in the class chat."
     ];
+  }
+
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    const r1=d.reservations[0],r2=d.reservations[1];
+    tasks.push(`Create Reservation 1 for ${reservationGuestLabel(r1,0)}.`);
+    tasks.push(`Create Reservation 2 for ${reservationGuestLabel(r2,1)}.`);
+    tasks.push(`Use the same selected sailing for both reservations and coordinate the rooms as: ${d.reservationRelationship||"Same Sailing / Linked"}.`);
+    tasks.push(`Reservation 1 stateroom: ${reservationStateroomLabel(r1)}.`);
+    tasks.push(`Reservation 2 stateroom: ${reservationStateroomLabel(r2)}.`);
+    if(r1.pricing)tasks.push(`Quote Reservation 1 advertised pricing: ${r1.pricing}. Reconfirm the current amount in Seaweb.`);
+    if(r2.pricing)tasks.push(`Quote Reservation 2 advertised pricing: ${r2.pricing}. Reconfirm the current amount in Seaweb.`);
+    tasks.push("Keep the two reservations separate for pricing, payment, recap, comments and confirmations unless the specific workflow says otherwise.");
   }
 
   if(isSoloStudioScenario(d)){
@@ -2629,10 +2788,12 @@ function checklistHtml(items){
 }
 
 function beforeEndItems(d){
-  const items=["Recap the reservation or changes in plain language."];
-  if(!["No Payment / Service Only","Refund / Reinstate"].includes(d.payment))items.push("Confirm the amount due now and/or next payment deadline shown in Seaweb.");
-  if(d.confirmation)items.push("Confirm the guest knows where the updated confirmation will be sent.");
-  if(d.commenting)items.push("Make sure required reservation notes/comments have been saved.");
+  const multi=isMultipleReservationScenario(d);
+  const items=[multi?"Recap both reservations separately in plain language.":"Recap the reservation or changes in plain language."];
+  if(!["No Payment / Service Only","Refund / Reinstate"].includes(d.payment))items.push(multi?"Confirm the amount due now and/or next payment deadline for each reservation shown in Seaweb.":"Confirm the amount due now and/or next payment deadline shown in Seaweb.");
+  if(d.confirmation)items.push(multi?"Confirm the guest knows where each reservation confirmation will be sent.":"Confirm the guest knows where the updated confirmation will be sent.");
+  if(d.commenting)items.push(multi?"Make sure required notes/comments have been saved on each reservation.":"Make sure required reservation notes/comments have been saved.");
+  if(multi)items.push("Verify both reservation numbers are saved and the reservations are linked with TWITH when required.");
   items.push("Ask the customer-satisfaction question and use the Norwegian Cruise Line branded closing.");
   return items;
 }
@@ -2699,6 +2860,7 @@ function commonMistakes(d,meta){
 function expectedCompletionState(d,meta){
   if(isMultipleAuthorizedCruisetourScenario(d))return "Two active Pride of America Cruisetour reservations are created for the same March 2027 departure, both contain the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
   if(isMultipleAuthorizedScenario(d))return "Two active reservations are created on the same March 2027 Galveston sailing, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
+  if(isMultipleReservationScenario(d))return "Two separate reservations are created on the selected sailing using the entered guest and stateroom details; each booking is reviewed and saved separately, confirmations/comments are completed as required, and the reservations are linked with TWITH when applicable.";
   if(isReinstateRoleplay(d))return "If eligible, the cancelled training reservation is active/booked again; previous stateroom and pricing are verified, changes are stored, comments are added, confirmation is sent, and the caller receives a full recap.";
   if(d.payment==="Offer / Hold only")return "Offer / Hold — verify the first deposit deadline before ending the call.";
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
@@ -2813,6 +2975,14 @@ function resetScenarioForm(){
   $("agency").value="5";
   $("guest1").value="";
   $("guest2").value="";
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value="2";
+  if($("reservation2Guest1"))$("reservation2Guest1").value="";
+  if($("reservation2Guest2"))$("reservation2Guest2").value="";
+  if($("reservationRelationship"))$("reservationRelationship").value="Same Sailing / Linked";
+  if($("reservation2Category"))$("reservation2Category").value="Balcony";
+  if($("reservation2LocationPref"))$("reservation2LocationPref").value="Any";
+  if($("reservation2SidePref"))$("reservation2SidePref").value="Any";
+  if($("reservation2Pricing"))$("reservation2Pricing").value="";
   $("category").value="Balcony";
   $("locationPref").value="Any";
   $("sidePref").value="Any";
@@ -2905,14 +3075,15 @@ function completionInstructionsHtml(d){
   if(isRoleplayScenario(d)){
     return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the servicing workflow, comments, confirmation and recap are complete.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
   }
-  if(isMultipleAuthorizedAny(d)){
-    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save BOTH reservation numbers.</span><span>Post BOTH reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH.</span></div>`;
+  if(isMultipleReservationScenario(d)){
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save BOTH reservation numbers.</span><span>Post BOTH reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH when required.</span></div>`;
   }
   return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
 }
 
 function curriculumScenarioDetailsHtml(d){
   if(isMultipleAuthorizedAny(d))return multipleAuthorizedDetailsHtml(d);
+  if(isMultipleReservationScenario(d))return multipleReservationDetailsHtml(d);
 
   if(isSoloStudioScenario(d)){
     return `<section class="scenario-section visual-section curriculum-specific-section">
@@ -2950,6 +3121,43 @@ function curriculumScenarioDetailsHtml(d){
     </section>`;
   }
   return "";
+}
+
+function reservationGuestLabel(reservation,index){
+  const names=(reservation?.guests||[]).slice(0,+reservation?.guestCount||reservation?.guests?.length||0).filter(Boolean);
+  return names.length?names.join(" & "):`Reservation ${index+1} guests`;
+}
+
+function reservationStateroomLabel(reservation){
+  if(!reservation)return "Verify in Seaweb";
+  return `${reservation.category||"Stateroom"}${reservation.location&&reservation.location!=="Any"?` • ${reservation.location}`:""}${reservation.side&&reservation.side!=="Any"?` • ${reservation.side} side`:""}`;
+}
+
+function multipleReservationDetailsHtml(d){
+  if(!isMultipleReservationScenario(d)||isMultipleAuthorizedAny(d))return "";
+  const reservations=Array.isArray(d.reservations)?d.reservations:[];
+  if(reservations.length<2)return "";
+  const cards=reservations.slice(0,2).map((r,i)=>{
+    const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
+    const guestItems=names.map((name,j)=>`<li><strong>${escapeHtml(name||`Guest ${j+1}`)}</strong></li>`).join("");
+    return `<article class="multi-res-card">
+      <div class="multi-res-card-head"><span>RESERVATION ${i+1}</span><strong>${escapeHtml(reservationGuestLabel(r,i))}</strong></div>
+      <ul>
+        ${guestItems}
+        <li><strong>Stateroom:</strong> ${escapeHtml(reservationStateroomLabel(r))}</li>
+        ${r.pricing?`<li><strong>Advertised Pricing:</strong> ${escapeHtml(r.pricing)}</li>`:"<li><strong>Advertised Pricing:</strong> Quote what Seaweb displays</li>"}
+      </ul>
+    </article>`;
+  }).join("");
+  return `<section class="scenario-section visual-section curriculum-specific-section multi-res-section">
+    <div class="section-label">MULTIPLE RESERVATIONS</div>
+    ${scenarioIconHeading('🧳','Reservation Details')}
+    <div class="scenario-detail-grid">
+      <div><span>Reservation Count</span><strong>2 Reservations</strong><small>${d.guestCount} total guest${d.guestCount===1?'':'s'}</small></div>
+      <div><span>Relationship</span><strong>${escapeHtml(d.reservationRelationship||'Same Sailing / Linked')}</strong><small>Coordinate both bookings and use TWITH when required</small></div>
+    </div>
+    <div class="multi-res-grid">${cards}</div>
+  </section>`;
 }
 
 function multipleAuthorizedDetailsHtml(d){
@@ -3043,19 +3251,21 @@ function bookingSourceSectionHtml(d,agencyDisplay){
 function sailingDetailsVisualHtml(d,pricing){
   if(d.reservationWorkflow==="modify")return '';
   const s=d.sailing;
+  const multi=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🚢','Sailing Details')}<div class="scenario-detail-grid">
     <div><span>Sailing</span><strong>${escapeHtml(s?`${s.ship||'NCL Ship'}${s.title?` • ${s.title}`:''}`:'Trainer-selected NCL sailing')}</strong></div>
     <div><span>Departure</span><strong>${escapeHtml(s?.departure||'Verify in Seaweb')}</strong></div>
     <div><span>Sail Date</span><strong>${escapeHtml(s?.sailingDate?formatSailingDate(s.sailingDate):'Select / verify exact date')}</strong></div>
-    <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}</strong></div>
-  </div><h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}</section>`;
+    <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}${multi?' • 2 Reservations':''}</strong></div>
+  </div>${multi?`<div class="instruction-strip"><strong>🛏️ Two Reservations</strong><span>Use the reservation-specific guest, stateroom and pricing details below. Both reservations use this sailing unless the trainer instructs otherwise.</span></div>`:`<h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}`}</section>`;
 }
 
 function guestInformationVisualHtml(d){
-  if(d.reservationWorkflow==="modify"||isMultipleAuthorizedAny(d))return '';
+  if(d.reservationWorkflow==="modify"||isMultipleReservationScenario(d))return '';
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   const cards=Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||`Guest ${i+1}`):i===1?(d.guest2||`Guest ${i+1}`):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const past=d.latitudes&&mix.flags[i];
     const status=d.latitudes?(past?`Past Guest${mix.numbers[i]?` • Guest ID: ${escapeHtml(mix.numbers[i])}`:' • Verify Latitudes number'}`:'New Guest'):'Verify guest profile';
     return `<div class="scenario-guest-card"><span>Guest ${i+1}</span><strong>${escapeHtml(name)}</strong><small>${status}</small></div>`;
@@ -3102,6 +3312,23 @@ function requiredActionsVisualHtml(d){
       ])}
     </section>`;
   }
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d)){
+    return `<section class="scenario-section visual-section required-actions-section">
+      <div class="section-label">REQUIRED ACTIONS</div>
+      ${scenarioIconHeading('✅','Complete Both Reservations')}
+      ${checklistHtml([
+        "Create and save Reservation 1 using its entered guest and stateroom details.",
+        "Create and save Reservation 2 using its entered guest and stateroom details.",
+        `Coordinate the room relationship as: ${d.reservationRelationship||"Same Sailing / Linked"}.`,
+        d.payment!=="No Payment / Service Only"?"Complete the required payment / booking action separately for each reservation.":null,
+        d.commenting?"Add the appropriate reservation comments to EACH reservation.":null,
+        d.confirmation?`Send a confirmation for EACH reservation to ${d.email||"training123@ncl.com"}.`:null,
+        "Recap each reservation separately with the caller.",
+        "Link the reservations with TWITH when required.",
+        "Save both reservation numbers and post both in the class chat."
+      ].filter(Boolean))}
+    </section>`;
+  }
   if(isReinstateRoleplay(d))items.push("Store Changes after the reinstatement and all required updates are complete.");
   if(isAddGuestUpgradeRoleplay(d))items.push("Store Changes after the guest, stateroom, pricing, bed configuration, special requests and any payment are complete.");
   if(d.confirmation && (isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))){
@@ -3130,6 +3357,16 @@ function recapVisualHtml(d){
     return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap Both Reservations')}<p>Review each reservation separately with Maria before ending the call.</p>${checklistHtml(items)}</section>`;
   }
 
+  if(isMultipleReservationScenario(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    const recapItems=d.reservations.slice(0,2).map((r,i)=>`Reservation ${i+1} – ${reservationGuestLabel(r,i)}: ${reservationStateroomLabel(r)}`);
+    recapItems.push(`Room relationship: ${d.reservationRelationship||"Same Sailing / Linked"}`);
+    if(d.payment!=="No Payment / Service Only")recapItems.push("Payment / booking action completed separately for both reservations");
+    if(d.confirmation)recapItems.push("A confirmation was sent for each reservation");
+    if(d.commenting)recapItems.push("Required comments were saved on each reservation");
+    recapItems.push("Both reservation numbers saved");
+    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap Both Reservations')}<p>Review each reservation separately with the caller before ending the call.</p>${checklistHtml(recapItems)}</section>`;
+  }
+
   const items=isSoloStudioScenario(d)
     ? ["Norwegian Aqua and June 27, 2027 sail date","7-Day Caribbean itinerary","Tom Holland traveling solo","Studio category and selected stateroom","Reservation pricing / total","Free at Sea","Pre-Paid Service Charges","Kosher Meals","Norwegian Care","Deposit collected","Confirmations and comments"]
     : isAddGuestUpgradeRoleplay(d)
@@ -3152,11 +3389,12 @@ function considerationsVisualHtml(d){
 
 function finalReservationCheckHtml(d,meta){
   const items=fullTaskList(d,meta);
-  if(isMultipleAuthorizedAny(d)){
+  if(isMultipleReservationScenario(d)){
     const core=[
       ...items,
       "Both reservation numbers saved",
       "Both reservation numbers posted in the class chat",
+      "Both reservations linked with TWITH when required",
       "Proper closing completed"
     ];
     return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
@@ -3322,7 +3560,7 @@ function generateScenario(){
   const d=scenarioData();
   const metas=focusRecords.map(r=>r.meta);
   const meta=metas[0]||{};
-  const guestNames=[d.guest1,d.guest2].filter(Boolean);
+  const guestNames=scenarioGuestNames(d).filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
   const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
@@ -3445,7 +3683,23 @@ function runValidator(){
   add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
   if(d.reservationWorkflow==="new"&&!d.guest1 && !metas.some(m=>m.kind==="demo"))add("error","Missing primary guest","Guest 1 is required for new-reservation trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
-  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo"))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo") && !isMultipleReservationScenario(d))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(isMultipleReservationScenario(d) && d.reservationWorkflow==="new"){
+    const reservations=Array.isArray(d.reservations)?d.reservations:[];
+    if(reservations.length<2){
+      add("error","Second reservation details missing","Multiple Reservations requires separate details for Reservation 1 and Reservation 2.");
+    }else{
+      reservations.slice(0,2).forEach((r,i)=>{
+        const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
+        if(!names[0])add("error",`Reservation ${i+1} primary guest missing`,`Enter the primary guest name for Reservation ${i+1}.`);
+        const missing=names.map((name,j)=>!name?j+1:null).filter(Boolean);
+        if(missing.length)add("warning",`Reservation ${i+1} guest name${missing.length===1?' is':'s are'} blank`,`Enter or intentionally leave blank Guest ${missing.join(", Guest ")} for Reservation ${i+1}.`);
+        if(!r.category)add("warning",`Reservation ${i+1} stateroom missing`,`Choose a stateroom category for Reservation ${i+1}.`);
+      });
+      add("passed","Two reservation profiles configured",`${reservations[0].guestCount} guest${reservations[0].guestCount===1?'':'s'} in Reservation 1 • ${reservations[1].guestCount} guest${reservations[1].guestCount===1?'':'s'} in Reservation 2.`);
+      add("passed","Reservation relationship",d.reservationRelationship||"Same Sailing / Linked");
+    }
+  }
   if(d.latitudes){
     const mix=getGuestProfileMix(d);
     const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
@@ -3457,7 +3711,8 @@ function runValidator(){
     if(d.reservationWorkflow!=="new")add("error","Multiple-reservation workflow mismatch","This scenario must use Create New Reservation.");
     if(d.newCallerType!=="direct_us")add("error","Caller type mismatch","Maria Lopez is a Direct Guest — U.S. caller.");
     if(d.guestCount!==4)add("warning","Travel party should contain four guests","Maria, Sofia, Ana and Luis are traveling across two reservations.");
-    if(d.category!=="Balcony")add("warning","Balcony category expected","Both reservations require connecting Balcony staterooms.");
+    if(d.category!=="Balcony" || d.reservations?.[1]?.category!=="Balcony")add("warning","Balcony category expected","Both reservations require connecting Balcony staterooms.");
+    if(d.reservationRelationship!=="Connecting")add("warning","Connecting rooms required","The Authorized Person scenario requires two staterooms that actually connect, not just adjacent rooms.");
     if(d.payment!=="Initial Deposit")add("warning","Separate deposits required","Process the $250 deposit on each reservation separately.");
     if(!d.cardRequired||!d.card)add("error","Training card required","Maria is paying both deposits with the training credit card.");
     if(d.sailing){
@@ -3926,8 +4181,9 @@ function onePageSailText(d){
 function onePageGuestStatusHtml(d){
   if(!d.latitudes)return `<div class="one-page-muted">Create or verify all guest profiles using the training details.</div>`;
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   return `<div class="one-page-guest-list">${Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||"Guest 1"):i===1?(d.guest2||"Guest 2"):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const isPast=!!mix.flags[i];
     const number=mix.numbers[i]||"";
     return `<div class="one-page-guest-row ${isPast?"past":"new"}"><div><strong>${escapeHtml(name)}</strong><span>Guest ${i+1}</span></div><div><b>${isPast?"Past Guest":"New Guest"}</b>${isPast?`<small>${number?`Latitudes # ${escapeHtml(number)}`:"Latitudes # — verify in Seaweb"}</small>`:`<small>Create training profile</small>`}</div></div>`;
@@ -3937,10 +4193,15 @@ function onePageGuestStatusHtml(d){
 function onePageReferenceHtml(d){
   const s=d.sailing;
   const agency=d.department==="Outbound Sales"?`${d.market} • Agency ${d.agency}`:`Agency ${d.agency}`;
+  const multi=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
+  const roomItems=multi
+    ? d.reservations.slice(0,2).map((r,i)=>[`Reservation ${i+1}`,`${reservationGuestLabel(r,i)} • ${reservationStateroomLabel(r)}`])
+    : [["Stateroom",`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`]];
   const items=[
     ["Agency",agency],
     ["Sailing",onePageSailText(d)],
-    ["Stateroom",`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`],
+    ...roomItems,
+    ...(multi?[["Relationship",d.reservationRelationship||"Same Sailing / Linked"]]:[]),
     ["Payment / Credit",d.payment],
     ["Promotions",promotionSummary(d)],
     ["Protection",protectionSummary(d)],
@@ -3971,7 +4232,7 @@ function onePageTrainingCardHtml(d){
 function makeOnePageTraineeClone(){
   const d=state.currentScenario||scenarioData();
   const meta=currentFocusMeta()||{};
-  const guestNames=[d.guest1,d.guest2].filter(Boolean);
+  const guestNames=scenarioGuestNames(d).filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const companion=guestNames[1]||"";
   const s=d.sailing;
@@ -4577,7 +4838,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.35",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.36",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -5469,14 +5730,34 @@ window.openSaved=(id)=>{
   updateGdprPreview();
   $("scenarioApproach").value=x.approach||"variation";
   $("difficulty").value=x.difficulty||"Intermediate";
-  $("guestCount").value=String(x.guestCount||2);
+  const savedReservations=Array.isArray(x.reservations)?x.reservations:[];
+  const savedR1=savedReservations[0]||null;
+  const savedR2=savedReservations[1]||null;
+  $("guestCount").value=String(savedR1?.guestCount||x.reservation1GuestCount||x.guestCount||2);
   $("agency").value=x.agency||($("department").value==="Guest Services"?"5":$("marketAgency").value);
-  $("guest1").value=x.guest1||"";$("guest2").value=x.guest2||"";
-  if([...$("category").options].some(o=>o.value===x.category)) $("category").value=x.category;
-  if([...$("locationPref").options].some(o=>o.value===x.location)) $("locationPref").value=x.location;
-  if([...$("sidePref").options].some(o=>o.value===x.side)) $("sidePref").value=x.side;
+  $("guest1").value=savedR1?.guests?.[0]??x.guest1??"";
+  $("guest2").value=savedR1?.guests?.[1]??x.guest2??"";
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value=String(savedR2?.guestCount||x.reservation2GuestCount||2);
+  if($("reservation2Guest1"))$("reservation2Guest1").value=savedR2?.guests?.[0]||"";
+  if($("reservation2Guest2"))$("reservation2Guest2").value=savedR2?.guests?.[1]||"";
+  if($("reservationRelationship"))$("reservationRelationship").value=x.reservationRelationship||"Same Sailing / Linked";
+  updateMultipleReservationUI();
+  if(savedR1?.guests){
+    savedR1.guests.slice(2).forEach((name,i)=>{const input=$(`reservation1Guest${i+3}`);if(input)input.value=name||"";});
+  }
+  if(savedR2?.guests){
+    savedR2.guests.slice(2).forEach((name,i)=>{const input=$(`reservation2Guest${i+3}`);if(input)input.value=name||"";});
+  }
+  if([...$("category").options].some(o=>o.value===(savedR1?.category||x.category))) $("category").value=savedR1?.category||x.category;
+  if(savedR2 && $("reservation2Category") && [...$("reservation2Category").options].some(o=>o.value===savedR2.category))$("reservation2Category").value=savedR2.category;
+  if([...$("locationPref").options].some(o=>o.value===(savedR1?.location||x.location))) $("locationPref").value=savedR1?.location||x.location;
+  if([...$("sidePref").options].some(o=>o.value===(savedR1?.side||x.side))) $("sidePref").value=savedR1?.side||x.side;
+  if(savedR2 && $("reservation2LocationPref") && [...$("reservation2LocationPref").options].some(o=>o.value===savedR2.location))$("reservation2LocationPref").value=savedR2.location;
+  if(savedR2 && $("reservation2SidePref") && [...$("reservation2SidePref").options].some(o=>o.value===savedR2.side))$("reservation2SidePref").value=savedR2.side;
   if([...$("paymentAction").options].some(o=>o.value===x.payment)) $("paymentAction").value=x.payment;
-  $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
+  $("pricing").value=savedR1?.pricing??x.pricing??"";
+  if($("reservation2Pricing"))$("reservation2Pricing").value=savedR2?.pricing||"";
+  $("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
   $("couponToggle").checked=!!x.couponEnabled || !!(x.coupons&&x.coupons.length);

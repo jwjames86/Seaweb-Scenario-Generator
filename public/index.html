@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.35" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.36" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.14 • Multi-Focus + Visual Scenario Format</span>
+            <span class="pill">V1.9.36 • Multiple Reservation Details</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -295,7 +295,7 @@
                   <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Challenge</option>
                 </select>
               </label>
-              <label id="guestCountField" class="new-reservation-detail">Guests
+              <label id="guestCountField" class="new-reservation-detail"><span id="guestCountLabelText">Guests</span>
                 <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
               </label>
               <label id="marketAgencyField" class="hidden-field">Outbound Market / Currency
@@ -305,22 +305,23 @@
                 <input id="agency" value="5" autocomplete="off" />
                 <span id="agencyHint" class="field-hint">Agency 5 = Direct Guest (US) • Agency 7 = Direct Guest (Canada) • Travel Agent booking = enter the Travel Agent's Agency ID or phone number.</span>
               </label>
-              <label id="guest1Field">Primary Guest
+              <label id="guest1Field"><span id="guest1LabelText">Primary Guest</span>
                 <input id="guest1" value="Maxim De Winter" />
               </label>
-              <label id="guest2Field" class="new-reservation-detail">Guest 2
+              <label id="guest2Field" class="new-reservation-detail"><span id="guest2LabelText">Guest 2</span>
                 <input id="guest2" value="Rebecca De Winter" />
               </label>
-              <label id="categoryField" class="new-reservation-detail">Stateroom Category
+              <div id="reservation1ExtraGuests" class="form-grid-contents"></div>
+              <label id="categoryField" class="new-reservation-detail"><span id="categoryLabelText">Stateroom Category</span>
                 <select id="category">
                   <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
                   <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
                 </select>
               </label>
-              <label id="locationField" class="new-reservation-detail">Location Preference
+              <label id="locationField" class="new-reservation-detail"><span id="locationLabelText">Location Preference</span>
                 <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
               </label>
-              <label id="sideField" class="new-reservation-detail">Side Preference
+              <label id="sideField" class="new-reservation-detail"><span id="sideLabelText">Side Preference</span>
                 <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
               </label>
               <label>Payment / Booking Action
@@ -329,12 +330,58 @@
                   <option>FCC / CruiseNext</option><option>Amenity Payment</option><option>Auto Final Payment discussion</option><option>Refund / Reinstate</option>
                 </select>
               </label>
-              <label id="pricingField" class="new-reservation-detail">Advertised Pricing (optional)
+              <label id="pricingField" class="new-reservation-detail"><span id="pricingLabelText">Advertised Pricing (optional)</span>
                 <input id="pricing" placeholder="$1,559 pp / $3,118 total" />
               </label>
               <label>Training Confirmation Email
                 <input id="confirmationEmail" value="training123@ncl.com" />
               </label>
+            </div>
+
+            <div id="multipleReservationPanel" class="multiple-reservation-panel hidden-field">
+              <div class="multiple-reservation-panel-head">
+                <div>
+                  <strong>Reservation 2 Details</strong>
+                  <span>Enter the guest and stateroom details for the second reservation. Sailing, caller type, booking source, promotions, payment action, and confirmation email are shared unless the scenario says otherwise.</span>
+                </div>
+                <span class="status-badge">RESERVATION 2</span>
+              </div>
+              <div class="form-grid multiple-reservation-form-grid">
+                <label>Guests
+                  <select id="reservation2GuestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+                </label>
+                <label>Reservation Relationship
+                  <select id="reservationRelationship">
+                    <option>Connecting</option>
+                    <option>Adjacent / Next Door</option>
+                    <option>Near Each Other</option>
+                    <option selected>Same Sailing / Linked</option>
+                    <option>No Preference</option>
+                  </select>
+                </label>
+                <label>Primary Guest
+                  <input id="reservation2Guest1" placeholder="Reservation 2 primary guest" />
+                </label>
+                <label id="reservation2Guest2Field">Guest 2
+                  <input id="reservation2Guest2" placeholder="Reservation 2 guest 2" />
+                </label>
+                <div id="reservation2ExtraGuests" class="form-grid-contents"></div>
+                <label>Stateroom Category
+                  <select id="reservation2Category">
+                    <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
+                    <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
+                  </select>
+                </label>
+                <label>Location Preference
+                  <select id="reservation2LocationPref"><option selected>Any</option><option>Forward</option><option>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
+                </label>
+                <label>Side Preference
+                  <select id="reservation2SidePref"><option selected>Any</option><option>Port</option><option>Starboard</option></select>
+                </label>
+                <label>Advertised Pricing (optional)
+                  <input id="reservation2Pricing" placeholder="$1,559 pp / $3,118 total" />
+                </label>
+              </div>
             </div>
 
             <div id="modificationPanel" class="modification-panel hidden-field">
@@ -733,6 +780,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.35"></script>
+  <script src="/app.js?v=1.9.36"></script>
 </body>
 </html>
