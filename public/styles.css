@@ -1644,3 +1644,17 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 #wizardStep3Content fieldset .check:has(#couponToggle):before{content:"◇"}
 #scenarioOutput.trainer-guide-only> :not(.trainer-guide){display:none!important}
 #scenarioOutput.trainer-guide-only .trainer-guide{margin-top:0}
+
+
+/* V1.9.39 compact scenario focus cards */
+.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:10px 12px 12px}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:112px;padding:14px 10px 12px;justify-content:flex-start;gap:7px}
+.wizard-generator-mode #generator .focus-choice svg{width:28px;height:28px}
+.wizard-generator-mode #generator .focus-choice strong{font-size:11.5px;line-height:1.25;max-width:160px}
+.wizard-generator-mode #generator .focus-card-toggle{margin-top:auto;border:1px solid #c8d5df;background:#fff;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;color:#27506a;cursor:pointer;transition:all .16s ease}
+.wizard-generator-mode #generator .focus-card-toggle:hover{border-color:#8fbad4;background:#f5fbff}
+.wizard-generator-mode #generator .focus-card-description{display:none;font-size:9px;line-height:1.4;color:#5f6c7a;max-width:180px;margin-top:2px}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-description{display:block}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-body{min-height:150px;box-shadow:0 8px 20px rgba(9,91,136,.08)}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-toggle{background:#eef7fb;border-color:#8fbad4;color:#0f4f73}
+@media(max-width:1280px){.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(3,minmax(0,1fr))}}

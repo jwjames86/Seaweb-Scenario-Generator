@@ -745,10 +745,26 @@ function updateScenarioFocus(preferred,preferredDay,preferredList){
   const requested=Array.isArray(preferredList)&&preferredList.length?preferredList:(preferred?[preferred]:[]);
   $("focusPickerOptions").innerHTML=all.map(({day,meta})=>{
     const checked=requested.some(name=>name===meta.name) || (!requested.length && all[0]?.meta.name===meta.name && all[0]?.day===day);
-    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong><small>${escapeHtml(meta.objective)}</small></span></label>`;
+    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong><button type="button" class="focus-card-toggle" aria-expanded="false">Details</button><small class="focus-card-description">${escapeHtml(meta.objective)}</small></span></label>`;
   }).join("");
 
   $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(input=>input.addEventListener('change',syncScenarioFocusSelection));
+  $("focusPickerOptions").querySelectorAll('.focus-card-toggle').forEach(btn=>btn.addEventListener('click',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const card=btn.closest('.focus-choice');
+    const isExpanded=card?.classList.contains('expanded');
+    $("focusPickerOptions").querySelectorAll('.focus-choice.expanded').forEach(item=>{
+      item.classList.remove('expanded');
+      const toggle=item.querySelector('.focus-card-toggle');
+      if(toggle){toggle.setAttribute('aria-expanded','false');toggle.textContent='Details';}
+    });
+    if(card && !isExpanded){
+      card.classList.add('expanded');
+      btn.setAttribute('aria-expanded','true');
+      btn.textContent='Hide details';
+    }
+  }));
   if(preferred && preferredDay){
     const exact=[...$("focusPickerOptions").querySelectorAll('.focus-choice-input')].find(i=>i.value===preferred&&i.dataset.day===String(preferredDay));
     if(exact && requested.length<=1){
@@ -4863,7 +4879,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.38",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.39",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
