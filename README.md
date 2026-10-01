@@ -972,3 +972,17 @@ The new portrait PDF styling works with:
 - Multiple Reservations / Authorized Person
 - Cruisetours
 - Trainer interactive scenarios
+
+
+## V1.9.35 – Interactive PDF Safe Margins
+
+The standalone interactive trainee/trainer **Print / Save PDF (Portrait)** layout now has a larger print-safe gutter.
+
+### PDF margin fix
+- Increased the Letter portrait page margins, especially on the left and right.
+- Added a small inner print gutter so content does not sit directly against the printable boundary.
+- Constrained cards, sections, tables, images and inherited Generator content to the available page width.
+- Added print-only text wrapping so long sailing names, labels, values and other content cannot force a section past the right edge.
+- Overrode inherited `white-space: nowrap` rules during printing where they could cause clipping.
+
+The interactive browser layout is unchanged; these adjustments apply only when the standalone interactive scenario is printed or saved as a PDF.
