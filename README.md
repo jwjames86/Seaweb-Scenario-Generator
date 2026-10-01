@@ -1035,3 +1035,16 @@ The Scenario Generator now follows the approved Option A experience as a true mu
 - The top progress indicator shows completed, current and upcoming steps.
 - **Edit Setup** returns directly to Review & Generate without losing the generated scenario.
 - Existing scenario logic, validation, multiple reservations, interactive HTML sharing and PDF-safe export behavior are preserved.
+
+
+## V1.9.39 – Compact Scenario Focus Cards
+
+The Scenario Focus area in the guided wizard was tightened up so trainers can see more options at once without scrolling.
+
+### What changed
+- Hid the long focus descriptions by default.
+- Added a **Details** expand/collapse control on each Scenario Focus card.
+- Reduced the default card size so more focus options fit on one screen.
+- Expanded the desktop grid so the Scenario Focus cards can display in more columns when space allows.
+
+This keeps the cleaner Option A flow while reducing visual overload in Step 1.
