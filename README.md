@@ -986,3 +986,18 @@ The standalone interactive trainee/trainer **Print / Save PDF (Portrait)** layou
 - Overrode inherited `white-space: nowrap` rules during printing where they could cause clipping.
 
 The interactive browser layout is unchanged; these adjustments apply only when the standalone interactive scenario is printed or saved as a PDF.
+
+## V1.9.36 – Multiple Reservation Detail Entry
+
+Multiple-reservation Scenario Focus combinations now provide separate data-entry areas for both bookings instead of forcing all guest and stateroom information into one reservation.
+
+### What changed
+- When **Multiple Reservations** is selected as any Scenario Focus, the original guest/stateroom fields become **Reservation 1** fields.
+- A new **Reservation 2 Details** panel appears with its own guest count, guest names, stateroom category, location preference, side preference, and optional advertised pricing.
+- Added a **Reservation Relationship** selector for Connecting, Adjacent / Next Door, Near Each Other, Same Sailing / Linked, or No Preference.
+- Guest counts from both reservations are combined correctly for Latitudes / Past Guest setup, coupon source choices, validation, scenario output, and exports.
+- Guest 3–8 name fields now appear automatically when a reservation contains more than two guests.
+- Generated trainee scenarios show Reservation 1 and Reservation 2 separately, including the entered names, stateroom preferences, pricing, and relationship.
+- Saved scenarios restore both reservations and all entered guest names.
+- Validator checks each reservation independently and flags missing primary guest names or incomplete multi-reservation setup.
+- Existing **Multiple Reservations & Authorized Person** scenarios now populate the same two-reservation input structure while keeping their specialized training instructions.
