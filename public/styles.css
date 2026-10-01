@@ -1435,3 +1435,40 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:760px){
   .multi-res-grid{grid-template-columns:1fr}
 }
+
+
+/* V1.9.33 • Interactive Scenario Sharing */
+.share-menu-group-label{
+  padding:8px 12px 5px;
+  font-size:9px;
+  line-height:1;
+  font-weight:850;
+  letter-spacing:1.05px;
+  color:#667085;
+}
+.interactive-share-menu{
+  width:min(430px,calc(100vw - 32px));
+  max-height:min(660px,calc(100vh - 120px));
+  overflow:auto;
+}
+.interactive-share-primary{
+  background:#F2F8F7 !important;
+  border-left:4px solid #00484F !important;
+}
+.interactive-share-primary .share-menu-icon{
+  background:#00484F !important;
+  color:#fff !important;
+}
+.interactive-share-menu .recommended-share-option::after{
+  content:"Recommended";
+  align-self:center;
+  margin-left:auto;
+  padding:3px 6px;
+  border-radius:999px;
+  background:#EAF4F6;
+  color:#00484F;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+}

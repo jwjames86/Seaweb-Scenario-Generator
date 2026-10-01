@@ -3711,6 +3711,7 @@ function inlineComputedStyles(root){
   });
 }
 
+const INTERACTIVE_SHARE_LOGO_DATA='';
 function makeOffscreenShareHost(){
   const host=document.createElement("div");
   host.className="share-render-host";
@@ -4564,6 +4565,423 @@ async function copyCardFormatted(){
   }
 }
 
+
+function interactiveScenarioFilename(mode="trainee"){
+  const d=state.currentScenario||scenarioData();
+  const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const focus=(focusTitle(d)||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54);
+  const type=isRoleplayScenario(d)||d.followUpRoleplay?"Roleplay":"Scenario";
+  const view=mode==="trainer"?"Trainer":"Trainee";
+  return `${dept}-${focus}-${type}-${view}-Interactive.html`;
+}
+
+async function currentGeneratorStylesForInteractiveShare(){
+  try{
+    const response=await fetch("/styles.css?v=1.9.33",{cache:"no-store"});
+    if(response.ok)return await response.text();
+  }catch(_){}
+  return "";
+}
+
+function interactiveShareOverrides(){
+  return `
+:root{
+  --interactive-sand:#EBE7DF;--interactive-white:#fff;--interactive-black:#101828;
+  --interactive-mid:#475467;--interactive-border:#D0D5DD;--interactive-aqua:#A7CAC6;
+  --interactive-teal:#00484F;--interactive-ocean:#006099;--interactive-blue:#0A84BD;
+  --interactive-success:#147A5B;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body.interactive-share-page{
+  margin:0!important;background:var(--interactive-sand)!important;color:var(--interactive-black)!important;
+  font-family:Poppins,"Segoe UI",Arial,sans-serif!important;
+}
+.interactive-top-accent{height:10px;background:var(--interactive-aqua)}
+.interactive-shell{max-width:1460px;margin:0 auto;padding:16px 22px 46px}
+.interactive-brand{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:8px}
+.interactive-brand img{height:39px;max-width:176px;object-fit:contain;object-position:left center}
+.interactive-brand-fallback{font-weight:850;letter-spacing:.03em}
+.interactive-brand-meta{text-align:right}
+.interactive-brand-meta strong{display:block;font-size:14px}
+.interactive-brand-meta span{display:block;color:var(--interactive-mid);font-size:12px;margin-top:1px}
+.interactive-toolbar{
+  position:sticky;top:0;z-index:50;display:flex;gap:9px;align-items:center;flex-wrap:wrap;
+  padding:10px 0 12px;margin-bottom:8px;background:rgba(235,231,223,.96);
+  backdrop-filter:blur(10px);border-bottom:1px solid rgba(167,202,198,.8)
+}
+.interactive-toolbar-spacer{flex:1}
+.interactive-btn{
+  border:1px solid var(--interactive-border);background:#fff;color:var(--interactive-black);
+  border-radius:7px;padding:9px 13px;font-weight:750;font-size:13px;cursor:pointer
+}
+.interactive-btn:hover{border-color:var(--interactive-blue)}
+.interactive-btn.primary{background:var(--interactive-blue);border-color:var(--interactive-blue);color:#fff}
+.interactive-btn.teal{background:var(--interactive-teal);border-color:var(--interactive-teal);color:#fff}
+.interactive-btn.danger{color:#B42318;background:transparent}
+.interactive-save-note{font-size:11px;color:var(--interactive-mid)}
+.interactive-header{margin:13px 0 14px}
+.interactive-header h1{margin:7px 0 5px;font-size:32px;line-height:1.1;letter-spacing:-.02em}
+.interactive-header p{margin:0;color:var(--interactive-mid);font-size:14px}
+.interactive-progress-wrap{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:13px 0 18px}
+.interactive-progress-track{height:12px;border-radius:999px;background:#DCE4E5;overflow:hidden}
+.interactive-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--interactive-teal),var(--interactive-blue));transition:width .25s ease}
+.interactive-progress-text{min-width:108px;text-align:right;color:var(--interactive-teal);font-size:13px;font-weight:850}
+.interactive-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:18px;align-items:start}
+.interactive-nav{
+  position:sticky;top:76px;max-height:calc(100vh - 98px);overflow:auto;background:#fff;
+  border:1px solid var(--interactive-border);border-radius:10px;box-shadow:0 8px 25px rgba(16,24,40,.07)
+}
+.interactive-nav-title{padding:14px 14px 10px;font-weight:850;font-size:13px;border-bottom:1px solid #EAECF0}
+.interactive-nav a{
+  display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #EAECF0;
+  color:var(--interactive-black);text-decoration:none;font-size:12px
+}
+.interactive-nav a:hover{background:#F2F8F7}
+.interactive-nav a.active{background:#F3F8FB;box-shadow:inset 4px 0 0 var(--interactive-blue)}
+.interactive-nav a.done .interactive-nav-num{background:var(--interactive-success);color:#fff}
+.interactive-nav-num{
+  width:23px;height:23px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  background:#EAF4F6;color:var(--interactive-ocean);font-size:11px;font-weight:850
+}
+.interactive-main{min-width:0}
+.interactive-scenario-wrap{background:transparent!important;padding:0!important;margin:0!important;max-width:none!important;border:0!important;box-shadow:none!important}
+.interactive-step{
+  position:relative;scroll-margin-top:90px;margin-bottom:16px!important;background:#fff!important;
+  border:1px solid var(--interactive-border)!important;border-radius:10px!important;
+  box-shadow:0 3px 14px rgba(16,24,40,.04)!important;padding:18px 20px!important
+}
+.interactive-stepbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 10px;
+  margin:0 0 12px;border-bottom:1px solid #EAECF0
+}
+.interactive-stepbar-label{color:var(--interactive-ocean);font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+.interactive-complete-btn{
+  border:1px solid var(--interactive-aqua);background:#EEF7F7;color:var(--interactive-teal);
+  border-radius:7px;padding:7px 10px;font-size:12px;font-weight:850;cursor:pointer
+}
+.interactive-complete-btn.done{background:var(--interactive-success);border-color:var(--interactive-success);color:#fff}
+.interactive-section-notes{margin-top:14px;padding-top:12px;border-top:1px dashed #D0D5DD}
+.interactive-section-notes summary{cursor:pointer;color:var(--interactive-ocean);font-weight:800;font-size:12px}
+.interactive-section-notes textarea{
+  width:100%;min-height:80px;margin-top:9px;border:1px solid #98A2B3;border-radius:7px;
+  padding:10px 11px;resize:vertical;font:inherit;color:var(--interactive-black);background:#fff
+}
+.interactive-task-input{width:18px;height:18px;accent-color:var(--interactive-teal);flex:0 0 auto;margin:1px 0 0}
+.interactive-step .task-checklist li,.interactive-step .visual-check-list li{display:flex!important;align-items:flex-start!important;gap:9px!important}
+.interactive-step .task-checklist .check-box{display:none!important}
+.interactive-step li.interactive-task-done>span:last-child{color:#667085;text-decoration:line-through;text-decoration-thickness:1px}
+.interactive-roleplay-banner{
+  display:none;margin-bottom:14px;padding:12px 14px;border-left:5px solid var(--interactive-teal);
+  background:#F2F8F7;border-radius:0 8px 8px 0
+}
+.interactive-roleplay-banner strong{display:block;margin-bottom:2px}
+body.interactive-roleplay .interactive-roleplay-banner{display:block}
+body.interactive-trainee .trainer-only,body.interactive-trainee .trainer-section{display:none!important}
+body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section{display:block}
+.interactive-share-page .scenario-main-title{font-size:30px!important;line-height:1.12!important;margin-bottom:6px!important}
+.interactive-share-page .scenario-intro{font-size:14px!important;line-height:1.5!important}
+.interactive-share-page .scenario-completion-box{
+  margin:13px 0 16px!important;background:#F3F8FB!important;border-left:5px solid var(--interactive-blue)!important;border-radius:7px!important
+}
+.interactive-share-page .visual-section-heading{font-size:19px!important}
+.interactive-share-page .section-label{font-weight:900!important;letter-spacing:.06em!important}
+.interactive-share-page strong{font-weight:800}
+.interactive-bottom-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:1000px){
+  .interactive-layout{grid-template-columns:1fr}.interactive-nav{display:none}.interactive-shell{padding:13px}
+}
+@media(max-width:700px){
+  .interactive-header h1{font-size:26px}.interactive-brand-meta{display:none}.interactive-toolbar{position:relative}.interactive-step{padding:15px!important}
+}
+@media print{
+  @page{size:letter landscape;margin:.35in}
+  body.interactive-share-page{background:#fff!important}
+  .interactive-top-accent,.interactive-toolbar,.interactive-nav,.interactive-stepbar,.interactive-section-notes,.interactive-save-note,.interactive-bottom-actions{display:none!important}
+  .interactive-shell{max-width:none;padding:0}.interactive-layout{display:block}
+  .interactive-step{box-shadow:none!important;break-inside:avoid;margin-bottom:11px!important}
+}
+`;
+}
+
+function interactiveStandaloneClient(config){
+  const STORAGE_KEY=config.storageKey;
+  const title=config.title;
+  const viewLabel=config.viewLabel;
+  const state={completed:{},fields:{}};
+  const $=(sel,root=document)=>root.querySelector(sel);
+  const $$=(sel,root=document)=>Array.from(root.querySelectorAll(sel));
+  const safeText=value=>String(value||"").replace(/\s+/g," ").trim();
+
+  function loadState(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      if(saved&&typeof saved==="object"){
+        state.completed=saved.completed||{};
+        state.fields=saved.fields||{};
+      }
+    }catch(_){}
+  }
+  function persist(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(_){}
+    const status=$("#interactiveSaveStatus");
+    if(status){
+      status.textContent="Saved just now";
+      clearTimeout(persist._t);
+      persist._t=setTimeout(()=>status.textContent="Progress saves automatically on this device.",1400);
+    }
+  }
+
+  const content=$("#interactiveScenarioContent");
+  const rawSections=$$(".scenario-section, .trainer-section",content).filter(el=>el.parentElement===content);
+  const visibleSections=rawSections.filter(el=>getComputedStyle(el).display!=="none");
+
+  visibleSections.forEach((section,index)=>{
+    const id=`interactive-step-${index+1}`;
+    section.id=id;
+    section.classList.add("interactive-step");
+    const label=section.querySelector(".section-label")?.textContent
+      ||section.querySelector(".trainer-kicker")?.textContent
+      ||`STEP ${index+1}`;
+    const heading=section.querySelector(".visual-section-heading")?.textContent
+      ||section.querySelector("h3")?.textContent
+      ||label;
+
+    const bar=document.createElement("div");
+    bar.className="interactive-stepbar";
+    bar.innerHTML=`<span class="interactive-stepbar-label">STEP ${index+1} • ${safeText(label)}</span><button type="button" class="interactive-complete-btn" data-step="${id}">Mark Complete</button>`;
+    section.insertBefore(bar,section.firstChild);
+
+    const notes=document.createElement("details");
+    notes.className="interactive-section-notes";
+    notes.innerHTML=`<summary>Notes / answers for this section</summary><textarea data-interactive-save="${id}-notes" placeholder="Write notes, answers, reservation details, or coaching reminders here..."></textarea>`;
+    section.appendChild(notes);
+
+    const nav=document.createElement("a");
+    nav.href=`#${id}`;
+    nav.dataset.step=id;
+    nav.innerHTML=`<span class="interactive-nav-num">${index+1}</span><span>${safeText(heading)}</span>`;
+    $("#interactiveNav").appendChild(nav);
+  });
+
+  $$(".task-checklist li, .visual-check-list li",content).forEach((li,index)=>{
+    const oldBox=li.querySelector(".check-box");
+    if(oldBox)oldBox.remove();
+    const input=document.createElement("input");
+    input.type="checkbox";
+    input.className="interactive-task-input";
+    input.dataset.interactiveSave=`task-${index}`;
+    li.insertBefore(input,li.firstChild);
+    input.addEventListener("change",()=>{
+      li.classList.toggle("interactive-task-done",input.checked);
+      saveFields();
+    });
+  });
+
+  function saveFields(){
+    $$("[data-interactive-save]").forEach(el=>{
+      const key=el.dataset.interactiveSave;
+      state.fields[key]=el.type==="checkbox"?el.checked:el.value;
+    });
+    persist();
+  }
+  function restoreFields(){
+    $$("[data-interactive-save]").forEach(el=>{
+      const key=el.dataset.interactiveSave;
+      if(!(key in state.fields))return;
+      if(el.type==="checkbox")el.checked=!!state.fields[key];
+      else el.value=state.fields[key]??"";
+      const li=el.closest("li");
+      if(li&&el.type==="checkbox")li.classList.toggle("interactive-task-done",el.checked);
+    });
+  }
+  function renderCompleted(){
+    $$(".interactive-complete-btn").forEach(btn=>{
+      const done=!!state.completed[btn.dataset.step];
+      btn.classList.toggle("done",done);
+      btn.textContent=done?"Completed ✓":"Mark Complete";
+      const nav=$(`#interactiveNav a[data-step="${btn.dataset.step}"]`);
+      if(nav)nav.classList.toggle("done",done);
+    });
+  }
+  function updateProgress(){
+    const buttons=$$(".interactive-complete-btn");
+    const done=buttons.filter(btn=>state.completed[btn.dataset.step]).length;
+    const pct=buttons.length?Math.round(done/buttons.length*100):0;
+    $("#interactiveProgressBar").style.width=pct+"%";
+    $("#interactiveProgressText").textContent=`${pct}% complete`;
+  }
+
+  $$(".interactive-complete-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const key=btn.dataset.step;
+      state.completed[key]=!state.completed[key];
+      renderCompleted();updateProgress();persist();
+      if(state.completed[key]){
+        const buttons=$$(".interactive-complete-btn");
+        const idx=buttons.indexOf(btn);
+        const next=buttons[idx+1]?.closest(".interactive-step");
+        if(next)setTimeout(()=>next.scrollIntoView({behavior:"smooth",block:"start"}),160);
+      }
+    });
+  });
+  $$("[data-interactive-save]").forEach(el=>el.addEventListener(el.type==="checkbox"?"change":"input",saveFields));
+
+  function buildSummary(){
+    const lines=[title,viewLabel,"",`Progress: ${$("#interactiveProgressText").textContent}`,""];
+    visibleSections.forEach((section,index)=>{
+      const heading=safeText(section.querySelector(".visual-section-heading")?.textContent||section.querySelector("h3")?.textContent||`Step ${index+1}`);
+      const done=!!state.completed[section.id];
+      const notes=section.querySelector(".interactive-section-notes textarea")?.value?.trim()||"";
+      const tasks=$$(".interactive-task-input",section);
+      const checked=tasks.filter(x=>x.checked).length;
+      lines.push(`${done?"✓":"○"} ${index+1}. ${heading}`);
+      if(tasks.length)lines.push(`   Checklist: ${checked}/${tasks.length}`);
+      if(notes)lines.push(`   Notes: ${notes}`);
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+  async function copySummary(){
+    const text=buildSummary();
+    try{
+      await navigator.clipboard.writeText(text);
+      alert("Progress summary copied.");
+    }catch(_){
+      const ta=document.createElement("textarea");
+      ta.value=text;document.body.appendChild(ta);ta.select();
+      document.execCommand("copy");ta.remove();
+      alert("Progress summary copied.");
+    }
+  }
+
+  $("#interactivePrintBtn").addEventListener("click",()=>window.print());
+  $("#interactiveBottomPrintBtn").addEventListener("click",()=>window.print());
+  $("#interactiveCopyBtn").addEventListener("click",copySummary);
+  $("#interactiveBottomCopyBtn").addEventListener("click",copySummary);
+  $("#interactiveNotesBtn").addEventListener("click",()=>{
+    const notes=$$(".interactive-section-notes");
+    const openSome=notes.some(x=>!x.open);
+    notes.forEach(x=>x.open=openSome);
+    $("#interactiveNotesBtn").textContent=openSome?"Close All Notes":"Open All Notes";
+  });
+  $("#interactiveResetBtn").addEventListener("click",()=>{
+    if(!confirm("Reset this interactive worksheet? All saved progress and notes on this device will be cleared."))return;
+    try{localStorage.removeItem(STORAGE_KEY);}catch(_){}
+    location.reload();
+  });
+
+  if("IntersectionObserver" in window){
+    const observer=new IntersectionObserver(entries=>{
+      const hit=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(!hit)return;
+      $$("#interactiveNav a").forEach(a=>a.classList.toggle("active",a.dataset.step===hit.target.id));
+    },{rootMargin:"-90px 0px -60% 0px",threshold:[0,.15,.4]});
+    visibleSections.forEach(section=>observer.observe(section));
+  }
+
+  loadState();restoreFields();renderCompleted();updateProgress();
+}
+
+async function buildInteractiveScenarioDocument(mode="trainee"){
+  if(!ensureScenarioReady())return "";
+  const d=state.currentScenario;
+  const roleplay=!!(isRoleplayScenario(d)||d.followUpRoleplay);
+  const scenarioHtml=d.html||$("scenarioOutput").innerHTML;
+  const generatorCss=await currentGeneratorStylesForInteractiveShare();
+  const title=`${roleplay?"SEAweb Interactive Roleplay":"SEAweb Interactive Practice Scenario"} – ${focusTitle(d)}`;
+  const storageId=(d.id||`${d.department}-${focusTitle(d)}`).replace(/[^A-Za-z0-9_-]+/g,"-");
+  const viewLabel=mode==="trainer"?"Trainer View":"Trainee View";
+  const bodyClass=`interactive-share-page interactive-${mode}${roleplay?" interactive-roleplay":""}`;
+  const clientScript=`(${interactiveStandaloneClient.toString()})(${JSON.stringify({
+    storageKey:`seawebInteractive-${storageId}-${mode}`,
+    title,
+    viewLabel
+  })});`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+${generatorCss}
+${interactiveShareOverrides()}
+</style>
+</head>
+<body class="${bodyClass}">
+<div class="interactive-top-accent"></div>
+<div class="interactive-shell">
+  <header class="interactive-brand">
+    <div>${INTERACTIVE_SHARE_LOGO_DATA?`<img src="${INTERACTIVE_SHARE_LOGO_DATA}" alt="Norwegian Cruise Line">`:`<div class="interactive-brand-fallback">NORWEGIAN CRUISE LINE</div>`}</div>
+    <div class="interactive-brand-meta"><strong>${roleplay?"SEAweb INTERACTIVE ROLEPLAY":"SEAweb INTERACTIVE SCENARIO"}</strong><span>${escapeHtml(d.department)} • ${escapeHtml(viewLabel)}</span></div>
+  </header>
+
+  <div class="interactive-toolbar">
+    <button class="interactive-btn teal" id="interactivePrintBtn">Print / Save PDF</button>
+    <button class="interactive-btn" id="interactiveCopyBtn">Copy Progress Summary</button>
+    <button class="interactive-btn" id="interactiveNotesBtn">Open All Notes</button>
+    <span class="interactive-toolbar-spacer"></span>
+    <span class="interactive-save-note" id="interactiveSaveStatus">Progress saves automatically on this device.</span>
+    <button class="interactive-btn danger" id="interactiveResetBtn">Reset Worksheet</button>
+  </div>
+
+  <section class="interactive-header">
+    <h1>${escapeHtml(title)}</h1>
+    <p>Follow the scenario step by step. Complete the interactive checklists, mark each section complete, and use the notes areas as you work.</p>
+  </section>
+
+  <div class="interactive-roleplay-banner"><strong>🎭 Partner Roleplay</strong><span>Use the role assignments and caller information in the scenario. Let the Cruise Specialist control the call naturally, then switch roles when instructed.</span></div>
+
+  <div class="interactive-progress-wrap">
+    <div class="interactive-progress-track"><div class="interactive-progress-bar" id="interactiveProgressBar"></div></div>
+    <div class="interactive-progress-text" id="interactiveProgressText">0% complete</div>
+  </div>
+
+  <div class="interactive-layout">
+    <nav class="interactive-nav" id="interactiveNav"><div class="interactive-nav-title">Scenario Progress</div></nav>
+    <main class="interactive-main">
+      <article id="interactiveScenarioContent" class="interactive-scenario-wrap scenario-paper">${scenarioHtml}</article>
+      <div class="interactive-bottom-actions">
+        <button class="interactive-btn teal" id="interactiveBottomPrintBtn">Print / Save PDF</button>
+        <button class="interactive-btn primary" id="interactiveBottomCopyBtn">Copy Progress Summary</button>
+      </div>
+    </main>
+  </div>
+</div>
+<script>${clientScript.replace(/<\/script/gi,"<\\/script")}</script>
+</body>
+</html>`;
+}
+
+async function downloadInteractiveScenario(mode="trainee"){
+  if(!ensureScenarioReady())return;
+  const btn=mode==="trainer"?$("downloadInteractiveTrainerBtn"):$("downloadInteractiveTraineeBtn");
+  const old=btn?.innerHTML||"";
+  if(btn){
+    btn.disabled=true;
+    btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Interactive HTML…</strong><small>Creating a self-contained guided worksheet</small></span>`;
+  }
+  try{
+    const html=await buildInteractiveScenarioDocument(mode);
+    if(!html)throw new Error("The interactive scenario could not be generated.");
+    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=interactiveScenarioFilename(mode);
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2500);
+    closeShareMenu();
+    flash(`${mode==="trainer"?"Trainer":"Trainee"} interactive scenario downloaded.`);
+  }catch(err){
+    alert(`Could not create the interactive scenario: ${err.message}`);
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML=old;}
+  }
+}
+
 function openShareMenu(){
   $("shareScenarioMenu").classList.add("open");
   $("shareScenarioBtn").setAttribute("aria-expanded","true");
@@ -4576,6 +4994,8 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("downloadInteractiveTraineeBtn").onclick=()=>downloadInteractiveScenario("trainee");
+$("downloadInteractiveTrainerBtn").onclick=()=>downloadInteractiveScenario("trainer");
 $("downloadAdaptivePdfBtn").onclick=downloadAdaptivePdf;
 $("downloadAdaptivePngBtn").onclick=downloadAdaptivePng;
 $("copyCardImageBtn").onclick=copyCardAsImage;

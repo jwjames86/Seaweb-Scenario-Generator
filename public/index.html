@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.32" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.33" />
 </head>
 <body>
   <header class="topbar">
@@ -554,33 +554,47 @@
               <div class="output-actions">
                 <div class="share-control" id="shareControl">
                   <button id="shareScenarioBtn" class="tiny share-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
-                    Share Card <span aria-hidden="true">⌄</span>
+                    Share Scenario <span aria-hidden="true">⌄</span>
                   </button>
-                  <div id="shareScenarioMenu" class="share-menu" role="menu">
-                    <button id="downloadAdaptivePdfBtn" type="button" role="menuitem" class="recommended-share-option">
+                  <div id="shareScenarioMenu" class="share-menu interactive-share-menu" role="menu">
+                    <div class="share-menu-group-label">INTERACTIVE SCENARIO</div>
+                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="recommended-share-option interactive-share-primary">
+                      <span class="share-menu-icon">HTML</span>
+                      <span><strong>Download Interactive Trainee Scenario</strong><small>Recommended — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
+                    </button>
+                    <button id="downloadInteractiveTrainerBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">TR</span>
+                      <span><strong>Download Interactive Trainer Scenario</strong><small>Same interactive document plus Trainer Guide and coaching content</small></span>
+                    </button>
+
+                    <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">OTHER EXPORT OPTIONS</div>
+                    <button id="downloadAdaptivePdfBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">PDF</span>
-                      <span><strong>Download Current View PDF</strong><small>Recommended — matches the current Generator scenario layout and styling</small></span>
+                      <span><strong>Download Current View PDF</strong><small>Static copy of the current Generator view</small></span>
                     </button>
                     <button id="downloadAdaptivePngBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▣</span>
-                      <span><strong>Download Current View PNG</strong><small>Matches the Generator scenario layout; respects Trainer or Trainee View</small></span>
+                      <span><strong>Download Current View PNG</strong><small>Static image of the current Trainer or Trainee view</small></span>
                     </button>
                     <button id="printTraineeViewBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">T</span>
-                      <span><strong>Print Trainee View</strong><small>Print the scenario without trainer-only coaching content</small></span>
+                      <span><strong>Print Trainee View</strong><small>Print directly from the Generator without trainer-only coaching content</small></span>
                     </button>
                     <button id="printTrainerViewBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">TR</span>
-                      <span><strong>Print Trainer View</strong><small>Print the scenario with the Trainer Guide and coaching notes</small></span>
+                      <span><strong>Print Trainer View</strong><small>Print directly from the Generator with Trainer Guide content</small></span>
                     </button>
+
                     <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">COPY</div>
                     <button id="copyCardImageBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▣</span>
-                      <span><strong>Copy Current View as Image</strong><small>Copies exactly what the current Trainer/Trainee export contains</small></span>
+                      <span><strong>Copy Current View as Image</strong><small>Copies the current static Generator view</small></span>
                     </button>
                     <button id="copyCardFormattedBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">A</span>
-                      <span><strong>Copy Current View Editable</strong><small>Formatted text recipients can select and copy</small></span>
+                      <span><strong>Copy Current View Editable</strong><small>Formatted text for Teams or Outlook</small></span>
                     </button>
                     <button id="copyScenarioBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">¶</span>
@@ -719,6 +733,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.32"></script>
+  <script src="/app.js?v=1.9.33"></script>
 </body>
 </html>
