@@ -1016,3 +1016,22 @@ The Scenario Generator has been reorganized into a guided 4-step wizard to reduc
 
 ### Notes
 - The live Cloudflare site must be redeployed with this build for the wizard layout to appear online.
+
+
+## V1.9.38 – Full-Screen Guided Wizard
+
+The Scenario Generator now follows the approved Option A experience as a true multi-screen wizard instead of showing the form and generated output side by side.
+
+### Trainer flow
+1. **Scenario Type** — select department/workflow/caller context, difficulty, and one or more large visual Scenario Focus cards.
+2. **Reservation Details** — enter guest, stateroom, sailing, booking-source, pricing, payment and multi-reservation/modification details in organized section cards.
+3. **Additional Options** — select scenario tasks using visual toggle cards, then complete any Air, Latitudes, coupon, or training-card details that appear.
+4. **Review & Generate** — review Scenario Type, Reservation Details and Additional Options in three summary cards, edit any prior step, add trainer notes, and generate.
+5. **Generated Scenario Screen** — after Generate Scenario, the setup wizard is replaced by a full-width scenario screen with a success banner and the existing Share Scenario, Roleplay, Follow-Up Roleplay, Print and Save tools.
+
+### Design
+- Uses the current NCL brand palette and typography already built into the Generator.
+- Scenario Focus options use large icon-based cards rather than a dropdown-style menu.
+- The top progress indicator shows completed, current and upcoming steps.
+- **Edit Setup** returns directly to Review & Generate without losing the generated scenario.
+- Existing scenario logic, validation, multiple reservations, interactive HTML sharing and PDF-safe export behavior are preserved.
