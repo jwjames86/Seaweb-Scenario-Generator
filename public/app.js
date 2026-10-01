@@ -4577,7 +4577,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.34",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.35",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -4697,7 +4697,8 @@ body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section
 @media print{
   @page{
     size:letter portrait;
-    margin:.42in .42in .48in;
+    /* Wider print-safe gutter so browser PDF engines cannot clip text at the page edge. */
+    margin:.52in .58in .55in;
   }
 
   html,body{
@@ -4730,10 +4731,12 @@ body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section
 
   .interactive-shell{
     width:100%!important;
-    max-width:none!important;
+    max-width:100%!important;
     min-width:0!important;
     margin:0!important;
-    padding:0!important;
+    /* Extra inner gutter protects against printer/PDF renderer edge clipping. */
+    padding:0 .04in!important;
+    box-sizing:border-box!important;
   }
 
   .interactive-brand{
@@ -5001,9 +5004,46 @@ body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section
   .interactive-share-page .trainer-section{
     max-width:100%!important;
   }
+  .interactive-share-page img,
+  .interactive-share-page svg{
+    height:auto!important;
+  }
   .interactive-share-page table{
     width:100%!important;
-    table-layout:auto!important;
+    table-layout:fixed!important;
+  }
+  .interactive-share-page th,
+  .interactive-share-page td{
+    min-width:0!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+
+  /* Never allow an inherited no-wrap rule or long value to push a card beyond the page. */
+  .interactive-share-page .interactive-main,
+  .interactive-share-page .interactive-step,
+  .interactive-share-page .scenario-section,
+  .interactive-share-page .trainer-section,
+  .interactive-share-page .scenario-detail-grid>div,
+  .interactive-share-page .scenario-guest-card,
+  .interactive-share-page .roleplay-role-card,
+  .interactive-share-page .multi-res-card,
+  .interactive-share-page .followup-change-card,
+  .interactive-share-page .training-card-box,
+  .interactive-share-page .scenario-payment-card,
+  .interactive-share-page .instruction-strip,
+  .interactive-share-page .critical-callout,
+  .interactive-share-page .authorized-comment-box{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .interactive-share-page .interactive-step *,
+  .interactive-share-page .interactive-header *,
+  .interactive-share-page .interactive-brand *{
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
   }
 }
 `;
