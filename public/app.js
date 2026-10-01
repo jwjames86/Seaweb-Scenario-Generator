@@ -4577,7 +4577,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.33",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.34",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -4695,11 +4695,316 @@ body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section
   .interactive-header h1{font-size:26px}.interactive-brand-meta{display:none}.interactive-toolbar{position:relative}.interactive-step{padding:15px!important}
 }
 @media print{
-  @page{size:letter landscape;margin:.35in}
-  body.interactive-share-page{background:#fff!important}
-  .interactive-top-accent,.interactive-toolbar,.interactive-nav,.interactive-stepbar,.interactive-section-notes,.interactive-save-note,.interactive-bottom-actions{display:none!important}
-  .interactive-shell{max-width:none;padding:0}.interactive-layout{display:block}
-  .interactive-step{box-shadow:none!important;break-inside:avoid;margin-bottom:11px!important}
+  @page{
+    size:letter portrait;
+    margin:.42in .42in .48in;
+  }
+
+  html,body{
+    width:auto!important;
+    min-width:0!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+
+  body.interactive-share-page{
+    background:#fff!important;
+    color:#101828!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* Keep the PDF visually consistent with the interactive scenario. */
+  .interactive-top-accent{
+    display:block!important;
+    height:7px!important;
+    margin:0 0 8px!important;
+    background:var(--interactive-aqua)!important;
+  }
+  .interactive-toolbar,
+  .interactive-nav,
+  .interactive-save-note,
+  .interactive-bottom-actions{
+    display:none!important;
+  }
+
+  .interactive-shell{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+  }
+
+  .interactive-brand{
+    display:flex!important;
+    min-height:34px!important;
+    margin:0 0 8px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-brand img{
+    height:28px!important;
+    max-width:142px!important;
+  }
+  .interactive-brand-meta strong{font-size:10px!important}
+  .interactive-brand-meta span{font-size:8px!important}
+
+  .interactive-header{
+    margin:7px 0 8px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-header h1{
+    margin:0 0 4px!important;
+    font-size:19px!important;
+    line-height:1.16!important;
+    letter-spacing:-.01em!important;
+  }
+  .interactive-header p{
+    margin:0!important;
+    font-size:9.5px!important;
+    line-height:1.4!important;
+  }
+
+  .interactive-roleplay-banner{
+    margin:7px 0 9px!important;
+    padding:8px 10px!important;
+    font-size:9px!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+
+  .interactive-progress-wrap{
+    display:grid!important;
+    grid-template-columns:1fr auto!important;
+    gap:8px!important;
+    margin:6px 0 10px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-progress-track{height:7px!important}
+  .interactive-progress-text{
+    min-width:68px!important;
+    font-size:8.5px!important;
+  }
+
+  .interactive-layout,
+  .interactive-main,
+  .interactive-scenario-wrap{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+
+  /* Allow long steps to flow across pages rather than leaving large blank areas. */
+  .interactive-step,
+  .interactive-scenario-wrap .scenario-section,
+  .interactive-scenario-wrap .trainer-section{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin:0 0 9px!important;
+    padding:11px 12px!important;
+    border:1px solid #D0D5DD!important;
+    border-radius:8px!important;
+    box-shadow:none!important;
+    background:#fff!important;
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+    overflow:visible!important;
+  }
+
+  /* Keep the Step header from the interactive view. */
+  .interactive-stepbar{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+    margin:0 0 7px!important;
+    padding:0 0 6px!important;
+    border-bottom:1px solid #EAECF0!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-stepbar-label{
+    font-size:7.5px!important;
+    line-height:1.2!important;
+  }
+  .interactive-complete-btn{
+    display:none!important;
+  }
+
+  /* Keep individual cards / callouts together where practical. */
+  .interactive-step .scenario-detail-grid>div,
+  .interactive-step .scenario-guest-card,
+  .interactive-step .roleplay-role-card,
+  .interactive-step .multi-res-card,
+  .interactive-step .followup-change-card,
+  .interactive-step .training-card-box,
+  .interactive-step .scenario-payment-card,
+  .interactive-step .instruction-strip,
+  .interactive-step .critical-callout,
+  .interactive-step .authorized-comment-box,
+  .interactive-step blockquote{
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+
+  /* Portrait-friendly layout while preserving the same card organization. */
+  .interactive-share-page .scenario-detail-grid,
+  .interactive-share-page .scenario-guest-grid,
+  .interactive-share-page .trainer-info-grid,
+  .interactive-share-page .roleplay-role-grid,
+  .interactive-share-page .multi-res-grid,
+  .interactive-share-page .gdpr-grid,
+  .interactive-share-page .followup-change-card-list{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+
+  .interactive-share-page .scenario-main-title{
+    margin:0 0 5px!important;
+    font-size:18px!important;
+    line-height:1.2!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-share-page .scenario-intro{
+    margin:0 0 8px!important;
+    font-size:9.5px!important;
+    line-height:1.45!important;
+  }
+  .interactive-share-page .scenario-meta-row{
+    gap:4px!important;
+    margin:0 0 6px!important;
+  }
+  .interactive-share-page .scenario-meta-row .chip{
+    font-size:7px!important;
+    padding:3px 5px!important;
+  }
+  .interactive-share-page .scenario-completion-box{
+    margin:7px 0 9px!important;
+    padding:7px 9px!important;
+    border-left-width:4px!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+  .interactive-share-page .scenario-completion-box strong{font-size:8.5px!important}
+  .interactive-share-page .scenario-completion-box span{font-size:8px!important}
+
+  .interactive-share-page .visual-section-heading{
+    margin:0 0 6px!important;
+    font-size:13px!important;
+    line-height:1.25!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-share-page .scenario-icon{
+    width:20px!important;
+    height:20px!important;
+    flex-basis:20px!important;
+    font-size:15px!important;
+  }
+  .interactive-share-page .section-label{
+    font-size:7px!important;
+    line-height:1.15!important;
+  }
+
+  .interactive-share-page p,
+  .interactive-share-page li{
+    font-size:9px!important;
+    line-height:1.42!important;
+    orphans:2;
+    widows:2;
+  }
+  .interactive-share-page small{
+    font-size:7.7px!important;
+    line-height:1.35!important;
+  }
+
+  .interactive-share-page .scenario-detail-grid>div,
+  .interactive-share-page .scenario-guest-card,
+  .interactive-share-page .roleplay-role-card,
+  .interactive-share-page .multi-res-card,
+  .interactive-share-page .followup-change-card{
+    padding:7px 8px!important;
+  }
+  .interactive-share-page .scenario-detail-grid span,
+  .interactive-share-page .scenario-guest-card>span{
+    font-size:6.8px!important;
+  }
+  .interactive-share-page .scenario-detail-grid strong,
+  .interactive-share-page .scenario-guest-card>strong{
+    font-size:9px!important;
+    line-height:1.35!important;
+  }
+
+  .interactive-task-input{
+    width:13px!important;
+    height:13px!important;
+    margin-top:1px!important;
+  }
+  .interactive-step .task-checklist,
+  .interactive-step .visual-check-list{
+    gap:3px!important;
+  }
+  .interactive-step .task-checklist li,
+  .interactive-step .visual-check-list li{
+    gap:6px!important;
+    margin:0!important;
+  }
+
+  /* Empty notes disappear from the PDF; completed notes print with the scenario. */
+  .interactive-section-notes{
+    display:none!important;
+  }
+  .interactive-section-notes.interactive-print-has-content{
+    display:block!important;
+    margin-top:8px!important;
+    padding-top:7px!important;
+    border-top:1px dashed #D0D5DD!important;
+  }
+  .interactive-section-notes.interactive-print-has-content summary{
+    display:none!important;
+  }
+  .interactive-section-notes.interactive-print-has-content textarea{
+    display:block!important;
+    width:100%!important;
+    min-height:42px!important;
+    padding:6px 7px!important;
+    border:1px solid #D0D5DD!important;
+    border-radius:5px!important;
+    background:#fff!important;
+    font-size:8px!important;
+    line-height:1.35!important;
+    overflow:visible!important;
+    resize:none!important;
+  }
+
+  body.interactive-trainee .trainer-only,
+  body.interactive-trainee .trainer-section{
+    display:none!important;
+  }
+
+  /* Constrain inherited Generator content to the portrait printable width. */
+  .interactive-share-page table,
+  .interactive-share-page img,
+  .interactive-share-page svg,
+  .interactive-share-page .scenario-paper,
+  .interactive-share-page .scenario-section,
+  .interactive-share-page .trainer-section{
+    max-width:100%!important;
+  }
+  .interactive-share-page table{
+    width:100%!important;
+    table-layout:auto!important;
+  }
 }
 `;
 }
@@ -4880,6 +5185,22 @@ function interactiveStandaloneClient(config){
     visibleSections.forEach(section=>observer.observe(section));
   }
 
+  function prepareInteractivePrint(){
+    $$(".interactive-section-notes").forEach(details=>{
+      const textarea=details.querySelector("textarea");
+      const hasText=!!textarea?.value?.trim();
+      details.classList.toggle("interactive-print-has-content",hasText);
+      if(hasText)details.open=true;
+    });
+  }
+  function cleanupInteractivePrint(){
+    $$(".interactive-section-notes").forEach(details=>{
+      details.classList.remove("interactive-print-has-content");
+    });
+  }
+  window.addEventListener("beforeprint",prepareInteractivePrint);
+  window.addEventListener("afterprint",cleanupInteractivePrint);
+
   loadState();restoreFields();renderCompleted();updateProgress();
 }
 
@@ -4919,7 +5240,7 @@ ${interactiveShareOverrides()}
   </header>
 
   <div class="interactive-toolbar">
-    <button class="interactive-btn teal" id="interactivePrintBtn">Print / Save PDF</button>
+    <button class="interactive-btn teal" id="interactivePrintBtn">Print / Save PDF (Portrait)</button>
     <button class="interactive-btn" id="interactiveCopyBtn">Copy Progress Summary</button>
     <button class="interactive-btn" id="interactiveNotesBtn">Open All Notes</button>
     <span class="interactive-toolbar-spacer"></span>
@@ -4944,7 +5265,7 @@ ${interactiveShareOverrides()}
     <main class="interactive-main">
       <article id="interactiveScenarioContent" class="interactive-scenario-wrap scenario-paper">${scenarioHtml}</article>
       <div class="interactive-bottom-actions">
-        <button class="interactive-btn teal" id="interactiveBottomPrintBtn">Print / Save PDF</button>
+        <button class="interactive-btn teal" id="interactiveBottomPrintBtn">Print / Save PDF (Portrait)</button>
         <button class="interactive-btn primary" id="interactiveBottomCopyBtn">Copy Progress Summary</button>
       </div>
     </main>
