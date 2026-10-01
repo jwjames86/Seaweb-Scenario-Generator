@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const makeUuid = () => (globalThis.crypto?.randomUUID ? globalThis.makeUuid() : `seaweb-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`);
 const state = {
   mode: "trainer",
   selectedSailing: null,
@@ -320,6 +321,10 @@ function go(page){
   document.querySelector(`.nav[data-page="${page}"]`)?.classList.add("active");
   if(page==="library") renderLibrary();
   if(page==="dashboard") updateStats();
+  if(page==="generator" && generatorWizardState?.ready){
+    if(state.currentScenario) showGeneratedScenarioScreen();
+    else showWizardScenarioSetup(generatorWizardState.currentStep||1);
+  }
 }
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>go(n.dataset.page));
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
@@ -329,6 +334,10 @@ function setMode(mode){
   document.body.classList.toggle("trainee-mode",mode==="trainee");
   $("trainerModeBtn").classList.toggle("active",mode==="trainer");
   $("traineeModeBtn").classList.toggle("active",mode==="trainee");
+  if(mode==="trainee"){
+    $("scenarioOutput")?.classList.remove("trainer-guide-only");
+    document.querySelectorAll('#generator .generated-tab').forEach(b=>b.classList.toggle('active',b.dataset.generatedTab==='scenario'));
+  }
   if(mode==="trainee" && $("validator").classList.contains("active")) go("generator");
 }
 $("trainerModeBtn").onclick=()=>setMode("trainer");
@@ -714,6 +723,20 @@ function updateDepartmentUI(){
   updateGdprPreview();
 }
 
+function scenarioFocusIconSvg(name){
+  const n=String(name||"").toLowerCase();
+  const wrap=paths=>`<span class="focus-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">${paths}</svg></span>`;
+  if(n.includes("air")||n.includes("transfer"))return wrap('<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>');
+  if(n.includes("special")||n.includes("ada"))return wrap('<path d="M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm-1 7v4H7.5a1.5 1.5 0 0 0 0 3H11v6h2v-6h3.5a1.5 1.5 0 0 0 0-3H13V9z"/>');
+  if(n.includes("multiple")&&n.includes("authorized"))return wrap('<path d="M7 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 21v-2a6 6 0 0 1 12 0v2Zm13.5 0v-2a5 5 0 0 1 8-4v6Z"/><path d="M17 15.5 19 17l3-3" fill="none" stroke="currentColor" stroke-width="1.8"/>');
+  if(n.includes("multiple"))return wrap('<path d="M7 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 21v-2a6 6 0 0 1 12 0v2Zm13.5 0v-2a5 5 0 0 1 8-4v6Z"/>');
+  if(n.includes("cancel")||n.includes("reinstate")||n.includes("existing")||n.includes("change")||n.includes("upgrade"))return wrap('<path d="M4 4h10v2H6v12h12v-8h2v10H4z"/><path d="M13 3h8v8h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H13z"/>');
+  if(n.includes("payment")||n.includes("fcc")||n.includes("coupon")||n.includes("price"))return wrap('<path d="M3 5h18v14H3zM5 8h14V7H5zm0 3v6h14v-6z"/><circle cx="8" cy="14" r="1.4"/>');
+  if(n.includes("dining")||n.includes("spa")||n.includes("amenit"))return wrap('<path d="M7 2v8a3 3 0 0 0 2 2.83V22h2v-9.17A3 3 0 0 0 13 10V2h-2v5H9V2Zm9 0c-1.7 0-3 2.24-3 5s1.3 5 3 5v10h2V2Z"/>');
+  if(n.includes("basic")||n.includes("solo")||n.includes("infant")||n.includes("agency")||n.includes("ta booking"))return wrap('<path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 21v-2a6 6 0 0 1 12 0v2Zm12 0v-2a5 5 0 0 1 8-4v6Z"/>');
+  return wrap('<path d="M12 2 9.2 8.2 3 11l6.2 2.8L12 20l2.8-6.2L21 11l-6.2-2.8Z"/>');
+}
+
 function updateScenarioFocus(preferred,preferredDay,preferredList){
   const dept=$("department").value;
   const all=allFocusRecords(dept);
@@ -722,7 +745,7 @@ function updateScenarioFocus(preferred,preferredDay,preferredList){
   const requested=Array.isArray(preferredList)&&preferredList.length?preferredList:(preferred?[preferred]:[]);
   $("focusPickerOptions").innerHTML=all.map(({day,meta})=>{
     const checked=requested.some(name=>name===meta.name) || (!requested.length && all[0]?.meta.name===meta.name && all[0]?.day===day);
-    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span><strong>${escapeHtml(meta.name)}</strong><small>${escapeHtml(meta.objective)}</small></span></label>`;
+    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong><small>${escapeHtml(meta.objective)}</small></span></label>`;
   }).join("");
 
   $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(input=>input.addEventListener('change',syncScenarioFocusSelection));
@@ -2171,7 +2194,7 @@ function scenarioData(){
   const totalGuestCount=multipleReservations?reservation1GuestCount+reservation2GuestCount:reservation1GuestCount;
   const flattenedGuestNames=multipleReservations?[...reservation1Guests,...reservation2Guests]:reservation1Guests;
   return {
-    id: state.currentScenario?.id || crypto.randomUUID(),
+    id: state.currentScenario?.id || makeUuid(),
     department:$("department").value,
     trainingDay:focusDays.length?Math.max(...focusDays):+$("trainingDay").value,
     approach:$("scenarioApproach").value,
@@ -3034,6 +3057,8 @@ function resetScenarioForm(){
   clearValidationDisplay();
   setMode("trainer");
   flash("Scenario cleared. You can start a brand-new exercise.");
+  showWizardScenarioSetup(1);
+  renderWizardReviewSummary();
   $("department").focus();
 }
 
@@ -3541,7 +3566,7 @@ function createFollowUpRoleplay(){
   const config={callerSelection,callerType:resolvedCaller,agency,changes,customChanges,includeCard:$("followUpIncludeCard").checked,keepBenefits:$("followUpKeepBenefits").checked};
   const sourceCard=current.card||currentTrainingCard();
   const now=new Date().toISOString();
-  const d={...current,id:crypto.randomUUID(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
+  const d={...current,id:makeUuid(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
   d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();runValidator();$("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";$("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
 }
 
@@ -4838,7 +4863,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.36",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.38",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -5705,7 +5730,7 @@ $("libraryDepartmentFilter").onchange=renderLibrary;
 window.toggleFavorite=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.favorite=!x.favorite;setSaved(a);renderLibrary()};
 window.archiveSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.archived=!x.archived;setSaved(a);renderLibrary()};
 window.deleteSaved=(id)=>{if(!confirm("Delete this saved scenario?"))return;setSaved(saved().filter(x=>x.id!==id));renderLibrary()};
-window.duplicateSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(!x)return;const copy={...x,id:crypto.randomUUID(),title:x.title+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};a.unshift(copy);setSaved(a);renderLibrary()};
+window.duplicateSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(!x)return;const copy={...x,id:makeUuid(),title:x.title+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};a.unshift(copy);setSaved(a);renderLibrary()};
 window.openSaved=(id)=>{
   const x=saved().find(v=>v.id===id);if(!x)return;
   state.currentScenario=x;state.selectedSailing=x.sailing||null;
@@ -5780,7 +5805,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -5789,7 +5814,7 @@ $("exportBtn").onclick=()=>{
 $("importFile").onchange=async(e)=>{
   const f=e.target.files[0];if(!f)return;
   try{const data=JSON.parse(await f.text()),incoming=Array.isArray(data)?data:data.scenarios;if(!Array.isArray(incoming))throw Error("No scenarios found in backup.");
-    const map=new Map(saved().map(x=>[x.id,x]));incoming.forEach(x=>map.set(x.id||crypto.randomUUID(),x));setSaved([...map.values()]);renderLibrary();flash(`Imported ${incoming.length} scenario(s).`);
+    const map=new Map(saved().map(x=>[x.id,x]));incoming.forEach(x=>map.set(x.id||makeUuid(),x));setSaved([...map.values()]);renderLibrary();flash(`Imported ${incoming.length} scenario(s).`);
   }catch(err){alert("Import failed: "+err.message)}
 };
 
@@ -5801,7 +5826,7 @@ function wizardFieldNode(target){
   return target.closest?.('label') || target;
 }
 
-function appendWizardNodes(host,nodes,gridClass='form-grid wizard-step-grid'){
+function appendWizardNodes(host,nodes,gridClass='wizard-form-grid'){
   if(!host)return null;
   const grid=document.createElement('div');
   grid.className=gridClass;
@@ -5810,92 +5835,188 @@ function appendWizardNodes(host,nodes,gridClass='form-grid wizard-step-grid'){
   return grid;
 }
 
+function wizardSection(host,{icon='•',title,subtitle='',className=''},nodes=[]){
+  if(!host)return null;
+  const section=document.createElement('section');
+  section.className=`wizard-detail-card ${className}`.trim();
+  section.innerHTML=`<div class="wizard-detail-card-head"><span class="wizard-detail-icon" aria-hidden="true">${icon}</span><div><strong>${escapeHtml(title)}</strong>${subtitle?`<small>${escapeHtml(subtitle)}</small>`:''}</div></div><div class="wizard-detail-card-body"></div>`;
+  const body=section.querySelector('.wizard-detail-card-body');
+  nodes.filter(Boolean).forEach(node=>body.appendChild(node));
+  host.appendChild(section);
+  return section;
+}
+
+function enabledWizardTasks(){
+  return [
+    ['Commenting Tool',$("commentToggle")?.checked],
+    ['Guest Confirmation',$("confirmToggle")?.checked],
+    ['Guest Status / Latitudes',$("latitudesToggle")?.checked],
+    ['Free at Sea',$("fasToggle")?.checked],
+    ['Travel Protection',$("travelToggle")?.checked],
+    ['Prepaid Service Charges',$("pscToggle")?.checked],
+    ['Air / Transfers',$("airToggle")?.checked],
+    ['Credits / Coupons',$("couponToggle")?.checked]
+  ].filter(([,on])=>on).map(([name])=>name);
+}
+
+function reservationReviewText(){
+  const res1=reservation1GuestNamesFromForm().filter(Boolean);
+  const res2=multipleReservationFormActive()?reservation2GuestNamesFromForm().filter(Boolean):[];
+  const bits=[];
+  bits.push(`${res1.length||+$('guestCount')?.value||1} guest${(res1.length||+$('guestCount')?.value||1)===1?'':'s'}`);
+  if($('category')?.value)bits.push($('category').value);
+  if(state.selectedSailing?.ship)bits.push(state.selectedSailing.ship);
+  if(multipleReservationFormActive())bits.push(`Reservation 2: ${res2.length||+$('reservation2GuestCount')?.value||1} guests`);
+  if($('paymentAction')?.value)bits.push($('paymentAction').value);
+  return bits.join(' • ');
+}
+
 function renderWizardReviewSummary(){
   const host=$("wizardReviewSummary");
   if(!host)return;
   const workflow=$("reservationWorkflow")?.value||'new';
   const focuses=selectedFocusRecords().map(r=>r.meta.name);
-  const sailing=state.selectedSailing?`${state.selectedSailing.ship||''}${state.selectedSailing.title?` • ${state.selectedSailing.title}`:''}`:'No real sailing selected yet';
-  const res1Guests=reservation1GuestNamesFromForm().filter(Boolean);
-  const res2Guests=multipleReservationFormActive()?reservation2GuestNamesFromForm().filter(Boolean):[];
-  const summary=[
-    ['Department', $("department")?.value||'—'],
-    ['Workflow', workflow==='modify'?'Modify Existing Reservation':'Create New Reservation'],
-    ['Caller Type', workflow==='modify' ? guestServicesAgencyDisplay($("agency")?.value||'') : newReservationCallerLabel({department:$("department")?.value||'Guest Services',newCallerType:$("newCallerType")?.value||'direct_us'})],
-    ['Scenario Focus', focuses.length?focuses.join(', '):'None selected'],
-    ['Difficulty', $("difficulty")?.value||'—'],
-    ['Sailing', sailing],
-    ['Reservation 1', res1Guests.length?res1Guests.join(', '):'No guests entered'],
-    ['Reservation 2', res2Guests.length?res2Guests.join(', '): (multipleReservationFormActive()?'No guests entered':'Not applicable')],
-    ['Tasks Enabled', [$("commentToggle")?.checked?'Commenting Tool':null,$("confirmToggle")?.checked?'Guest Confirmation':null,$("fasToggle")?.checked?'Free at Sea':null,$("travelToggle")?.checked?'Travel Protection':null,$("pscToggle")?.checked?'Prepaid Service Charges':null,$("airToggle")?.checked?'Air / Transfers':null,$("couponToggle")?.checked?'Credits / Coupons':null].filter(Boolean).join(', ') || 'None'],
-    ['Payment Action', $("paymentAction")?.value||'—']
-  ];
-  host.innerHTML=`<div class="wizard-review-grid">${summary.map(([label,value])=>`<div class="wizard-review-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>`;
+  const tasks=enabledWizardTasks();
+  const caller=workflow==='modify'
+    ? guestServicesAgencyDisplay($("agency")?.value||'')
+    : newReservationCallerLabel({department:$("department")?.value||'Guest Services',newCallerType:$("newCallerType")?.value||'direct_us'});
+  host.innerHTML=`
+    <div class="wizard-review-cards">
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">▦</span><strong>Scenario Type</strong><button type="button" data-edit-step="1">Edit ✎</button></div>
+        <h4>${escapeHtml(focuses.join(' + ')||'No scenario focus selected')}</h4>
+        <p>${escapeHtml($("department")?.value||'')} • ${escapeHtml(workflow==='modify'?'Modify Existing Reservation':'Create New Reservation')} • ${escapeHtml($("difficulty")?.value||'')}</p>
+      </section>
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">♟</span><strong>Reservation Details</strong><button type="button" data-edit-step="2">Edit ✎</button></div>
+        <h4>${escapeHtml(caller)}</h4>
+        <p>${escapeHtml(reservationReviewText())}</p>
+      </section>
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">⚙</span><strong>Additional Options</strong><button type="button" data-edit-step="3">Edit ✎</button></div>
+        <h4>${tasks.length?`${tasks.length} option${tasks.length===1?'':'s'} selected`:'No additional options selected'}</h4>
+        <p>${escapeHtml(tasks.join(' • ')||'You can go back and add optional training elements.')}</p>
+      </section>
+    </div>`;
+  host.querySelectorAll('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.editStep)));
 }
 
 function showGeneratorWizardStep(step){
   const normalized=Math.max(1,Math.min(4,Number(step)||1));
   generatorWizardState.currentStep=normalized;
-  document.querySelectorAll('[data-step-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.stepPanel===String(normalized)));
-  document.querySelectorAll('.wizard-step-button').forEach(btn=>{
+  document.querySelectorAll('#generator [data-step-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.stepPanel===String(normalized)));
+  document.querySelectorAll('#generator .wizard-step-button').forEach(btn=>{
     const stepNum=Number(btn.dataset.wizardStep);
     btn.classList.toggle('active',stepNum===normalized);
     btn.classList.toggle('complete',stepNum<normalized);
+    const num=btn.querySelector('.wizard-step-number');
+    if(num)num.textContent=stepNum<normalized?'✓':String(stepNum);
   });
   if(normalized===4)renderWizardReviewSummary();
+  $("generatorWizard")?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showWizardScenarioSetup(step=1){
+  const generator=$("generator");
+  generator?.classList.add('wizard-active');
+  generator?.classList.remove('generated-active');
+  showGeneratorWizardStep(step);
+}
+
+function showGeneratedScenarioScreen(){
+  const generator=$("generator");
+  generator?.classList.remove('wizard-active');
+  generator?.classList.add('generated-active');
+  generator?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function setupGeneratedScreenTabs(){
+  document.querySelectorAll('#generator .generated-tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('#generator .generated-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const output=$("scenarioOutput");
+    const trainerOnly=btn.dataset.generatedTab==='trainer';
+    output?.classList.toggle('trainer-guide-only',trainerOnly);
+    output?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
 }
 
 function setupGeneratorWizard(){
   const wizard=$("generatorWizard");
   if(!wizard || generatorWizardState.ready)return;
   document.body.classList.add('wizard-generator-mode');
+  $("generator")?.classList.add('wizard-active');
 
   const step1=$("wizardStep1Content");
   const step2=$("wizardStep2Content");
   const step3=$("wizardStep3Content");
   const step4=$("wizardStep4Content");
 
-  appendWizardNodes(step1,[
-    wizardFieldNode($("department")),
-    wizardFieldNode($("reservationWorkflow")),
-    $("newCallerTypeField"),
-    document.querySelector('.focus-picker-field'),
-    wizardFieldNode($("scenarioApproach")),
-    wizardFieldNode($("difficulty"))
-  ]);
-  if($("trainingDay"))step1.appendChild($("trainingDay"));
+  const setupStrip=document.createElement('section');
+  setupStrip.className='wizard-setup-strip';
+  const setupGrid=document.createElement('div');
+  setupGrid.className='wizard-setup-grid';
+  [wizardFieldNode($("department")),wizardFieldNode($("reservationWorkflow")),$("newCallerTypeField"),wizardFieldNode($("difficulty")),wizardFieldNode($("scenarioApproach"))].filter(Boolean).forEach(node=>setupGrid.appendChild(node));
+  setupStrip.innerHTML='<div class="wizard-mini-heading"><strong>Scenario Setup</strong><small>Choose the department, workflow, caller type, and difficulty.</small></div>';
+  setupStrip.appendChild(setupGrid);
+  step1.appendChild(setupStrip);
+  const focusField=document.querySelector('.focus-picker-field');
+  if(focusField)step1.appendChild(focusField);
+  if($('trainingDay'))step1.appendChild($('trainingDay'));
 
-  step2.appendChild($("selectedSailingSummary"));
-  appendWizardNodes(step2,[
-    $("guestCountField"),
-    $("marketAgencyField"),
-    $("agencyField"),
-    $("guest1Field"),
-    $("guest2Field"),
-    $("reservation1ExtraGuests"),
-    $("categoryField"),
-    $("locationField"),
-    $("sideField"),
-    wizardFieldNode($("paymentAction")),
-    $("pricingField"),
-    wizardFieldNode($("confirmationEmail"))
-  ],'form-grid wizard-step-grid reservation-step-grid');
-  step2.appendChild($("multipleReservationPanel"));
-  step2.appendChild($("modificationPanel"));
+  const sailingTools=document.createElement('div');
+  sailingTools.className='wizard-sailing-tools';
+  const findSailing=document.createElement('button');
+  findSailing.type='button';findSailing.className='secondary tiny';findSailing.textContent='Find / Change Sailing';findSailing.onclick=()=>go('search');
+  sailingTools.appendChild(findSailing);
+  wizardSection(step2,{icon:'☎',title:'Caller & Booking Source',subtitle:'Who is calling and which booking source should be used?'},[$("marketAgencyField"),$("agencyField")]);
+  const guestSection=wizardSection(step2,{icon:'♟',title:'Guests & Stateroom',subtitle:'Enter guest names, count, category and location preferences.'},[$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField")]);
+  if(guestSection){
+    const tools=document.createElement('div');tools.className='wizard-inline-tools';tools.appendChild($("generateNamesBtn"));guestSection.querySelector('.wizard-detail-card-body').appendChild(tools);
+  }
+  wizardSection(step2,{icon:'⚓',title:'Sailing Details',subtitle:'Use a real NCL sailing when the scenario requires one.'},[$("selectedSailingSummary"),sailingTools]);
+  wizardSection(step2,{icon:'$',title:'Pricing & Booking Action',subtitle:'Set the payment action, advertised quote, and confirmation email.'},[wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail"))]);
+  if($("multipleReservationPanel"))step2.appendChild($("multipleReservationPanel"));
+  if($("modificationPanel"))step2.appendChild($("modificationPanel"));
 
   if($("curriculumNote"))step3.appendChild($("curriculumNote"));
-  if($("trainingCardPanel"))step3.appendChild($("trainingCardPanel"));
   const scenarioTasks=document.querySelector('#generator fieldset');
   if(scenarioTasks)step3.appendChild(scenarioTasks);
-  ["airProgramPanel","latitudesNumberPanel","couponPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
+  ["airProgramPanel","latitudesNumberPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
 
-  appendWizardNodes(step4,[wizardFieldNode($("trainerNotes"))],'wizard-step-grid');
-  const actions=document.querySelector('#generator .actions');
-  if(actions)step4.appendChild(actions);
+  const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
+  const reviewAction=document.createElement('div');
+  reviewAction.className='wizard-generate-row';
+  const generateBtn=$("generateBtn");
+  generateBtn.textContent='Generate Scenario →';
+  reviewAction.appendChild(generateBtn);
+  step4.appendChild(reviewAction);
+
+  const oldActions=document.querySelector('#generator .generator-setup-panel > .actions');
+  if(oldActions)oldActions.classList.add('wizard-orphan-actions');
+  const clearBtn=$("clearScenarioBtn");
+  if(clearBtn)clearBtn.classList.add('wizard-hidden-source-button');
 
   wizard.querySelectorAll('[data-wizard-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardStep)));
-  wizard.querySelectorAll('[data-wizard-next]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardNext)));
+  wizard.querySelectorAll('[data-wizard-next]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(btn.dataset.wizardNext==='2' && !selectedFocusRecords().length){alert('Choose at least one Scenario Focus to continue.');return;}
+    showGeneratorWizardStep(btn.dataset.wizardNext);
+  }));
   wizard.querySelectorAll('[data-wizard-prev]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardPrev)));
+
+  $("wizardCancelBtn")?.addEventListener('click',()=>go('dashboard'));
+  $("wizardStartOverBtn")?.addEventListener('click',()=>{
+    if(confirm('Clear the current scenario and start a brand-new one? Unsaved changes will be lost.'))resetScenarioForm();
+  });
+  $("editScenarioSetupBtn")?.addEventListener('click',()=>showWizardScenarioSetup(4));
+
+  const originalGenerate=generateScenario;
+  generateBtn.onclick=()=>{
+    originalGenerate();
+    if(state.currentScenario)showGeneratedScenarioScreen();
+  };
+
+  setupGeneratedScreenTabs();
 
   document.querySelectorAll('#generator input, #generator select, #generator textarea').forEach(el=>{
     el.addEventListener('change',renderWizardReviewSummary);
@@ -5903,7 +6024,7 @@ function setupGeneratorWizard(){
   });
 
   generatorWizardState.ready=true;
-  showGeneratorWizardStep(1);
+  showWizardScenarioSetup(1);
   renderWizardReviewSummary();
 }
 

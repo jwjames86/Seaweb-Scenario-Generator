@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.37" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.38" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.37 • Step-by-Step Wizard</span>
+            <span class="pill">V1.9.38 • Full-Screen Guided Wizard</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -241,27 +241,38 @@
           </div>
         </details>
 
-        <div class="two-col">
-          <div class="panel">
+        <div class="two-col generator-workspace">
+          <div class="panel generator-setup-panel">
             <div id="selectedSailingSummary" class="selected-sailing empty new-reservation-only">No real sailing selected yet.</div>
 
             <div id="generatorWizard" class="generator-wizard">
+              <div class="wizard-topline">
+                <div class="wizard-brand-copy">
+                  <span>SEAweb Scenario Generator</span>
+                  <small>Guided trainer setup</small>
+                </div>
+                <button id="wizardStartOverBtn" type="button" class="secondary tiny">Start New Scenario</button>
+              </div>
+
               <div class="wizard-progress" aria-label="Scenario Generator Steps">
-                <button type="button" class="wizard-step-button active" data-wizard-step="1"><span class="wizard-step-number">1</span><span class="wizard-step-copy"><strong>Scenario Type</strong><small>Core setup</small></span></button>
-                <button type="button" class="wizard-step-button" data-wizard-step="2"><span class="wizard-step-number">2</span><span class="wizard-step-copy"><strong>Reservation Details</strong><small>Guests & booking</small></span></button>
-                <button type="button" class="wizard-step-button" data-wizard-step="3"><span class="wizard-step-number">3</span><span class="wizard-step-copy"><strong>Additional Options</strong><small>Tasks & extras</small></span></button>
-                <button type="button" class="wizard-step-button" data-wizard-step="4"><span class="wizard-step-number">4</span><span class="wizard-step-copy"><strong>Review & Generate</strong><small>Final check</small></span></button>
+                <button type="button" class="wizard-step-button active" data-wizard-step="1"><span class="wizard-step-number">1</span><span class="wizard-step-copy"><strong>Scenario Type</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="2"><span class="wizard-step-number">2</span><span class="wizard-step-copy"><strong>Reservation Details</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="3"><span class="wizard-step-number">3</span><span class="wizard-step-copy"><strong>Additional Options</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="4"><span class="wizard-step-number">4</span><span class="wizard-step-copy"><strong>Review &amp; Generate</strong></span></button>
               </div>
 
               <section class="wizard-step-panel active" data-step-panel="1">
                 <div class="wizard-step-intro">
                   <span class="wizard-step-kicker">Step 1 of 4</span>
                   <h3>Select the Scenario Type</h3>
-                  <p>Start with the main setup for the exercise. The scenario focus options are shown as visual cards so they are easier to review.</p>
+                  <p>Choose the main scenario focus. You can combine multiple skills into one exercise.</p>
                 </div>
                 <div id="wizardStep1Content" class="wizard-step-content"></div>
                 <div class="wizard-nav">
-                  <span class="wizard-nav-note">Choose one or more scenario focuses to continue.</span>
+                  <button id="wizardCancelBtn" type="button" class="secondary">Cancel</button>
                   <button type="button" class="primary" data-wizard-next="2">Next: Reservation Details →</button>
                 </div>
               </section>
@@ -270,7 +281,7 @@
                 <div class="wizard-step-intro">
                   <span class="wizard-step-kicker">Step 2 of 4</span>
                   <h3>Enter Reservation Details</h3>
-                  <p>Add sailing, guest, stateroom, and booking details. Multiple-reservation and modification scenarios automatically expand when needed.</p>
+                  <p>Provide the key details for this scenario. Fields adapt automatically based on the scenario type.</p>
                 </div>
                 <div id="wizardStep2Content" class="wizard-step-content"></div>
                 <div class="wizard-nav">
@@ -282,27 +293,26 @@
               <section class="wizard-step-panel" data-step-panel="3">
                 <div class="wizard-step-intro">
                   <span class="wizard-step-kicker">Step 3 of 4</span>
-                  <h3>Choose Additional Options</h3>
-                  <p>Turn on the tasks, payment details, air, coupons, and other training elements you want included.</p>
+                  <h3>Add Additional Options</h3>
+                  <p>Select the tasks and training elements to include. You can choose one or multiple options.</p>
                 </div>
                 <div id="wizardStep3Content" class="wizard-step-content"></div>
                 <div class="wizard-nav">
                   <button type="button" class="secondary" data-wizard-prev="2">← Back</button>
-                  <button type="button" class="primary" data-wizard-next="4">Next: Review & Generate →</button>
+                  <button type="button" class="primary" data-wizard-next="4">Next: Review &amp; Generate →</button>
                 </div>
               </section>
 
               <section class="wizard-step-panel" data-step-panel="4">
                 <div class="wizard-step-intro">
                   <span class="wizard-step-kicker">Step 4 of 4</span>
-                  <h3>Review & Generate</h3>
-                  <p>Review your selections, add trainer notes if needed, and generate the final scenario.</p>
+                  <h3>Review Your Selections</h3>
+                  <p>Confirm the scenario details below, then generate the exercise.</p>
                 </div>
                 <div id="wizardReviewSummary" class="wizard-review-summary"></div>
                 <div id="wizardStep4Content" class="wizard-step-content"></div>
-                <div class="wizard-nav">
+                <div class="wizard-nav review-nav">
                   <button type="button" class="secondary" data-wizard-prev="3">← Back</button>
-                  <span class="wizard-nav-note">Generate the scenario when you are ready.</span>
                 </div>
               </section>
             </div>
@@ -575,14 +585,14 @@
 
             <fieldset>
               <legend>Scenario Tasks</legend>
-              <label id="guestStatusTaskControl" class="check"><input id="latitudesToggle" type="checkbox" checked /> Guest Status / Latitudes</label>
-              <label class="check"><input id="commentToggle" type="checkbox" /> Use Commenting Tool</label>
-              <label class="check"><input id="confirmToggle" type="checkbox" checked /> Send Guest Confirmation</label>
-              <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
-              <label class="check"><input id="travelToggle" type="checkbox" /> Travel Protection discussion</label>
-              <label class="check"><input id="pscToggle" type="checkbox" /> Prepaid Service Charges discussion</label>
-              <label class="check"><input id="airToggle" type="checkbox" /> Include Air / Transfers</label>
-              <label class="check"><input id="couponToggle" type="checkbox" /> Include Credits / Coupons</label>
+              <label id="guestStatusTaskControl" class="check"><input id="latitudesToggle" type="checkbox" checked /><span class="task-card-copy"><strong>Guest Status / Latitudes</strong><small>Choose Past Guest or New Guest and add training Latitudes numbers when needed.</small></span></label>
+              <label class="check"><input id="commentToggle" type="checkbox" /><span class="task-card-copy"><strong>Commenting Tool</strong><small>Include reservation comments and internal documentation in the scenario.</small></span></label>
+              <label class="check"><input id="confirmToggle" type="checkbox" checked /><span class="task-card-copy"><strong>Guest Confirmation</strong><small>Include sending the appropriate confirmation email to the guest.</small></span></label>
+              <label class="check"><input id="fasToggle" type="checkbox" /><span class="task-card-copy"><strong>Free at Sea (FAS)</strong><small>Include applicable Free at Sea selections, eligibility, and discussion points.</small></span></label>
+              <label class="check"><input id="travelToggle" type="checkbox" /><span class="task-card-copy"><strong>Travel Protection</strong><small>Include Norwegian Care / travel protection offer and guest questions.</small></span></label>
+              <label class="check"><input id="pscToggle" type="checkbox" /><span class="task-card-copy"><strong>Prepaid Service Charges</strong><small>Include prepaid service charges and applicable payment discussion.</small></span></label>
+              <label class="check"><input id="airToggle" type="checkbox" /><span class="task-card-copy"><strong>Air / Transfers</strong><small>Include NCL Air and/or ground transfer details and required terms.</small></span></label>
+              <label class="check"><input id="couponToggle" type="checkbox" /><span class="task-card-copy"><strong>Credits / Coupons</strong><small>Include FCC, CruiseNext, CruiseFirst, discount coupons, or other training credits.</small></span></label>
             </fieldset>
 
             <div id="airProgramPanel" class="air-program-panel hidden-field">
@@ -657,7 +667,15 @@
             </div>
           </div>
 
-          <div class="panel output-panel">
+          <div class="panel output-panel generated-scenario-panel">
+            <div class="generated-success-banner">
+              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Review, share, print, or save it below.</small></div></div>
+              <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+            </div>
+            <div class="generated-tabs" role="tablist" aria-label="Generated scenario view">
+              <button type="button" class="generated-tab active" data-generated-tab="scenario">Scenario Output</button>
+              <button type="button" class="generated-tab trainer-only" data-generated-tab="trainer">Trainer Guide</button>
+            </div>
             <div class="output-toolbar">
               <span id="scenarioStatus" class="status-badge neutral">Draft</span>
               <div class="output-actions">
@@ -842,6 +860,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.36"></script>
+  <script src="/app.js?v=1.9.38"></script>
 </body>
 </html>

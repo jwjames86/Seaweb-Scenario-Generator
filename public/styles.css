@@ -1515,41 +1515,132 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 }
 
 
-/* V1.9.37 step-by-step wizard layout */
-.generator-wizard{display:flex;flex-direction:column;gap:18px;margin-bottom:18px}
-.wizard-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.wizard-step-button{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #cfd6db;background:#f7f8fa;border-radius:10px;text-align:left;color:#344054;cursor:pointer;transition:.18s ease all}
-.wizard-step-button:hover{border-color:var(--ncl-blue);background:#fff}
-.wizard-step-button.active{border-color:var(--ncl-blue);background:#eef7fb;box-shadow:0 0 0 3px rgba(10,132,189,.08)}
-.wizard-step-button.complete{border-color:#b8d7d5;background:#eef7f6}
-.wizard-step-number{width:32px;height:32px;border-radius:999px;background:#dfe6ee;color:var(--navy);display:grid;place-items:center;font-weight:800;flex:0 0 32px}
-.wizard-step-button.active .wizard-step-number{background:var(--ncl-blue);color:#fff}
-.wizard-step-button.complete .wizard-step-number{background:var(--teal);color:#fff}
-.wizard-step-copy{display:flex;flex-direction:column;gap:2px;min-width:0}.wizard-step-copy strong{font-size:13px;line-height:1.2}.wizard-step-copy small{font-size:11px;color:#667085;line-height:1.2}
-.wizard-step-panel{display:none;border:1px solid #d6dbe1;border-radius:14px;background:#fff;padding:22px}.wizard-step-panel.active{display:block}
-.wizard-step-intro{margin-bottom:16px}.wizard-step-kicker{display:inline-block;margin-bottom:6px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ncl-blue)}
-.wizard-step-intro h3{margin:0 0 6px;font-size:26px;color:#132544}.wizard-step-intro p{margin:0;color:#667085;line-height:1.55}
-.wizard-step-content{display:flex;flex-direction:column;gap:16px}.wizard-step-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.wizard-step-grid>label,.wizard-step-grid>.focus-picker-field,.wizard-step-grid>.form-grid-contents{margin:0}.wizard-step-grid .form-grid-contents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;grid-column:1/-1}.reservation-step-grid #selectedSailingSummary{grid-column:1/-1}
-.wizard-nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid #eaecf0}.wizard-nav-note{font-size:12px;color:#667085}
-.wizard-review-summary{background:#f8fafc;border:1px solid #d9e1e8;border-radius:12px;padding:16px}.wizard-review-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.wizard-review-item{background:#fff;border:1px solid #e4e7ec;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:4px}.wizard-review-item span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#667085;font-weight:800}.wizard-review-item strong{font-size:13px;line-height:1.45;color:#101828}
-.wizard-generator-mode #generator .curriculum-grid{display:none!important}
-.wizard-generator-mode #generator .focus-picker{position:static}
-.wizard-generator-mode #generator .focus-picker-trigger{display:none!important}
-.wizard-generator-mode #generator .focus-picker-menu{display:block!important;position:static;left:auto;right:auto;top:auto;max-height:none;box-shadow:none;border:1px solid #d0d5dd;border-radius:12px;overflow:visible}
-.wizard-generator-mode #generator .focus-picker-head{padding:14px 16px;background:#f8fafc}
-.wizard-generator-mode #generator .focus-picker-head strong{font-size:15px}
-.wizard-generator-mode #generator .focus-picker-head small{font-size:12px}
-.wizard-generator-mode #generator .focus-picker-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}
-.wizard-generator-mode #generator .focus-choice{position:relative;align-items:flex-start!important;gap:0;padding:0;border:0;background:none!important}
+/* V1.9.38 full-screen guided wizard — NCL brand aligned */
+:root{
+  --wizard-navy:#0b2e59;
+  --wizard-blue:#087fbd;
+  --wizard-ocean:#006a98;
+  --wizard-teal:#168f96;
+  --wizard-aqua:#e9f7f7;
+  --wizard-sky:#eef8fd;
+  --wizard-ink:#10223d;
+  --wizard-muted:#637083;
+  --wizard-line:#d6e0e7;
+  --wizard-soft:#f7f9fb;
+}
+
+#generator .generator-workspace{display:block!important}
+#generator .generator-setup-panel,#generator .generated-scenario-panel{width:100%;max-width:none;position:static!important}
+#generator.wizard-active .generated-scenario-panel{display:none!important}
+#generator.generated-active .generator-setup-panel{display:none!important}
+#generator.generated-active .generated-scenario-panel{display:block!important}
+#generator.generated-active>.section-head,#generator.generated-active>.trainer-instructions{display:none!important}
+#generator.wizard-active .output-panel{display:none!important}
+#generator .generator-setup-panel{padding:0;background:transparent;border:0;box-shadow:none}
+#generator .generated-scenario-panel{padding:22px;border:1px solid var(--wizard-line);border-radius:10px;background:#fff;box-shadow:0 6px 24px rgba(15,55,85,.06)}
+
+.generator-wizard{display:flex;flex-direction:column;gap:0;background:#fff;border:1px solid #d4dde5;border-radius:10px;overflow:hidden;box-shadow:0 8px 26px rgba(15,55,85,.055)}
+.wizard-topline{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid #e5eaee;background:#fff}
+.wizard-brand-copy{display:flex;flex-direction:column;gap:2px}.wizard-brand-copy>span{font-size:14px;font-weight:800;color:var(--wizard-navy)}.wizard-brand-copy>small{font-size:10px;color:var(--wizard-muted)}
+
+.wizard-progress{display:grid;grid-template-columns:auto 1fr auto 1fr auto 1fr auto;align-items:center;padding:16px 22px;background:#fbfcfd;border-bottom:1px solid #e5eaee}
+.wizard-step-button{display:flex;align-items:center;gap:9px;border:0;background:transparent;padding:0;color:#8190a0;cursor:pointer;font-family:inherit}
+.wizard-step-button:hover{color:var(--wizard-ocean)}
+.wizard-step-number{width:28px;height:28px;border-radius:999px;background:#a9bac9;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex:0 0 28px;transition:.18s ease}
+.wizard-step-copy{display:flex;align-items:center}.wizard-step-copy strong{font-size:11px;white-space:nowrap;font-weight:700;color:inherit}
+.wizard-step-button.active{color:var(--wizard-blue)}.wizard-step-button.active .wizard-step-number{background:var(--wizard-blue);box-shadow:0 0 0 4px rgba(8,127,189,.09)}
+.wizard-step-button.complete{color:var(--wizard-teal)}.wizard-step-button.complete .wizard-step-number{background:var(--wizard-teal)}
+.wizard-connector{height:2px;background:#dce5eb;margin:0 18px;min-width:18px}
+
+.wizard-step-panel{display:none;padding:24px 24px 20px;background:#fff;min-height:560px}
+.wizard-step-panel.active{display:flex;flex-direction:column}
+.wizard-step-intro{margin-bottom:18px;max-width:800px}.wizard-step-kicker{display:block;font-size:11px;font-weight:800;color:var(--wizard-blue);letter-spacing:.03em;text-transform:uppercase;margin-bottom:4px}.wizard-step-intro h3{margin:0 0 4px;font-size:24px;color:var(--wizard-navy);letter-spacing:-.02em}.wizard-step-intro p{margin:0;color:var(--wizard-muted);font-size:12px;line-height:1.5}
+.wizard-step-content{display:flex;flex-direction:column;gap:16px;flex:1}
+.wizard-nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid #e5eaee}
+.wizard-nav .primary{margin-left:auto;min-width:185px}
+.review-nav{justify-content:flex-start}.review-nav .secondary{margin-right:auto}
+
+/* Step 1 setup strip */
+.wizard-setup-strip{border:1px solid var(--wizard-line);border-radius:9px;background:var(--wizard-soft);padding:14px 16px}
+.wizard-mini-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}.wizard-mini-heading strong{font-size:12px;color:var(--wizard-navy)}.wizard-mini-heading small{font-size:10px;color:var(--wizard-muted)}
+.wizard-setup-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.wizard-setup-grid label{margin:0}.wizard-setup-grid label>span:not(.field-hint){font-size:10px}.wizard-setup-grid .field-hint{font-size:8.5px;line-height:1.3;margin-top:4px}.wizard-setup-grid select,.wizard-setup-grid input{min-height:40px;font-size:11px;padding:8px 10px}
+
+/* Scenario focus cards */
+.wizard-generator-mode #generator .focus-picker-field{gap:8px}.wizard-generator-mode #generator .focus-picker-field>.field-title{display:none}
+.wizard-generator-mode #generator .focus-picker{position:static}.wizard-generator-mode #generator .focus-picker-trigger{display:none!important}
+.wizard-generator-mode #generator .focus-picker-menu{display:block!important;position:static;inset:auto;max-height:none;box-shadow:none;border:0;border-radius:0;overflow:visible;background:transparent}
+.wizard-generator-mode #generator .focus-picker-head{padding:0 0 10px;border:0;background:transparent}.wizard-generator-mode #generator .focus-picker-head strong{font-size:13px;color:var(--wizard-navy)}.wizard-generator-mode #generator .focus-picker-head small{font-size:10px;color:var(--wizard-muted);margin-top:2px}
+.wizard-generator-mode #generator .focus-picker-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;max-height:none;overflow:visible}
+.wizard-generator-mode #generator .focus-choice{position:relative;display:block!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;cursor:pointer}
 .wizard-generator-mode #generator .focus-choice input{position:absolute;opacity:0;pointer-events:none}
-.wizard-generator-mode #generator .focus-choice span{display:flex;flex-direction:column;gap:8px;width:100%;padding:16px;border:1px solid #d0d5dd;border-radius:12px;min-height:128px;background:#fff;transition:.18s ease all}
-.wizard-generator-mode #generator .focus-choice strong{font-size:14px;line-height:1.3;color:#0f172a}
-.wizard-generator-mode #generator .focus-choice small{font-size:12px;line-height:1.5;color:#667085}
-.wizard-generator-mode #generator .focus-choice input:checked + span{border-color:var(--ncl-blue);box-shadow:0 0 0 3px rgba(10,132,189,.10);background:#f2fbff}
-.wizard-generator-mode #generator .focus-choice input:checked + span::before{content:"✓ Selected";display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;padding:4px 8px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:4px}
-.wizard-generator-mode #generator .focus-picker-actions{padding:0 14px 14px;border-top:0;justify-content:flex-start}.wizard-generator-mode #generator #doneFocusBtn{display:none!important}
-.wizard-generator-mode #generator .selected-focus-chips{margin-top:2px}.wizard-generator-mode #generator .focus-chip{font-size:11px;padding:6px 10px}
-.wizard-generator-mode #generator .multiple-reservation-panel,.wizard-generator-mode #generator .modification-panel,.wizard-generator-mode #generator .payment-training-panel,.wizard-generator-mode #generator .air-program-panel,.wizard-generator-mode #generator .latitudes-number-panel,.wizard-generator-mode #generator .coupon-panel,.wizard-generator-mode #generator fieldset,.wizard-generator-mode #generator .curriculum-note{margin-top:0}
-.wizard-generator-mode #generator .actions{justify-content:flex-start;flex-wrap:wrap}
-@media(max-width:1024px){.wizard-progress{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-step-grid,.wizard-review-grid,.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:1fr}}
-@media(max-width:680px){.wizard-progress{grid-template-columns:1fr}.wizard-step-panel{padding:18px}.wizard-step-intro h3{font-size:22px}.wizard-nav{flex-direction:column;align-items:stretch}.wizard-step-button{padding:12px 14px}}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;width:100%;min-height:170px;padding:18px 14px 15px;border:1px solid #d7e0e7;border-radius:7px;background:#fff;transition:border-color .16s,box-shadow .16s,background .16s,transform .16s}
+.wizard-generator-mode #generator .focus-choice:hover .focus-card-body{border-color:#95c7df;box-shadow:0 5px 18px rgba(9,91,136,.07);transform:translateY(-1px)}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body{border:2px solid var(--wizard-blue);background:linear-gradient(180deg,#f5fbff 0%,#fff 100%);box-shadow:0 0 0 3px rgba(8,127,189,.08)}
+.focus-card-icon{width:44px;height:44px;display:grid;place-items:center;color:var(--wizard-blue);margin-bottom:2px}.focus-card-icon svg{width:36px;height:36px;fill:currentColor}
+.wizard-generator-mode #generator .focus-choice strong{font-size:12px;line-height:1.25;color:var(--wizard-navy);font-weight:800}
+.wizard-generator-mode #generator .focus-choice small{font-size:9.5px;line-height:1.45;color:#5f6c7a;max-width:210px}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body:after{content:"Selected";position:absolute;top:10px;right:10px;padding:3px 6px;border-radius:999px;background:#e3f3fb;color:#006d9d;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.wizard-generator-mode #generator .focus-picker-actions{padding:10px 0 0;border:0;justify-content:flex-start}.wizard-generator-mode #generator #doneFocusBtn{display:none!important}
+.wizard-generator-mode #generator .selected-focus-chips{display:none}.wizard-generator-mode #generator .focus-picker-field>.field-hint{display:none}
+
+/* Step 2 grouped cards */
+.wizard-detail-card{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start;border:1px solid var(--wizard-line);border-radius:8px;padding:14px 16px;background:#fff}
+.wizard-detail-card-head{display:flex;align-items:flex-start;gap:11px;padding-top:3px}.wizard-detail-icon{width:34px;height:34px;border-radius:999px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-size:16px;font-weight:800;flex:0 0 34px}.wizard-detail-card-head>div{display:flex;flex-direction:column;gap:3px}.wizard-detail-card-head strong{font-size:12px;color:var(--wizard-navy)}.wizard-detail-card-head small{font-size:9px;line-height:1.35;color:var(--wizard-muted)}
+.wizard-detail-card-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px;align-items:start}.wizard-detail-card-body>label,.wizard-detail-card-body>.form-grid-contents{margin:0}.wizard-detail-card-body input,.wizard-detail-card-body select,.wizard-detail-card-body textarea{min-height:42px}.wizard-detail-card-body .field-hint{font-size:9px;line-height:1.35}
+.wizard-detail-card-body .selected-sailing{grid-column:1/-1;margin:0}.wizard-sailing-tools{grid-column:1/-1;display:flex;justify-content:flex-end}.wizard-inline-tools{grid-column:1/-1;display:flex;justify-content:flex-end}
+.wizard-detail-card-body>.form-grid-contents{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px}
+#wizardStep2Content>.multiple-reservation-panel,#wizardStep2Content>.modification-panel{margin:0;border-radius:8px}
+
+/* Step 3 toggle cards */
+#wizardStep3Content fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#wizardStep3Content fieldset legend{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--wizard-navy);margin-bottom:2px}
+#wizardStep3Content fieldset .check{position:relative;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center;gap:4px;min-height:86px;padding:15px 62px 15px 52px;border:1px solid var(--wizard-line);border-radius:8px;background:#fff;color:var(--wizard-ink);cursor:pointer}
+#wizardStep3Content fieldset .check:before{position:absolute;left:14px;top:16px;width:28px;height:28px;border-radius:6px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-size:15px;font-weight:800}
+#wizardStep3Content fieldset .check:nth-of-type(1):before{content:"💬"}#wizardStep3Content fieldset .check:nth-of-type(2):before{content:"✉"}#wizardStep3Content fieldset .check:nth-of-type(3):before{content:"★"}#wizardStep3Content fieldset .check:nth-of-type(4):before{content:"★"}#wizardStep3Content fieldset .check:nth-of-type(5):before{content:"◆"}#wizardStep3Content fieldset .check:nth-of-type(6):before{content:"$"}#wizardStep3Content fieldset .check:nth-of-type(7):before{content:"✈"}#wizardStep3Content fieldset .check:nth-of-type(8):before{content:"◇"}
+#wizardStep3Content fieldset .check input{appearance:none;position:absolute;right:14px;top:17px;width:34px;height:19px;border-radius:999px;background:#c7d3dd;border:0;margin:0;cursor:pointer;transition:.18s ease}
+#wizardStep3Content fieldset .check input:after{content:"";position:absolute;width:15px;height:15px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.18s ease}
+#wizardStep3Content fieldset .check input:checked{background:var(--wizard-blue)}#wizardStep3Content fieldset .check input:checked:after{left:17px}
+#wizardStep3Content fieldset .check:has(input:checked){border-color:#9bcde2;background:#f8fcfe}
+#wizardStep3Content .air-program-panel,#wizardStep3Content .latitudes-number-panel,#wizardStep3Content .coupon-panel,#wizardStep3Content .payment-training-panel,#wizardStep3Content .curriculum-note{margin:0;border-radius:8px}
+
+/* Step 4 review */
+.wizard-review-summary{background:transparent;border:0;padding:0}.wizard-review-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.wizard-review-card{border:1px solid var(--wizard-line);border-radius:8px;padding:15px;background:#fff;min-height:160px}.wizard-review-card-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:12px}.wizard-review-icon{width:30px;height:30px;border-radius:6px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-weight:800}.wizard-review-card-head strong{font-size:11px;color:var(--wizard-navy)}.wizard-review-card-head button{border:0;background:transparent;color:var(--wizard-blue);font:inherit;font-size:9px;font-weight:700;cursor:pointer}.wizard-review-card h4{font-size:13px;line-height:1.35;margin:0 0 6px;color:var(--wizard-navy)}.wizard-review-card p{font-size:9.5px;line-height:1.5;color:var(--wizard-muted);margin:0}
+#wizardStep4Content .wizard-detail-card{grid-template-columns:180px 1fr}.wizard-generate-row{display:flex;justify-content:flex-end;margin-top:4px}.wizard-generate-row .primary{min-width:180px;background:#078b88;border-color:#078b88}.wizard-generate-row .primary:hover{background:#047775}
+.wizard-orphan-actions,.wizard-hidden-source-button{display:none!important}
+
+/* Generated scenario screen */
+.generated-success-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 15px;margin-bottom:14px;border:1px solid #9dddc1;border-left:4px solid #1a9a6d;border-radius:7px;background:#effaf4}.generated-success-copy{display:flex;align-items:center;gap:10px}.generated-success-copy>div{display:flex;flex-direction:column;gap:2px}.generated-success-copy strong{font-size:12px;color:#0d5f42}.generated-success-copy small{font-size:9px;color:#477260}.generated-check{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#1a9a6d;color:#fff;font-weight:900}
+.generated-tabs{display:flex;gap:6px;border-bottom:1px solid #dce4ea;margin-bottom:12px}.generated-tab{border:0;border-bottom:3px solid transparent;background:transparent;padding:10px 14px;font-family:inherit;font-size:10px;font-weight:700;color:#667085;cursor:pointer}.generated-tab.active{color:var(--wizard-navy);border-bottom-color:var(--wizard-blue);background:#f8fbfd}
+#generator.generated-active .output-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:0}.generated-scenario-panel .output-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.generated-scenario-panel .scenario-paper{width:100%;max-width:none;min-height:0;padding:22px;border:1px solid #cfd8df;border-radius:7px}
+
+/* Keep NCL brand treatment prominent */
+#generator .wizard-step-panel .primary,#generator .generated-scenario-panel .primary{background:var(--ncl-blue);border-color:var(--ncl-blue)}
+#generator .wizard-step-panel .primary:hover,#generator .generated-scenario-panel .primary:hover{background:var(--ocean-blue)}
+
+@media(max-width:1200px){
+  .wizard-setup-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wizard-review-cards{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .wizard-progress{grid-template-columns:1fr 1fr;gap:10px}.wizard-connector{display:none}.wizard-step-button{padding:8px;border:1px solid #e0e7ed;border-radius:7px;background:#fff}
+  .wizard-detail-card{grid-template-columns:1fr}.wizard-detail-card-body{grid-template-columns:1fr}.wizard-detail-card-body>.form-grid-contents{grid-template-columns:1fr}.wizard-setup-grid{grid-template-columns:1fr 1fr}
+  #wizardStep3Content fieldset{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .wizard-topline{padding:12px 14px}.wizard-progress{grid-template-columns:1fr;padding:12px 14px}.wizard-step-panel{padding:18px 14px;min-height:auto}.wizard-setup-grid{grid-template-columns:1fr}.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:1fr}.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:145px}.wizard-nav{flex-direction:column;align-items:stretch}.wizard-nav .primary{margin-left:0}.generated-success-banner{align-items:flex-start;flex-direction:column}.generated-scenario-panel .output-toolbar{align-items:flex-start;flex-direction:column}
+}
+#generator.wizard-active>.section-head,#generator.wizard-active>.trainer-instructions{display:none!important}
+#wizardStep3Content fieldset .check .task-card-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+#wizardStep3Content fieldset .check .task-card-copy strong{font-size:11px;color:var(--wizard-navy);font-weight:800;line-height:1.25}
+#wizardStep3Content fieldset .check .task-card-copy small{font-size:9px;color:var(--wizard-muted);line-height:1.4;font-weight:500}
+#wizardStep3Content fieldset .check:has(#latitudesToggle):before{content:"★"}
+#wizardStep3Content fieldset .check:has(#commentToggle):before{content:"💬"}
+#wizardStep3Content fieldset .check:has(#confirmToggle):before{content:"✉"}
+#wizardStep3Content fieldset .check:has(#fasToggle):before{content:"★"}
+#wizardStep3Content fieldset .check:has(#travelToggle):before{content:"◆"}
+#wizardStep3Content fieldset .check:has(#pscToggle):before{content:"$"}
+#wizardStep3Content fieldset .check:has(#airToggle):before{content:"✈"}
+#wizardStep3Content fieldset .check:has(#couponToggle):before{content:"◇"}
+#scenarioOutput.trainer-guide-only> :not(.trainer-guide){display:none!important}
+#scenarioOutput.trainer-guide-only .trainer-guide{margin-top:0}
