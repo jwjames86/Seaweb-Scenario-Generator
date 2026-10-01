@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.36" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.37" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.36 • Multiple Reservation Details</span>
+            <span class="pill">V1.9.37 • Step-by-Step Wizard</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -219,7 +219,7 @@
 
       <section id="generator" class="page">
         <div class="section-head">
-          <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
+          <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with a guided step-by-step setup, clearer scenario focus selection, and a cleaner trainer workflow.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
 
@@ -244,6 +244,68 @@
         <div class="two-col">
           <div class="panel">
             <div id="selectedSailingSummary" class="selected-sailing empty new-reservation-only">No real sailing selected yet.</div>
+
+            <div id="generatorWizard" class="generator-wizard">
+              <div class="wizard-progress" aria-label="Scenario Generator Steps">
+                <button type="button" class="wizard-step-button active" data-wizard-step="1"><span class="wizard-step-number">1</span><span class="wizard-step-copy"><strong>Scenario Type</strong><small>Core setup</small></span></button>
+                <button type="button" class="wizard-step-button" data-wizard-step="2"><span class="wizard-step-number">2</span><span class="wizard-step-copy"><strong>Reservation Details</strong><small>Guests & booking</small></span></button>
+                <button type="button" class="wizard-step-button" data-wizard-step="3"><span class="wizard-step-number">3</span><span class="wizard-step-copy"><strong>Additional Options</strong><small>Tasks & extras</small></span></button>
+                <button type="button" class="wizard-step-button" data-wizard-step="4"><span class="wizard-step-number">4</span><span class="wizard-step-copy"><strong>Review & Generate</strong><small>Final check</small></span></button>
+              </div>
+
+              <section class="wizard-step-panel active" data-step-panel="1">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 1 of 4</span>
+                  <h3>Select the Scenario Type</h3>
+                  <p>Start with the main setup for the exercise. The scenario focus options are shown as visual cards so they are easier to review.</p>
+                </div>
+                <div id="wizardStep1Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <span class="wizard-nav-note">Choose one or more scenario focuses to continue.</span>
+                  <button type="button" class="primary" data-wizard-next="2">Next: Reservation Details →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="2">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 2 of 4</span>
+                  <h3>Enter Reservation Details</h3>
+                  <p>Add sailing, guest, stateroom, and booking details. Multiple-reservation and modification scenarios automatically expand when needed.</p>
+                </div>
+                <div id="wizardStep2Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="secondary" data-wizard-prev="1">← Back</button>
+                  <button type="button" class="primary" data-wizard-next="3">Next: Additional Options →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="3">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 3 of 4</span>
+                  <h3>Choose Additional Options</h3>
+                  <p>Turn on the tasks, payment details, air, coupons, and other training elements you want included.</p>
+                </div>
+                <div id="wizardStep3Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="secondary" data-wizard-prev="2">← Back</button>
+                  <button type="button" class="primary" data-wizard-next="4">Next: Review & Generate →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="4">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 4 of 4</span>
+                  <h3>Review & Generate</h3>
+                  <p>Review your selections, add trainer notes if needed, and generate the final scenario.</p>
+                </div>
+                <div id="wizardReviewSummary" class="wizard-review-summary"></div>
+                <div id="wizardStep4Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="secondary" data-wizard-prev="3">← Back</button>
+                  <span class="wizard-nav-note">Generate the scenario when you are ready.</span>
+                </div>
+              </section>
+            </div>
 
             <div class="form-grid curriculum-grid">
               <label>Department

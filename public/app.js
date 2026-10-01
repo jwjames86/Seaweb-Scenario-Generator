@@ -5780,7 +5780,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();go("generator");
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -5793,8 +5793,122 @@ $("importFile").onchange=async(e)=>{
   }catch(err){alert("Import failed: "+err.message)}
 };
 
+
+const generatorWizardState={currentStep:1,ready:false};
+
+function wizardFieldNode(target){
+  if(!target)return null;
+  return target.closest?.('label') || target;
+}
+
+function appendWizardNodes(host,nodes,gridClass='form-grid wizard-step-grid'){
+  if(!host)return null;
+  const grid=document.createElement('div');
+  grid.className=gridClass;
+  nodes.filter(Boolean).forEach(node=>grid.appendChild(node));
+  if(grid.children.length)host.appendChild(grid);
+  return grid;
+}
+
+function renderWizardReviewSummary(){
+  const host=$("wizardReviewSummary");
+  if(!host)return;
+  const workflow=$("reservationWorkflow")?.value||'new';
+  const focuses=selectedFocusRecords().map(r=>r.meta.name);
+  const sailing=state.selectedSailing?`${state.selectedSailing.ship||''}${state.selectedSailing.title?` • ${state.selectedSailing.title}`:''}`:'No real sailing selected yet';
+  const res1Guests=reservation1GuestNamesFromForm().filter(Boolean);
+  const res2Guests=multipleReservationFormActive()?reservation2GuestNamesFromForm().filter(Boolean):[];
+  const summary=[
+    ['Department', $("department")?.value||'—'],
+    ['Workflow', workflow==='modify'?'Modify Existing Reservation':'Create New Reservation'],
+    ['Caller Type', workflow==='modify' ? guestServicesAgencyDisplay($("agency")?.value||'') : newReservationCallerLabel({department:$("department")?.value||'Guest Services',newCallerType:$("newCallerType")?.value||'direct_us'})],
+    ['Scenario Focus', focuses.length?focuses.join(', '):'None selected'],
+    ['Difficulty', $("difficulty")?.value||'—'],
+    ['Sailing', sailing],
+    ['Reservation 1', res1Guests.length?res1Guests.join(', '):'No guests entered'],
+    ['Reservation 2', res2Guests.length?res2Guests.join(', '): (multipleReservationFormActive()?'No guests entered':'Not applicable')],
+    ['Tasks Enabled', [$("commentToggle")?.checked?'Commenting Tool':null,$("confirmToggle")?.checked?'Guest Confirmation':null,$("fasToggle")?.checked?'Free at Sea':null,$("travelToggle")?.checked?'Travel Protection':null,$("pscToggle")?.checked?'Prepaid Service Charges':null,$("airToggle")?.checked?'Air / Transfers':null,$("couponToggle")?.checked?'Credits / Coupons':null].filter(Boolean).join(', ') || 'None'],
+    ['Payment Action', $("paymentAction")?.value||'—']
+  ];
+  host.innerHTML=`<div class="wizard-review-grid">${summary.map(([label,value])=>`<div class="wizard-review-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>`;
+}
+
+function showGeneratorWizardStep(step){
+  const normalized=Math.max(1,Math.min(4,Number(step)||1));
+  generatorWizardState.currentStep=normalized;
+  document.querySelectorAll('[data-step-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.stepPanel===String(normalized)));
+  document.querySelectorAll('.wizard-step-button').forEach(btn=>{
+    const stepNum=Number(btn.dataset.wizardStep);
+    btn.classList.toggle('active',stepNum===normalized);
+    btn.classList.toggle('complete',stepNum<normalized);
+  });
+  if(normalized===4)renderWizardReviewSummary();
+}
+
+function setupGeneratorWizard(){
+  const wizard=$("generatorWizard");
+  if(!wizard || generatorWizardState.ready)return;
+  document.body.classList.add('wizard-generator-mode');
+
+  const step1=$("wizardStep1Content");
+  const step2=$("wizardStep2Content");
+  const step3=$("wizardStep3Content");
+  const step4=$("wizardStep4Content");
+
+  appendWizardNodes(step1,[
+    wizardFieldNode($("department")),
+    wizardFieldNode($("reservationWorkflow")),
+    $("newCallerTypeField"),
+    document.querySelector('.focus-picker-field'),
+    wizardFieldNode($("scenarioApproach")),
+    wizardFieldNode($("difficulty"))
+  ]);
+  if($("trainingDay"))step1.appendChild($("trainingDay"));
+
+  step2.appendChild($("selectedSailingSummary"));
+  appendWizardNodes(step2,[
+    $("guestCountField"),
+    $("marketAgencyField"),
+    $("agencyField"),
+    $("guest1Field"),
+    $("guest2Field"),
+    $("reservation1ExtraGuests"),
+    $("categoryField"),
+    $("locationField"),
+    $("sideField"),
+    wizardFieldNode($("paymentAction")),
+    $("pricingField"),
+    wizardFieldNode($("confirmationEmail"))
+  ],'form-grid wizard-step-grid reservation-step-grid');
+  step2.appendChild($("multipleReservationPanel"));
+  step2.appendChild($("modificationPanel"));
+
+  if($("curriculumNote"))step3.appendChild($("curriculumNote"));
+  if($("trainingCardPanel"))step3.appendChild($("trainingCardPanel"));
+  const scenarioTasks=document.querySelector('#generator fieldset');
+  if(scenarioTasks)step3.appendChild(scenarioTasks);
+  ["airProgramPanel","latitudesNumberPanel","couponPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
+
+  appendWizardNodes(step4,[wizardFieldNode($("trainerNotes"))],'wizard-step-grid');
+  const actions=document.querySelector('#generator .actions');
+  if(actions)step4.appendChild(actions);
+
+  wizard.querySelectorAll('[data-wizard-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardStep)));
+  wizard.querySelectorAll('[data-wizard-next]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardNext)));
+  wizard.querySelectorAll('[data-wizard-prev]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardPrev)));
+
+  document.querySelectorAll('#generator input, #generator select, #generator textarea').forEach(el=>{
+    el.addEventListener('change',renderWizardReviewSummary);
+    el.addEventListener('input',renderWizardReviewSummary);
+  });
+
+  generatorWizardState.ready=true;
+  showGeneratorWizardStep(1);
+  renderWizardReviewSummary();
+}
+
 function flash(msg){const n=document.createElement("div");n.className="notice success";n.style.cssText="position:fixed;right:20px;bottom:20px;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.15)";n.textContent=msg;document.body.appendChild(n);setTimeout(()=>n.remove(),2200)}
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderWizardReviewSummary();
