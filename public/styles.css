@@ -1360,3 +1360,78 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .roleplay-caller-rule,.caller-private-note{display:flex;flex-direction:column;gap:4px;padding:11px 13px;border-radius:8px;margin:10px 0}.roleplay-caller-rule{background:#EEF8F7;border:1px solid #C6DFDC}.caller-private-note{background:#FFF6E0;border:1px solid #F2D789}
 @media(max-width:900px){.followup-change-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:700px){.followup-form-grid,.followup-options-row,.followup-change-grid,.gdpr-grid,.followup-change-card-list{grid-template-columns:1fr}.followup-dialog-card{padding:16px}.followup-dialog-actions{position:sticky;bottom:0;background:#fff;padding-bottom:2px}}
+
+
+/* V1.9.32 • Multiple Reservations + Authorized Person scenarios */
+.multi-res-section .scenario-detail-grid{
+  margin-bottom:12px;
+}
+.multi-res-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin:14px 0;
+}
+.multi-res-card{
+  border:1px solid #D6E5EB;
+  background:#fff;
+  border-radius:9px;
+  overflow:hidden;
+}
+.multi-res-card-head{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:11px 13px;
+  background:#F2F8FA;
+  border-bottom:1px solid #D6E5EB;
+}
+.multi-res-card-head span{
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:1px;
+  color:#006099;
+}
+.multi-res-card-head strong{
+  font-size:14px;
+}
+.multi-res-card ul{
+  margin:0;
+  padding:12px 16px 12px 30px;
+}
+.multi-res-card li{
+  margin:5px 0;
+  line-height:1.4;
+}
+.authorized-person-section{
+  background:#FFF9EA;
+  border-left:5px solid #F0C24B;
+}
+.authorized-script{
+  margin:12px 0;
+  padding:13px 15px;
+  background:#fff;
+  border:1px solid #F2D789;
+  border-radius:8px;
+  font-size:11px;
+  line-height:1.6;
+}
+.authorized-comment-box{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:11px 13px;
+  background:#fff;
+  border:1px solid #E4E7EC;
+  border-radius:8px;
+}
+.authorized-comment-box span{
+  font-size:9px;
+  font-weight:850;
+  color:#006099;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+@media(max-width:760px){
+  .multi-res-grid{grid-template-columns:1fr}
+}

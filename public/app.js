@@ -252,6 +252,7 @@ const scenarioCatalog = {
       {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
       {name:"Solo Guest / Studio Booking",payment:"Minimum Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Intermediate",kind:"solo_studio",objective:"Travel Agent Kyle James with Norwegian Training Travel books Tom Holland as a solo guest on the June 27, 2027 Norwegian Aqua sailing. Search the guest by last name and date of birth, select a Studio, quote advertised pricing, include applicable Free at Sea, Pre-Paid Service Charges, Kosher Meals, Norwegian Care, collect the minimum deposit, send guest and agent confirmations, and add Compass comments."},
       {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
+      {name:"Multiple Reservations & Authorized Person",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"multi_authorized",objective:"Direct Guest Maria Lopez books two connecting Balcony reservations from Galveston in March 2027 for herself, Sofia, Ana and Luis. Verify all guest details, Free at Sea, Pre-Paid Service Charges, Norwegian Care, special requests, separate deposits, Authorized Person guidance/commenting, confirmations, recap, and TWITH."},
       {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an NCL Air reservation with ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
@@ -259,7 +260,8 @@ const scenarioCatalog = {
       {name:"Reinstate Cancelled Reservation – Roleplay",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"roleplay",objective:"Two-person servicing roleplay using a reservation cancelled yesterday. Complete GDPR with Reservation Number required, verify cancellation occurred within the last 24 hours, confirm the previous stateroom and pricing are still available, reinstate when eligible, Store Changes, add comments, send confirmation, recap, then switch roles."},
       {name:"Add Guest & Upgrade Stateroom – Roleplay",payment:"No Payment / Service Only",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"add_guest_upgrade_roleplay",objective:"Two-person servicing roleplay using today's Solo Guest / Studio Booking reservation. Travel Agent Kyle James calls to add Taylor using Latitudes #272279126. Complete GDPR with Reservation Number required, upgrade the Studio to a category for two guests near elevators/stairs when possible, quote new pricing, preserve Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, set Twin Beds, add Taylor's mushroom allergy while retaining Tom's Kosher Meals, check for additional deposit, Store Changes, add Compass comments, send guest and agent confirmations, recap, then switch roles."},
       {name:"Price Drops - TRAINER DEMO",payment:"No Payment / Service Only",cardRequired:false,commenting:false,difficulty:"Advanced",kind:"demo",objective:"Trainer-led demonstration of the price-drop workflow and the required Seaweb/NCLHelp checks."},
-      {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."}
+      {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."},
+      {name:"Multiple Reservations & Authorized Person – Cruisetour",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"multi_authorized_cruisetour",objective:"Direct Guest Maria Lopez books two connecting Balcony reservations on Pride of America from Honolulu in March 2027 using the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour with a 4-day pre-cruise land portion. Include Authorized Person handling, separate deposits, Free at Sea, Pre-Paid Service Charges, Norwegian Care, special requests, confirmations, recap, and TWITH."}
     ]
   },
   "Outbound Sales": {
@@ -387,6 +389,51 @@ function isSoloStudioScenario(dOrNames){
 function isAddGuestUpgradeRoleplay(dOrNames){
   const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
   return names.some(name=>String(name||"").toLowerCase().includes("add guest & upgrade stateroom"));
+}
+
+function isMultipleAuthorizedScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>{
+    const n=String(name||"").toLowerCase();
+    return n.includes("multiple reservations & authorized person") && !n.includes("cruisetour");
+  });
+}
+
+function isMultipleAuthorizedCruisetourScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("multiple reservations & authorized person – cruisetour"));
+}
+
+function isMultipleAuthorizedAny(dOrNames){
+  return isMultipleAuthorizedScenario(dOrNames)||isMultipleAuthorizedCruisetourScenario(dOrNames);
+}
+
+function setSailingSearchPreset(anchor,value,from,to,duration=""){
+  const radio=document.querySelector(`input[name="searchAnchor"][value="${anchor}"]`);
+  if(radio){
+    radio.checked=true;
+    updateAnchorUI();
+    chooseAnchorValue(value);
+  }
+  if($("searchFrom"))$("searchFrom").value=from;
+  if($("searchTo")){
+    $("searchTo").min=from;
+    $("searchTo").max=addDays(from,30);
+    $("searchTo").value=to;
+  }
+  if($("searchDuration"))$("searchDuration").value=duration;
+  updateDateHint();
+}
+
+function applyMultipleAuthorizedGuests(){
+  $("guestCount").value="4";
+  $("guest1").value="Maria Lopez";
+  $("guest2").value="Sofia";
+  $("latitudesToggle").checked=true;
+  renderLatitudesFields(
+    ["279019549","279019550","279019849","279019848"],
+    [true,true,true,true]
+  );
 }
 
 function isDedicatedRoleplay(d){
@@ -1163,6 +1210,8 @@ function applyFocusDefaults(){
   const reinstateRoleplay=metas.some(m=>m.kind==="roleplay" || m.name==="Reinstate Cancelled Reservation – Roleplay");
   const soloStudio=metas.some(m=>m.kind==="solo_studio" || m.name==="Solo Guest / Studio Booking");
   const addGuestUpgrade=metas.some(m=>m.kind==="add_guest_upgrade_roleplay" || m.name==="Add Guest & Upgrade Stateroom – Roleplay");
+  const multiAuthorized=metas.some(m=>m.kind==="multi_authorized" || m.name==="Multiple Reservations & Authorized Person");
+  const multiAuthorizedCruisetour=metas.some(m=>m.kind==="multi_authorized_cruisetour" || m.name==="Multiple Reservations & Authorized Person – Cruisetour");
 
   if(reinstateRoleplay && $("department").value==="Guest Services"){
     $("reservationWorkflow").value="modify";
@@ -1228,18 +1277,53 @@ function applyFocusDefaults(){
     syncAgencyCallerLogic();
   }
 
+  if((multiAuthorized||multiAuthorizedCruisetour) && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="new";
+    updateWorkflowUI(false);
+    $("newCallerType").value="direct_us";
+    syncAgencyCallerLogic();
+    $("agency").value="5";
+    applyMultipleAuthorizedGuests();
+    $("category").value="Balcony";
+    $("locationPref").value="Any";
+    $("sidePref").value="Any";
+    $("paymentAction").value="Initial Deposit";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+
+    // Prevent a sailing from a previous practice from silently carrying over.
+    state.selectedSailing=null;
+    renderSelectedSailing();
+
+    if(multiAuthorizedCruisetour){
+      setSailingSearchPreset("ship","Pride of America","2027-03-01","2027-03-31","");
+    }else{
+      setSailingSearchPreset("departure","Galveston","2027-03-01","2027-03-31","");
+    }
+  }
+
   if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && metas.some(m=>m.name==="Agencies: TA Booking")){
     $("newCallerType").value="travel_agent";
     syncAgencyCallerLogic();
   }
   $("commentToggle").checked=metas.some(m=>m.commenting);
   $("confirmToggle").checked=true;
-  $("fasToggle").checked=soloStudio||addGuestUpgrade||/\bfas\b|free at sea/.test(focusText);
-  $("travelToggle").checked=soloStudio||addGuestUpgrade||/norwegian care|travel protection/.test(focusText);
-  $("pscToggle").checked=soloStudio||addGuestUpgrade||/ppsrvchg|prepaid service charge/.test(focusText);
+  $("fasToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/\bfas\b|free at sea/.test(focusText);
+  $("travelToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/norwegian care|travel protection/.test(focusText);
+  $("pscToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/ppsrvchg|prepaid service charge/.test(focusText);
   $("couponToggle").checked=/fcc|cruisenext|cruise first|coupon|credit/.test(focusText);
-  $("latitudesToggle").checked=soloStudio?false:(!/\bnew guest\b/.test(focusText));
-  refreshLatitudesPanel();
+  $("latitudesToggle").checked=soloStudio?false:(multiAuthorized||multiAuthorizedCruisetour?true:(!/\bnew guest\b/.test(focusText)));
+  if(multiAuthorized||multiAuthorizedCruisetour){
+    renderLatitudesFields(["279019549","279019550","279019849","279019848"],[true,true,true,true]);
+  }else{
+    refreshLatitudesPanel();
+  }
 
   if(/\bada\b|accessible/.test(focusText)){
     $("category").value="ADA / Accessible";
@@ -1347,6 +1431,7 @@ const anchorSuggestions = {
     {value:"Los Angeles",detail:"Los Angeles, California"},
     {value:"New Orleans",detail:"New Orleans, Louisiana"},
     {value:"Tampa",detail:"Tampa, Florida"},
+    {value:"Galveston",detail:"Galveston, Texas"},
     {value:"San Juan",detail:"San Juan, Puerto Rico"},
     {value:"Honolulu",detail:"Honolulu, Hawaii"},
     {value:"Barcelona",detail:"Barcelona, Spain"},
@@ -2077,6 +2162,33 @@ function focusConsiderations(d){
   if(name.includes("cruise first")) items.push("What are the CruiseFirst terms and where is the credit purchased/applied?");
   if(name.includes("gty")) items.push("What expectations must be set for a Guarantee category, including stateroom assignment and location?");
   if(d.sailing?.ports?.length) items.push(`Confirm any requested port of call against the selected itinerary: ${d.sailing.ports.join(", ")}.`);
+  if(isMultipleAuthorizedAny(d)){
+    const isTour=isMultipleAuthorizedCruisetourScenario(d);
+    return [
+      "Anticipate the steps based on the reason for the call to control the call flow and guide the interaction effectively.",
+      "How many days prior to sailing is the booking being made?",
+      "Is each reservation inside or outside the final payment date?",
+      "What is the gross amount due and final payment date for each reservation?",
+      "What are the current promo codes?",
+      "Which Free at Sea selections have a package fee?",
+      "Is the applicable package fee different for Sofia as a child?",
+      "What is the deadline for guests to change their selection or remove the Free at Sea promotion?",
+      "What is the square footage of the selected Balcony staterooms?",
+      "What are the bed arrangements for each room? Is there a sofa bed?",
+      "Are you POSITIVE the selected staterooms connect?",
+      "Were the Authorized Person guidelines explained and the exact Authorized Person comment added to the parents' reservation?",
+      "Were the two $250 deposits processed separately?",
+      "Were both reservations recapped, notated and confirmed?",
+      "Were the reservations linked using TWITH before ending the call?",
+      ...(isTour?[
+        "Did both reservations use the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour?",
+        "What are the dates of the 4-day pre-cruise portion?",
+        "When does the Pride of America sailing begin?",
+        "What is included in the selected Cruisetour and are there any Cruisetour-specific requirements the guests should know?"
+      ]:[])
+    ];
+  }
+
   return [...new Set(items)];
 }
 
@@ -2168,6 +2280,14 @@ function focusStoryDetail(d,meta){
 
 function customerStoryHtml(d,meta,sailText,guestNames){
   const modifying=d.reservationWorkflow==="modify";
+
+  if(isMultipleAuthorizedCruisetourScenario(d)){
+    return `<p>You receive a call from <strong>Maria Lopez</strong>, who is excited about planning a Hawaiian vacation for herself, her daughter Sofia, and her parents Ana and Luis. Maria wants two reservations on <strong>Pride of America</strong> sailing from <strong>Honolulu in March 2027</strong> and specifically wants the <strong>11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour</strong>, including the <strong>4-day pre-cruise Cruisetour</strong>. Maria will make both reservations and pay both deposits. Confirm the Recipe for Success naturally without making her repeat information she has already provided.</p>`;
+  }
+
+  if(isMultipleAuthorizedScenario(d)){
+    return `<p>You receive a call from <strong>Maria Lopez</strong>, who sounds excited but slightly overwhelmed with the website. She is planning a vacation for herself, her daughter Sofia, and her parents Ana and Luis. They live near Galveston and want a <strong>Caribbean cruise in March 2027 departing from Galveston</strong>. Maria will make both reservations and pay both deposits. Confirm all applicable Recipe for Success questions without making her repeat information she has already provided.</p>`;
+  }
 
   if(isSoloStudioScenario(d)){
     return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls to book a new cruise for his client <strong>Tom Holland</strong>, who will be traveling alone. Kyle already knows exactly what he is looking for because he called earlier in the day for pricing and options. Express your willingness to assist, confirm the information Kyle provides without making him repeat himself, quote the booking as you would for any new reservation, and complete a full recap.</p>`;
@@ -2308,6 +2428,34 @@ function latitudesScenarioHtml(d){
 function fullTaskList(d,meta){
   const name=focusSearchText(d);
   const tasks=[];
+
+  if(isMultipleAuthorizedAny(d)){
+    const isTour=isMultipleAuthorizedCruisetourScenario(d);
+    return [
+      "Express willingness to assist and control the call using the Recipe for Success without making Maria repeat information she already provided.",
+      isTour
+        ? "Search Pride of America from Honolulu in March 2027 and select an appropriate sailing for the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour."
+        : "Search for a Caribbean sailing departing from Galveston in March 2027 and select an appropriate qualifying sailing.",
+      isTour
+        ? "Add the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour to BOTH reservations and verify the 4-day pre-cruise land component."
+        : "Create two separate reservations on the same selected sailing.",
+      "Create Reservation 1 for Maria Lopez (Latitudes #279019549) and Sofia, age 4 (Latitudes #279019550).",
+      "Create Reservation 2 for Ana Martinez (Latitudes #279019849) and Luis Martinez (Latitudes #279019848).",
+      "Confirm every guest's legal name exactly as shown on travel documents and verify all required dates of birth / guest information.",
+      "Book two Balcony staterooms that actually connect. Any location is acceptable, but adjacent rooms are not enough — verify the connecting door.",
+      "Include all applicable Free at Sea offers, Pre-Paid Service Charges and Norwegian Care / Travel Protection on both reservations.",
+      "Add Sofia's peanut allergy to Reservation 1.",
+      "For Ana and Luis, request beds pushed together and extra pillows.",
+      "Quote the advertised pricing. If both reservations have identical components, one quote may represent the price per reservation; if anything differs, quote each booking separately.",
+      "Explain the Authorized Person guidelines because Maria is booking and paying for her parents' reservation.",
+      "Add the exact parents' reservation comment: Authorized Person: Maria Lopez, CC 0000.",
+      "Process the $250 deposit on each reservation separately using the training credit card.",
+      "Recap and notate each reservation separately.",
+      "Send a confirmation for each reservation.",
+      "Link both reservations with TWITH (Travel With) before ending the call.",
+      "Save both reservation numbers and post both reservation numbers in the class chat."
+    ];
+  }
 
   if(isSoloStudioScenario(d)){
     return [
@@ -2549,6 +2697,8 @@ function commonMistakes(d,meta){
 }
 
 function expectedCompletionState(d,meta){
+  if(isMultipleAuthorizedCruisetourScenario(d))return "Two active Pride of America Cruisetour reservations are created for the same March 2027 departure, both contain the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
+  if(isMultipleAuthorizedScenario(d))return "Two active reservations are created on the same March 2027 Galveston sailing, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
   if(isReinstateRoleplay(d))return "If eligible, the cancelled training reservation is active/booked again; previous stateroom and pricing are verified, changes are stored, comments are added, confirmation is sent, and the caller receives a full recap.";
   if(d.payment==="Offer / Hold only")return "Offer / Hold — verify the first deposit deadline before ending the call.";
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
@@ -2753,12 +2903,17 @@ function roleplaySetupHtml(d){
 
 function completionInstructionsHtml(d){
   if(isRoleplayScenario(d)){
-    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the reinstatement workflow is complete, comments were added, and the confirmation was sent.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the servicing workflow, comments, confirmation and recap are complete.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
+  }
+  if(isMultipleAuthorizedAny(d)){
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save BOTH reservation numbers.</span><span>Post BOTH reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH.</span></div>`;
   }
   return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
 }
 
 function curriculumScenarioDetailsHtml(d){
+  if(isMultipleAuthorizedAny(d))return multipleAuthorizedDetailsHtml(d);
+
   if(isSoloStudioScenario(d)){
     return `<section class="scenario-section visual-section curriculum-specific-section">
       <div class="section-label">SCENARIO DETAILS</div>
@@ -2797,6 +2952,85 @@ function curriculumScenarioDetailsHtml(d){
   return "";
 }
 
+function multipleAuthorizedDetailsHtml(d){
+  if(!isMultipleAuthorizedAny(d))return "";
+
+  const isTour=isMultipleAuthorizedCruisetourScenario(d);
+  const selected=d.sailing;
+  const selectedText=selected
+    ? `${selected.ship||"NCL Ship"}${selected.sailingDate?` • ${formatSailingDate(selected.sailingDate)}`:""}${selected.departure?` • From ${selected.departure}`:""}`
+    : (isTour
+        ? "Search Pride of America • Honolulu • March 2027"
+        : "Search Caribbean • Galveston • March 2027");
+
+  return `<section class="scenario-section visual-section curriculum-specific-section multi-res-section">
+    <div class="section-label">SCENARIO DETAILS</div>
+    ${scenarioIconHeading(isTour?'🌺':'👨‍👩‍👧‍👦',isTour?'Multiple Reservations, Authorized Person & Cruisetour':'Multiple Reservations & Authorized Person')}
+    <div class="scenario-detail-grid">
+      <div><span>Caller</span><strong>Maria Lopez</strong><small>Direct Guest — U.S. Funds • Agency 5</small></div>
+      <div><span>Travel Party</span><strong>4 Guests • 2 Reservations</strong><small>Maria + Sofia / Ana + Luis</small></div>
+      <div><span>Sailing Search</span><strong>${escapeHtml(selectedText)}</strong><small>${isTour?'Use the exact selected Pride of America sailing and add the Cruisetour package in Seaweb.':'Choose a qualifying Caribbean sailing from Galveston in March 2027.'}</small></div>
+      <div><span>Staterooms</span><strong>2 Balcony Staterooms</strong><small>They MUST connect • Any location</small></div>
+      ${isTour?`<div><span>Cruisetour</span><strong>11-DAY OAHU EXPLORER HYATT WAIKIKI OCEAN VIEW CRUISETOUR</strong><small>4-day pre-cruise land portion • Do not substitute another package</small></div>`:""}
+      <div><span>Payment</span><strong>Separate deposit on each reservation</strong><small>Maria is paying both deposits using the training card</small></div>
+    </div>
+
+    <div class="multi-res-grid">
+      <article class="multi-res-card">
+        <div class="multi-res-card-head"><span>RESERVATION 1</span><strong>Maria & Sofia</strong></div>
+        <ul>
+          <li><strong>Maria Lopez</strong> • Latitudes #279019549</li>
+          <li><strong>Sofia</strong> • Age 4 • Latitudes #279019550</li>
+          <li>Balcony stateroom connecting to Ana & Luis</li>
+          <li>All applicable Free at Sea offers</li>
+          <li>Pre-Paid Service Charges</li>
+          <li>Norwegian Care / Travel Protection</li>
+          <li>Sofia: <strong>Peanut Allergy</strong></li>
+        </ul>
+      </article>
+
+      <article class="multi-res-card">
+        <div class="multi-res-card-head"><span>RESERVATION 2</span><strong>Ana & Luis</strong></div>
+        <ul>
+          <li><strong>Ana Martinez</strong> • Latitudes #279019849</li>
+          <li><strong>Luis Martinez</strong> • Latitudes #279019848</li>
+          <li>Balcony stateroom connecting to Maria & Sofia</li>
+          <li>Beds pushed together</li>
+          <li>Extra pillows</li>
+          <li>All applicable Free at Sea offers</li>
+          <li>Pre-Paid Service Charges</li>
+          <li>Norwegian Care / Travel Protection</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="instruction-strip"><strong>💬 Advertised Quote</strong><span>“The _____ stateroom is priced at $_____ per person for guests 1 & 2. This includes the cruise fare, taxes, fees, and port expenses.”</span></div>
+    <div class="instruction-strip"><strong>Quote Rule</strong><span>When both bookings have identical components — same stateroom type, promotions, add-ons, number of guests and guest types — one quote may reflect the price per reservation. If anything differs, quote each reservation separately.</span></div>
+    ${isTour?`<div class="instruction-strip"><strong>🌺 Cruisetour Check</strong><span>Make sure both reservations contain the exact <strong>11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour</strong> and the 4-day pre-cruise component. Do not book only the cruise portion.</span></div>`:""}
+  </section>
+
+  <section class="scenario-section visual-section authorized-person-section">
+    <div class="section-label">AUTHORIZED PERSON</div>
+    ${scenarioIconHeading('👤','Maria Is Booking for Her Parents')}
+    <p>Maria is making Ana and Luis's reservation on their behalf and paying their deposit. Explain the Authorized Person guidelines before completing the parents' reservation.</p>
+    <blockquote class="authorized-script">“Since you’re making a reservation for your parents, there are just a few important things to keep in mind. The payment being placed today is for each reservation and must be paid separately. You’ll be responsible for each $250 deposit made at this time, however your parents' reservation itself will be under their names, and they will have full access to manage it. I have added the authorized user so that you will also have access to manage it.”</blockquote>
+    <div class="authorized-comment-box"><span>Required Parents' Reservation Comment</span><strong>Authorized Person: Maria Lopez, CC 0000</strong></div>
+  </section>
+
+  <section class="scenario-section visual-section">
+    <div class="section-label">CONNECT & LINK</div>
+    ${scenarioIconHeading('🔗','Connecting Staterooms + TWITH')}
+    <div class="critical-callout"><strong>Do not assume adjacent rooms connect.</strong><span>Verify in Seaweb that the selected Balcony staterooms actually have a connecting door.</span></div>
+    ${checklistHtml([
+      "Both Balcony staterooms actually connect.",
+      "Each room accommodates its assigned guests.",
+      "Ana and Luis's beds are pushed together.",
+      "Extra pillows are requested for Ana and Luis.",
+      "Both reservations are linked with TWITH (Travel With) before ending the call."
+    ])}
+  </section>`;
+}
+
 function bookingSourceSectionHtml(d,agencyDisplay){
   const travelAgent=d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent";
   const title=travelAgent?'Travel Agency Information':'Caller / Booking Information';
@@ -2818,7 +3052,7 @@ function sailingDetailsVisualHtml(d,pricing){
 }
 
 function guestInformationVisualHtml(d){
-  if(d.reservationWorkflow==="modify")return '';
+  if(d.reservationWorkflow==="modify"||isMultipleAuthorizedAny(d))return '';
   const mix=getGuestProfileMix(d);
   const cards=Array.from({length:d.guestCount},(_,i)=>{
     const name=i===0?(d.guest1||`Guest ${i+1}`):i===1?(d.guest2||`Guest ${i+1}`):`Guest ${i+1}`;
@@ -2853,6 +3087,21 @@ function paymentVisualHtml(d,paymentInstruction){
 
 function requiredActionsVisualHtml(d){
   const items=[];
+  if(isMultipleAuthorizedAny(d)){
+    return `<section class="scenario-section visual-section required-actions-section">
+      <div class="section-label">REQUIRED ACTIONS</div>
+      ${scenarioIconHeading('✅','Complete Both Reservations')}
+      ${checklistHtml([
+        "Recap Reservation 1 – Maria & Sofia.",
+        "Recap Reservation 2 – Ana & Luis.",
+        "Add appropriate reservation comments to BOTH reservations.",
+        "Add the exact parents' reservation note: Authorized Person: Maria Lopez, CC 0000.",
+        `Send a confirmation for EACH reservation to ${d.email||"training123@ncl.com"}.`,
+        "Verify both deposits were processed separately.",
+        "Link both reservations using TWITH (Travel With)."
+      ])}
+    </section>`;
+  }
   if(isReinstateRoleplay(d))items.push("Store Changes after the reinstatement and all required updates are complete.");
   if(isAddGuestUpgradeRoleplay(d))items.push("Store Changes after the guest, stateroom, pricing, bed configuration, special requests and any payment are complete.");
   if(d.confirmation && (isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))){
@@ -2868,6 +3117,19 @@ function requiredActionsVisualHtml(d){
 }
 
 function recapVisualHtml(d){
+  if(isMultipleAuthorizedAny(d)){
+    const tour=isMultipleAuthorizedCruisetourScenario(d);
+    const items=[
+      "Selected ship, sail date and itinerary",
+      ...(tour?["11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour","4-day pre-cruise Cruisetour details"]:[]),
+      "Reservation 1 – Maria & Sofia: Balcony stateroom, connecting room, pricing, offers, service charges, Norwegian Care, Sofia's peanut allergy and deposit",
+      "Reservation 2 – Ana & Luis: Balcony stateroom, connecting room, pricing, offers, service charges, Norwegian Care, beds together, extra pillows, Authorized Person and deposit",
+      "Both confirmations sent",
+      "Both reservations linked with TWITH"
+    ];
+    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap Both Reservations')}<p>Review each reservation separately with Maria before ending the call.</p>${checklistHtml(items)}</section>`;
+  }
+
   const items=isSoloStudioScenario(d)
     ? ["Norwegian Aqua and June 27, 2027 sail date","7-Day Caribbean itinerary","Tom Holland traveling solo","Studio category and selected stateroom","Reservation pricing / total","Free at Sea","Pre-Paid Service Charges","Kosher Meals","Norwegian Care","Deposit collected","Confirmations and comments"]
     : isAddGuestUpgradeRoleplay(d)
@@ -2890,6 +3152,15 @@ function considerationsVisualHtml(d){
 
 function finalReservationCheckHtml(d,meta){
   const items=fullTaskList(d,meta);
+  if(isMultipleAuthorizedAny(d)){
+    const core=[
+      ...items,
+      "Both reservation numbers saved",
+      "Both reservation numbers posted in the class chat",
+      "Proper closing completed"
+    ];
+    return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
+  }
   const core=isRoleplayScenario(d)
     ? [...items,"Full reservation recap completed","Proper closing statements used","Roles switched and exercise repeated"]
     : [...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
@@ -3180,6 +3451,25 @@ function runValidator(){
     const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
     if(missing.length)add("warning","Past Guest Latitudes number missing",`Guest ${missing.join(", Guest ")} ${missing.length===1?"is":"are"} marked Past Guest but missing a training Latitudes number.`);
     else add("passed","Guest status configured",`${mix.pastCount} Past Guest${mix.pastCount===1?"":"s"} • ${mix.newCount} New Guest${mix.newCount===1?"":"s"}.`);
+  }
+
+  if(isMultipleAuthorizedAny(d)){
+    if(d.reservationWorkflow!=="new")add("error","Multiple-reservation workflow mismatch","This scenario must use Create New Reservation.");
+    if(d.newCallerType!=="direct_us")add("error","Caller type mismatch","Maria Lopez is a Direct Guest — U.S. caller.");
+    if(d.guestCount!==4)add("warning","Travel party should contain four guests","Maria, Sofia, Ana and Luis are traveling across two reservations.");
+    if(d.category!=="Balcony")add("warning","Balcony category expected","Both reservations require connecting Balcony staterooms.");
+    if(d.payment!=="Initial Deposit")add("warning","Separate deposits required","Process the $250 deposit on each reservation separately.");
+    if(!d.cardRequired||!d.card)add("error","Training card required","Maria is paying both deposits with the training credit card.");
+    if(d.sailing){
+      if(isMultipleAuthorizedCruisetourScenario(d) && String(d.sailing.ship||"").toLowerCase()!=="pride of america")add("error","Pride of America required","The Cruisetour scenario must use Pride of America.");
+      if(isMultipleAuthorizedCruisetourScenario(d) && !/honolulu/i.test(d.sailing.departure||""))add("warning","Honolulu departure expected","Verify the selected Pride of America sailing departs Honolulu.");
+      if(isMultipleAuthorizedScenario(d) && !/galveston/i.test(d.sailing.departure||""))add("warning","Galveston departure expected","The standard scenario requires a March 2027 Caribbean sailing from Galveston.");
+    }else{
+      add("warning","Select the training sailing","Use Real Sailing Search to choose the exact March 2027 sailing before assigning the scenario.");
+    }
+    add("passed","Authorized Person requirement","Parents' reservation must include: Authorized Person: Maria Lopez, CC 0000.");
+    add("passed","TWITH requirement","Both reservations must be linked using TWITH before ending the call.");
+    if(isMultipleAuthorizedCruisetourScenario(d))add("passed","Cruisetour requirement","Use the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour with the 4-day pre-cruise component on both reservations.");
   }
 
   if(isSoloStudioScenario(d)){
