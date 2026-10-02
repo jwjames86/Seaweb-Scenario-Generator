@@ -1252,3 +1252,40 @@ The trainee call simulation presentation was refreshed to better reflect the NCL
 ### Notes
 - New-reservation scenarios use a discovery / verification slide with a GDPR reminder in case the interaction changes into servicing an existing reservation.
 - Existing-reservation scenarios show the correct GDPR path and required verification items.
+
+
+## V1.9.47 – Department Call Flow + Recap Scripts
+
+This release aligns the generator and Trainee Call Simulation more closely with the provided Guest Services and Outbound scripting.
+
+### Guest Status / Latitudes
+- Guest Status and Latitudes remain in **Step 2 – Guests & Stateroom**.
+- The duplicate Guest Status / Latitudes setup is hidden from Step 3.
+
+### Training Payment Card
+- Added a visible **Training Payment Card** selector to Step 3 whenever the selected scenario requires card payment.
+- Trainers can choose from the existing training-card profiles and edit the training card number, expiration, CCV and billing address for the scenario.
+- Generated scenarios and Call Simulations use the selected training card.
+
+### Guest Services scripting
+- Uses the provided branded introduction: **“Thank you for calling Norwegian Cruise Line. My name is ________. With whom do I have the pleasure of speaking?”**
+- Step 2 asks how the Cruise Specialist may assist and determines whether the call is a **Sales Call** or **Service Call**.
+- New Reservation / Sales Calls follow the Guest Services Sales Recipe for Success and do **not** use GDPR verification.
+- Existing Reservation / Service Calls use the applicable GDPR verification before servicing.
+- New Guest Services reservations now use the Guest Services Reservation Recap Script when the reservation is **booked or placed in Offer status**.
+
+### Outbound scripting and guardrails
+- Outbound Sales is limited to **Direct Guests**.
+- Outbound new-reservation scenarios use the provided **OB Sales Recipe for Success**.
+- **Offer / Hold** is unavailable for Outbound Sales. Outbound must collect payment to book the reservation or use the sales follow-up / callback workflow if payment cannot be collected.
+- Added **Payment Follow-Up / Callback** as the Outbound existing-quote workflow.
+- Outbound follow-up does **not** use GDPR verification.
+- Outbound new bookings use the provided blue **Outbound Reservation Recap Script**.
+
+### Call Simulation
+- Added department-specific opening / branded introduction content.
+- Added Guest Services GDPR only for existing reservations.
+- Added department-specific Recipe for Success slides.
+- Added the selected training payment card to the Seaweb-work slide when payment is required.
+- Added Guest Services and Outbound recap-script slides.
+- Updated branded closings by department.
