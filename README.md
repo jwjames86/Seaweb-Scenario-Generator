@@ -1289,3 +1289,17 @@ This release aligns the generator and Trainee Call Simulation more closely with 
 - Added the selected training payment card to the Seaweb-work slide when payment is required.
 - Added Guest Services and Outbound recap-script slides.
 - Updated branded closings by department.
+
+
+## V1.9.48 – Follow-Up Call Reason Fix
+
+Follow-up servicing scenarios now use the actual source reservation and trainer-selected servicing request when writing the caller story and Call Simulation dialogue.
+
+### What changed
+- The Call Simulation now clearly displays a **Reason for Call** for follow-up servicing scenarios.
+- Follow-up story wording is generated from the **original reservation guest**, caller type, sailing details, and selected servicing changes.
+- Removed awkward generic wording such as “general reservation update. Add a Guest.”
+- Example behavior: “Direct Guest William Darcy is contacting Norwegian Cruise Line about the existing reservation. William Darcy wants to add a guest to the reservation. Before servicing the reservation, complete GDPR verification for the Direct Guest.”
+- The **Branded Introduction** conversation now has the caller state the actual servicing request after the Cruise Specialist asks how they can assist.
+- The **Reservation Details** presentation slide now includes a Reason for Call card on follow-up scenarios.
+- Follow-up source snapshots now preserve the complete original guest list rather than only the first two guest fields.
