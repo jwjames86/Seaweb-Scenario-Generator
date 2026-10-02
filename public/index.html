@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.39" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.40" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.39 • Compact Scenario Focus Cards</span>
+            <span class="pill">V1.9.40 • Focus Categories & Detailed Setup</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -348,7 +348,7 @@
                   <div id="focusPickerMenu" class="focus-picker-menu" role="dialog" aria-label="Scenario Focus">
                     <div class="focus-picker-head"><strong>Select Scenario Focus</strong><small>Combine multiple skills into one scenario.</small></div>
                     <div id="focusPickerOptions" class="focus-picker-options"></div>
-                    <div class="focus-picker-actions"><button id="clearFocusBtn" type="button" class="secondary tiny">Clear</button><button id="doneFocusBtn" type="button" class="primary tiny">Done</button></div>
+                    <div class="focus-picker-actions"><button id="clearFocusBtn" type="button" class="secondary tiny">Clear Selected</button><button id="doneFocusBtn" type="button" class="primary tiny">Done</button></div>
                   </div>
                 </div>
                 <select id="scenarioType" class="focus-compat-select" aria-hidden="true" tabindex="-1"></select>
@@ -413,10 +413,12 @@
             <div id="multipleReservationPanel" class="multiple-reservation-panel hidden-field">
               <div class="multiple-reservation-panel-head">
                 <div>
-                  <strong>Reservation 2 Details</strong>
-                  <span>Enter the guest and stateroom details for the second reservation. Sailing, caller type, booking source, promotions, payment action, and confirmation email are shared unless the scenario says otherwise.</span>
+                  <strong>Multiple Reservation Setup</strong>
+                  <span>Choose the total number of reservations, then enter the guest and stateroom details for each booking. Sailing, caller type, booking source, promotions, payment action, and confirmation email are shared unless the scenario says otherwise.</span>
                 </div>
-                <span class="status-badge">RESERVATION 2</span>
+                <label class="reservation-count-control">Total Reservations
+                  <select id="reservationCount"><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+                </label>
               </div>
               <div class="form-grid multiple-reservation-form-grid">
                 <label>Guests
@@ -454,6 +456,7 @@
                   <input id="reservation2Pricing" placeholder="$1,559 pp / $3,118 total" />
                 </label>
               </div>
+              <div id="additionalReservationsContainer" class="additional-reservations-container"></div>
             </div>
 
             <div id="modificationPanel" class="modification-panel hidden-field">
@@ -594,6 +597,53 @@
               <label class="check"><input id="airToggle" type="checkbox" /><span class="task-card-copy"><strong>Air / Transfers</strong><small>Include NCL Air and/or ground transfer details and required terms.</small></span></label>
               <label class="check"><input id="couponToggle" type="checkbox" /><span class="task-card-copy"><strong>Credits / Coupons</strong><small>Include FCC, CruiseNext, CruiseFirst, discount coupons, or other training credits.</small></span></label>
             </fieldset>
+
+            <div id="focusConfigurationHub" class="focus-configuration-hub">
+              <div id="specialRequestConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Special Requests by Guest</strong><span>Choose the exact request and the guest it applies to. Add as many requests as needed.</span></div>
+                  <button id="addSpecialRequestBtn" type="button" class="secondary tiny">+ Add Special Request</button>
+                </div>
+                <div id="specialRequestRows" class="focus-config-rows"></div>
+              </div>
+
+              <div id="adaConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>ADA / Accessibility Needs by Guest</strong><span>Identify which guest has the accessibility need and the type of support or accommodation required.</span></div>
+                  <button id="addAdaNeedBtn" type="button" class="secondary tiny">+ Add Accessibility Need</button>
+                </div>
+                <div id="adaNeedRows" class="focus-config-rows"></div>
+              </div>
+
+              <div id="priceProgramConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Price Programs &amp; Promotions</strong><span>Select the exact programs to include. ALL4CHO includes Unlimited Open Bar, Specialty Dining, Internet, and Shore Excursions.</span></div>
+                  <span class="status-badge">PRICE PROGRAMS</span>
+                </div>
+                <div class="price-program-grid">
+                  <label class="program-choice master-program"><input id="programAll4cho" type="checkbox" /><span><strong>ALL4CHO</strong><small>Include all 4 Free at Sea choices</small></span></label>
+                  <label class="program-choice"><input id="programOpenBar" type="checkbox" /><span><strong>Unlimited Open Bar</strong><small>Free at Sea beverage choice</small></span></label>
+                  <label class="program-choice"><input id="programDining" type="checkbox" /><span><strong>Specialty Dining</strong><small>Free at Sea dining choice</small></span></label>
+                  <label class="program-choice"><input id="programInternet" type="checkbox" /><span><strong>Internet</strong><small>Free at Sea internet choice</small></span></label>
+                  <label class="program-choice"><input id="programShoreEx" type="checkbox" /><span><strong>Shore Excursions</strong><small>Free at Sea shore excursion choice</small></span></label>
+                  <label class="program-choice"><input id="programPsc" type="checkbox" /><span><strong>Prepaid Service Charges</strong><small>Add PPSRVCHG</small></span></label>
+                  <label class="program-choice"><input id="programKosher" type="checkbox" /><span><strong>Kosher Meals</strong><small>Add meal request when applicable</small></span></label>
+                  <label class="program-choice ta-program"><input id="programFlexnet" type="checkbox" /><span><strong>FlexNet</strong><small>Travel Agent promotion</small></span></label>
+                  <label class="program-choice ta-program"><input id="programAmexcpp" type="checkbox" /><span><strong>AMEXCPP</strong><small>Travel Agent promotion</small></span></label>
+                </div>
+                <label class="price-program-other">Other Price Program / TA Promotion <span class="optional-label">optional</span>
+                  <input id="programOther" placeholder="Enter another program or promotion" />
+                </label>
+              </div>
+
+              <div id="airGuestConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Air &amp; Transfers by Guest</strong><span>Configure each traveler independently. A guest may decline air, choose a different air product, or have different transfer needs.</span></div>
+                  <span class="status-badge">PER GUEST</span>
+                </div>
+                <div id="airGuestRows" class="air-guest-rows"></div>
+              </div>
+            </div>
 
             <div id="airProgramPanel" class="air-program-panel hidden-field">
               <div class="air-panel-head">
@@ -860,6 +910,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.39"></script>
+  <script src="/app.js?v=1.9.40"></script>
 </body>
 </html>

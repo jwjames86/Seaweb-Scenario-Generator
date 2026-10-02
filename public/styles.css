@@ -1658,3 +1658,62 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 .wizard-generator-mode #generator .focus-choice.expanded .focus-card-body{min-height:150px;box-shadow:0 8px 20px rgba(9,91,136,.08)}
 .wizard-generator-mode #generator .focus-choice.expanded .focus-card-toggle{background:#eef7fb;border-color:#8fbad4;color:#0f4f73}
 @media(max-width:1280px){.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V1.9.40 tabbed Scenario Focus + detailed focus configuration */
+.wizard-generator-mode #generator .focus-category-tabs{display:flex;align-items:stretch;gap:0;border:1px solid var(--wizard-line);border-radius:8px 8px 0 0;overflow:hidden;background:#f7f9fb;margin:0 0 12px}
+.wizard-generator-mode #generator .focus-category-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;flex:1;min-height:46px;padding:9px 10px;border:0;border-right:1px solid var(--wizard-line);background:#f7f9fb;color:#40536a;font-family:inherit;font-size:10px;font-weight:750;cursor:pointer;transition:.16s ease}
+.wizard-generator-mode #generator .focus-category-tab:last-child{border-right:0}
+.wizard-generator-mode #generator .focus-category-tab:hover{background:#eef7fb;color:var(--wizard-ocean)}
+.wizard-generator-mode #generator .focus-category-tab.active{background:var(--ncl-blue);color:#fff}
+.wizard-generator-mode #generator .focus-category-tab b{display:grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#dff3fb;color:#006b98;font-size:8px}
+.wizard-generator-mode #generator .focus-category-tab.active b{background:#fff;color:var(--ncl-blue)}
+.wizard-generator-mode #generator .focus-category-icon{font-size:14px;line-height:1}
+.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0}
+.wizard-generator-mode #generator .focus-choice.focus-category-hidden{display:none!important}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:105px;padding:14px 10px 12px;justify-content:center;gap:8px;border-radius:7px}
+.wizard-generator-mode #generator .focus-choice strong{font-size:11px;line-height:1.25;max-width:165px}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body:after{top:8px;right:8px}
+.wizard-generator-mode #generator .focus-card-toggle,.wizard-generator-mode #generator .focus-card-description{display:none!important}
+.wizard-generator-mode #generator .focus-picker-actions{padding:10px 0 0}
+
+.reservation-count-control{min-width:150px;margin:0!important;font-size:9px!important;font-weight:700!important;color:#344054!important}
+.reservation-count-control select{margin-top:5px;min-height:38px!important;background:#fff}
+.additional-reservations-container{display:grid;gap:12px;margin-top:12px}
+.additional-reservation-card{border:1px solid #ccd9e2;border-radius:8px;background:#fff;overflow:hidden}
+.additional-reservation-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;background:#f6fafc;border-bottom:1px solid #d9e3e9}
+.additional-reservation-head>div{display:flex;flex-direction:column;gap:2px}.additional-reservation-head strong{font-size:12px;color:var(--wizard-navy)}.additional-reservation-head span:not(.status-badge){font-size:9px;color:var(--wizard-muted)}
+.additional-reservation-card .multiple-reservation-form-grid{padding:14px}
+
+.focus-configuration-hub{display:grid;gap:14px}
+.focus-config-panel{border:1px solid var(--wizard-line);border-radius:9px;background:#fff;overflow:hidden}
+.focus-config-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;background:#f7fafc;border-bottom:1px solid #dce5ea}
+.focus-config-head>div{display:flex;flex-direction:column;gap:3px}.focus-config-head strong{font-size:12px;color:var(--wizard-navy)}.focus-config-head span:not(.status-badge){font-size:9px;line-height:1.4;color:var(--wizard-muted)}
+.focus-config-rows{display:grid;gap:10px;padding:13px 15px}
+.focus-config-row{display:grid;grid-template-columns:1fr 1.2fr 1.6fr auto;gap:10px;align-items:end;padding:11px;border:1px solid #e1e7ec;border-radius:7px;background:#fff}
+.focus-config-row label{margin:0}.focus-config-row select,.focus-config-row input{min-height:40px;font-size:10px}.focus-config-detail{min-width:0}.focus-config-remove{margin-bottom:1px}
+
+.price-program-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:13px 15px 8px}
+.program-choice{position:relative;display:flex!important;flex-direction:row!important;align-items:flex-start!important;gap:9px;padding:11px;border:1px solid #d9e2e8;border-radius:7px;background:#fff;cursor:pointer;margin:0!important}
+.program-choice:hover{border-color:#98c7db;background:#fbfdfe}.program-choice:has(input:checked){border-color:var(--wizard-blue);background:#f1faff;box-shadow:0 0 0 2px rgba(8,127,189,.06)}
+.program-choice input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto}.program-choice span{display:flex;flex-direction:column;gap:2px}.program-choice strong{font-size:10px;color:var(--wizard-navy)}.program-choice small{font-size:8.5px;line-height:1.35;color:var(--wizard-muted)}
+.master-program{grid-column:span 2;background:#eef8fc;border-color:#a9d2e2}.ta-program{background:#fbfaf5}
+.price-program-other{display:block;margin:4px 15px 15px!important}.price-program-other input{margin-top:6px}
+
+.air-guest-rows{display:grid;gap:10px;padding:13px 15px}
+.air-guest-row{display:grid;grid-template-columns:155px 1.25fr .8fr 1fr 1.25fr;gap:10px;align-items:end;padding:11px;border:1px solid #dfe7ec;border-radius:8px;background:#fff}
+.air-guest-name{align-self:center;display:flex;flex-direction:column;gap:3px}.air-guest-name span{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--wizard-muted)}.air-guest-name strong{font-size:11px;color:var(--wizard-navy);line-height:1.3}
+.air-guest-row label{margin:0}.air-guest-row select,.air-guest-row input{min-height:40px;font-size:9.5px}
+#airProgramPanel.focus-config-legacy-hidden{display:none!important}
+
+.detailed-focus-config-section{background:#fbfdfe;border-left:4px solid var(--wizard-blue);padding:17px 18px}
+.focus-config-output-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.focus-config-output{border:1px solid #dbe5eb;border-radius:8px;background:#fff;padding:12px}.focus-config-output h4{margin:0 0 8px!important;font-size:12px!important;color:var(--wizard-navy)}.focus-config-output ul{margin:0;padding-left:18px}.focus-config-output li{font-size:11px;line-height:1.45;margin:4px 0}
+
+@media(max-width:1200px){
+  .wizard-generator-mode #generator .focus-category-tabs{flex-wrap:wrap}.wizard-generator-mode #generator .focus-category-tab{flex:1 1 30%;border-bottom:1px solid var(--wizard-line)}
+  .wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .focus-config-row{grid-template-columns:1fr 1fr}.focus-config-remove{justify-self:start}.price-program-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.air-guest-row{grid-template-columns:1fr 1fr}.air-guest-name{grid-column:1/-1}
+}
+@media(max-width:700px){
+  .wizard-generator-mode #generator .focus-category-tab{flex:1 1 50%}.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:96px}
+  .focus-config-head,.additional-reservation-head{align-items:flex-start;flex-direction:column}.focus-config-row,.price-program-grid,.air-guest-row,.focus-config-output-grid{grid-template-columns:1fr}.master-program{grid-column:auto}.reservation-count-control{width:100%}
+}

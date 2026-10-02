@@ -453,18 +453,34 @@ function reservation1GuestNamesFromForm(){
 }
 
 function reservation2GuestNamesFromForm(){
-  const count=+$("reservation2GuestCount")?.value||1;
+  const count=+$('reservation2GuestCount')?.value||1;
   return Array.from({length:count},(_,i)=>{
-    if(i===0)return $("reservation2Guest1")?.value.trim()||"";
-    if(i===1)return $("reservation2Guest2")?.value.trim()||"";
-    return $(`reservation2Guest${i+1}`)?.value.trim()||"";
+    if(i===0)return $('reservation2Guest1')?.value.trim()||'';
+    if(i===1)return $('reservation2Guest2')?.value.trim()||'';
+    return $(`reservation2Guest${i+1}`)?.value.trim()||'';
   });
 }
 
+function multipleReservationTotal(){
+  return multipleReservationFormActive() ? Math.max(2,Math.min(8,+$('reservationCount')?.value||2)) : 1;
+}
+
+function reservationGuestNamesFromForm(number){
+  if(number===1)return reservation1GuestNamesFromForm();
+  if(number===2)return reservation2GuestNamesFromForm();
+  const count=+$(`reservation${number}GuestCount`)?.value||1;
+  return Array.from({length:count},(_,i)=>$(`reservation${number}Guest${i+1}`)?.value.trim()||'');
+}
+
+function reservationFormData(number){
+  if(number===1)return {number,guestCount:+$('guestCount')?.value||1,guests:reservation1GuestNamesFromForm(),category:$('category')?.value||'',location:$('locationPref')?.value||'Any',side:$('sidePref')?.value||'Any',pricing:$('pricing')?.value.trim()||''};
+  if(number===2)return {number,guestCount:+$('reservation2GuestCount')?.value||1,guests:reservation2GuestNamesFromForm(),category:$('reservation2Category')?.value||$('category')?.value||'',location:$('reservation2LocationPref')?.value||'Any',side:$('reservation2SidePref')?.value||'Any',pricing:$('reservation2Pricing')?.value.trim()||''};
+  return {number,guestCount:+$(`reservation${number}GuestCount`)?.value||1,guests:reservationGuestNamesFromForm(number),category:$(`reservation${number}Category`)?.value||$('category')?.value||'',location:$(`reservation${number}LocationPref`)?.value||'Any',side:$(`reservation${number}SidePref`)?.value||'Any',pricing:$(`reservation${number}Pricing`)?.value.trim()||''};
+}
+
 function formGuestNames(){
-  const names=reservation1GuestNamesFromForm();
-  if(multipleReservationFormActive())names.push(...reservation2GuestNamesFromForm());
-  return names;
+  if(!multipleReservationFormActive())return reservation1GuestNamesFromForm();
+  return Array.from({length:multipleReservationTotal()},(_,i)=>reservationGuestNamesFromForm(i+1)).flat();
 }
 
 function effectiveFormGuestCount(){
@@ -478,40 +494,88 @@ function scenarioGuestNames(d){
   const names=[];
   const count=+d?.guestCount||1;
   for(let i=0;i<count;i++){
-    if(i===0)names.push(d?.guest1||"");
-    else if(i===1)names.push(d?.guest2||"");
-    else names.push(Array.isArray(d?.guestNames)?(d.guestNames[i]||""):"");
+    if(i===0)names.push(d?.guest1||'');
+    else if(i===1)names.push(d?.guest2||'');
+    else names.push(Array.isArray(d?.guestNames)?(d.guestNames[i]||''):'');
   }
   return names;
 }
 
-function updateMultipleReservationUI(){
+function dynamicReservationSnapshot(){
+  const data={};
+  for(let n=3;n<=8;n++){
+    const count=$(`reservation${n}GuestCount`);
+    if(!count)continue;
+    data[n]=reservationFormData(n);
+  }
+  return data;
+}
+
+function reservationCategoryOptions(selected='Balcony'){
+  return ['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible','Random'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function reservationLocationOptions(selected='Any'){
+  return ['Any','Forward','Midship','Aft','Near stairs/elevators','Highest deck available'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function reservationSideOptions(selected='Any'){
+  return ['Any','Port','Starboard'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+
+function renderDynamicReservationGuestFields(number,values=[]){
+  const host=$(`reservation${number}GuestFields`);if(!host)return;
+  const count=+$(`reservation${number}GuestCount`)?.value||1;
+  const current=Array.from({length:Math.max(count,values.length)},(_,i)=>$(`reservation${number}Guest${i+1}`)?.value||values[i]||'');
+  host.innerHTML=Array.from({length:count},(_,i)=>`<label>${i===0?'Primary Guest':`Guest ${i+1}`}<input id="reservation${number}Guest${i+1}" value="${escapeAttr(current[i]||'')}" placeholder="Reservation ${number} ${i===0?'primary guest':`guest ${i+1}`}" /></label>`).join('');
+  host.querySelectorAll('input').forEach(input=>input.addEventListener('input',refreshGuestDependentConfigs));
+}
+
+function renderAdditionalReservationPanels(initialData={}){
+  const host=$('additionalReservationsContainer');if(!host)return;
+  const previous={...dynamicReservationSnapshot(),...initialData};
+  const total=multipleReservationTotal();
+  if(total<=2){host.innerHTML='';return;}
+  host.innerHTML=Array.from({length:total-2},(_,idx)=>{
+    const n=idx+3,d=previous[n]||{};
+    return `<section class="additional-reservation-card" data-reservation-number="${n}">
+      <div class="additional-reservation-head"><div><strong>Reservation ${n} Details</strong><span>Enter the guests and stateroom requirements for this booking.</span></div><span class="status-badge">RESERVATION ${n}</span></div>
+      <div class="form-grid multiple-reservation-form-grid">
+        <label>Guests<select id="reservation${n}GuestCount">${Array.from({length:8},(_,i)=>`<option ${(+d.guestCount||2)===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+        <label>Stateroom Category<select id="reservation${n}Category">${reservationCategoryOptions(d.category||'Balcony')}</select></label>
+        <div id="reservation${n}GuestFields" class="form-grid-contents"></div>
+        <label>Location Preference<select id="reservation${n}LocationPref">${reservationLocationOptions(d.location||'Any')}</select></label>
+        <label>Side Preference<select id="reservation${n}SidePref">${reservationSideOptions(d.side||'Any')}</select></label>
+        <label>Advertised Pricing (optional)<input id="reservation${n}Pricing" value="${escapeAttr(d.pricing||'')}" placeholder="$1,559 pp / $3,118 total" /></label>
+      </div>
+    </section>`;
+  }).join('');
+  for(let n=3;n<=total;n++){
+    const d=previous[n]||{};
+    renderDynamicReservationGuestFields(n,d.guests||[]);
+    $(`reservation${n}GuestCount`)?.addEventListener('change',()=>{renderDynamicReservationGuestFields(n);refreshGuestDependentConfigs();});
+    [$(`reservation${n}Category`),$(`reservation${n}LocationPref`),$(`reservation${n}SidePref`),$(`reservation${n}Pricing`)].filter(Boolean).forEach(el=>el.addEventListener('change',renderWizardReviewSummary));
+  }
+}
+
+function updateMultipleReservationUI(initialExtraData={}){
   const active=multipleReservationFormActive();
-  $("multipleReservationPanel")?.classList.toggle("hidden-field",!active);
-  const labels={
-    guestCount:active?"Reservation 1 Guests":"Guests",
-    guest1:active?"Reservation 1 Primary Guest":"Primary Guest",
-    guest2:active?"Reservation 1 Guest 2":"Guest 2",
-    category:active?"Reservation 1 Stateroom Category":"Stateroom Category",
-    location:active?"Reservation 1 Location Preference":"Location Preference",
-    side:active?"Reservation 1 Side Preference":"Side Preference",
-    pricing:active?"Reservation 1 Advertised Pricing (optional)":"Advertised Pricing (optional)"
-  };
-  if($("guestCountLabelText"))$("guestCountLabelText").textContent=labels.guestCount;
-  if($("guest1LabelText"))$("guest1LabelText").textContent=labels.guest1;
-  if($("guest2LabelText"))$("guest2LabelText").textContent=labels.guest2;
-  if($("categoryLabelText"))$("categoryLabelText").textContent=labels.category;
-  if($("locationLabelText"))$("locationLabelText").textContent=labels.location;
-  if($("sideLabelText"))$("sideLabelText").textContent=labels.side;
-  if($("pricingLabelText"))$("pricingLabelText").textContent=labels.pricing;
+  $('multipleReservationPanel')?.classList.toggle('hidden-field',!active);
+  const labels={guestCount:active?'Reservation 1 Guests':'Guests',guest1:active?'Reservation 1 Primary Guest':'Primary Guest',guest2:active?'Reservation 1 Guest 2':'Guest 2',category:active?'Reservation 1 Stateroom Category':'Stateroom Category',location:active?'Reservation 1 Location Preference':'Location Preference',side:active?'Reservation 1 Side Preference':'Side Preference',pricing:active?'Reservation 1 Advertised Pricing (optional)':'Advertised Pricing (optional)'};
+  if($('guestCountLabelText'))$('guestCountLabelText').textContent=labels.guestCount;
+  if($('guest1LabelText'))$('guest1LabelText').textContent=labels.guest1;
+  if($('guest2LabelText'))$('guest2LabelText').textContent=labels.guest2;
+  if($('categoryLabelText'))$('categoryLabelText').textContent=labels.category;
+  if($('locationLabelText'))$('locationLabelText').textContent=labels.location;
+  if($('sideLabelText'))$('sideLabelText').textContent=labels.side;
+  if($('pricingLabelText'))$('pricingLabelText').textContent=labels.pricing;
 
-  const count1=+$("guestCount")?.value||1;
-  $("guest2Field")?.classList.toggle("guest-count-hidden",count1<2);
-  renderExtraGuestFields("reservation1ExtraGuests","reservation1",count1);
-
-  const count2=+$("reservation2GuestCount")?.value||1;
-  $("reservation2Guest2Field")?.classList.toggle("guest-count-hidden",count2<2);
-  renderExtraGuestFields("reservation2ExtraGuests","reservation2",count2);
+  const count1=+$('guestCount')?.value||1;
+  $('guest2Field')?.classList.toggle('guest-count-hidden',count1<2);
+  renderExtraGuestFields('reservation1ExtraGuests','reservation1',count1);
+  const count2=+$('reservation2GuestCount')?.value||1;
+  $('reservation2Guest2Field')?.classList.toggle('guest-count-hidden',count2<2);
+  renderExtraGuestFields('reservation2ExtraGuests','reservation2',count2);
+  if(active)renderAdditionalReservationPanels(initialExtraData); else if($('additionalReservationsContainer'))$('additionalReservationsContainer').innerHTML='';
+  refreshGuestDependentConfigs();
 }
 
 function setSailingSearchPreset(anchor,value,from,to,duration=""){
@@ -532,9 +596,11 @@ function setSailingSearchPreset(anchor,value,from,to,duration=""){
 }
 
 function applyMultipleAuthorizedGuests(){
+  if($("reservationCount"))$("reservationCount").value="2";
   $("guestCount").value="2";
   $("guest1").value="Maria Lopez";
   $("guest2").value="Sofia";
+  if($("reservationCount"))$("reservationCount").value="2";
   if($("reservation2GuestCount"))$("reservation2GuestCount").value="2";
   if($("reservation2Guest1"))$("reservation2Guest1").value="Ana Martinez";
   if($("reservation2Guest2"))$("reservation2Guest2").value="Luis Martinez";
@@ -737,6 +803,190 @@ function scenarioFocusIconSvg(name){
   return wrap('<path d="M12 2 9.2 8.2 3 11l6.2 2.8L12 20l2.8-6.2L21 11l-6.2-2.8Z"/>');
 }
 
+
+const focusCategoryDefs=[
+  {id:'common',label:'Most Common',icon:'★'},
+  {id:'new',label:'New Reservation',icon:'👤'},
+  {id:'servicing',label:'Servicing / Changes',icon:'↻'},
+  {id:'special',label:'Special Requests',icon:'◆'},
+  {id:'air',label:'Air & Transfers',icon:'✈'},
+  {id:'advanced',label:'Advanced',icon:'⚙'}
+];
+let activeFocusCategory='common';
+
+function focusActualCategory(meta){
+  const n=String(meta?.name||'').toLowerCase();
+  const kind=String(meta?.kind||'').toLowerCase();
+  if(/air|transfer/.test(n))return 'air';
+  if(/special request|ada|infant|guests 3-8|dietary/.test(n))return 'special';
+  if(kind==='followup'||/cancel|reinstate|price drop|hotel|amenit|dining|entertainment|spa|servic|change|upgrade/.test(n))return 'servicing';
+  if(/multiple reservations & authorized|cruisetour|land pkg|gty|guarantee|roleplay|ta booking|agency|flexnet/.test(n))return 'advanced';
+  return 'new';
+}
+
+function focusIsCommon(meta){
+  return /basic reservation|payments|applying fcc|norwegian.?care|price programs|special requests$|ada & special|multiple reservations$|ncl air & ground transfers/i.test(meta?.name||'');
+}
+
+function renderFocusCategoryTabs(){
+  const picker=$('focusPickerMenu'),options=$('focusPickerOptions');if(!picker||!options)return;
+  let tabs=picker.querySelector('.focus-category-tabs');
+  if(!tabs){tabs=document.createElement('div');tabs.className='focus-category-tabs';options.before(tabs);}
+  const selected=selectedFocusRecords();
+  tabs.innerHTML=focusCategoryDefs.map(cat=>{
+    const count=selected.filter(r=>cat.id==='common'?focusIsCommon(r.meta):focusActualCategory(r.meta)===cat.id).length;
+    return `<button type="button" class="focus-category-tab ${activeFocusCategory===cat.id?'active':''}" data-focus-category="${cat.id}"><span class="focus-category-icon">${cat.icon}</span><span>${cat.label}</span>${count?`<b>${count}</b>`:''}</button>`;
+  }).join('');
+  tabs.querySelectorAll('.focus-category-tab').forEach(btn=>btn.addEventListener('click',()=>{activeFocusCategory=btn.dataset.focusCategory;renderFocusCategoryTabs();filterFocusCards();}));
+  filterFocusCards();
+}
+
+function filterFocusCards(){
+  $('focusPickerOptions')?.querySelectorAll('.focus-choice').forEach(card=>{
+    const show=activeFocusCategory==='common'?card.dataset.common==='true':card.dataset.category===activeFocusCategory;
+    card.classList.toggle('focus-category-hidden',!show);
+  });
+}
+
+function selectedFocusHas(pattern){return selectedFocusNames().some(name=>pattern.test(String(name||'')));}
+function specialRequestFocusActive(){return selectedFocusHas(/special request/i);}
+function adaFocusActive(){return selectedFocusHas(/\bada\b|accessible/i);}
+function priceProgramFocusActive(){return selectedFocusHas(/price programs|\bfas\b|free at sea/i);}
+function airFocusActive(){return selectedFocusHas(/air|transfer/i);}
+
+const specialRequestTypes=['Extra Pillows','Beds Together','Egg Crate Mattress','Food Allergy','Kosher Meals','Gluten-Free Diet','Salt-Free Diet','Lactose Intolerant','Celebration / Cake','Wheelchair Assistance – Embarkation','Wheelchair Assistance – Debarkation','Other Special Request'];
+const adaNeedTypes=['Wheelchair User / Limited Mobility','Wheelchair-Accessible Stateroom','Mobility Scooter','Embarkation Assistance','Debarkation Assistance','Hearing Impairment','Visual Impairment','Service Animal','Medical Equipment / Device','Dietary / Food Allergy Accommodation','Other Accessibility Need'];
+const airGuestTypes=[
+  {value:'none',label:'No NCL Air'},
+  {value:'bundled',label:'Bundled Air / AIRPROM3'},
+  {value:'air_choice',label:'Air Choice'},
+  {value:'air_choice_plus',label:'Air Choice Plus'},
+  {value:'independent_no_flights',label:'Independent Air – No Flights / Transfer Setup'}
+];
+const transferTypes=['No NCL Transfers','Embarkation Transfer Only','Debarkation Transfer Only','Round-Trip Transfers'];
+let specialRequestRowSeq=0,adaNeedRowSeq=0;
+
+function guestOptionRecords(){
+  return formGuestNames().map((name,i)=>({value:name||`Guest ${i+1}`,label:name||`Guest ${i+1}`}));
+}
+function guestSelectOptions(selected=''){
+  const guests=guestOptionRecords();
+  return guests.map(g=>`<option value="${escapeAttr(g.value)}" ${g.value===selected?'selected':''}>${escapeHtml(g.label)}</option>`).join('');
+}
+
+function addSpecialRequestRow(data={}){
+  const host=$('specialRequestRows');if(!host)return;
+  const row=document.createElement('div');row.className='focus-config-row';row.dataset.specialRequestRow=String(++specialRequestRowSeq);
+  row.innerHTML=`<label>Guest<select class="focus-config-guest">${guestSelectOptions(data.guest||'')}</select></label><label>Special Request<select class="special-request-type"><option value="">Choose request...</option>${specialRequestTypes.map(v=>`<option ${data.type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><label class="focus-config-detail">Details <span class="optional-label">optional</span><input class="special-request-detail" value="${escapeAttr(data.detail||'')}" placeholder="Allergy item, celebration, location, or other detail" /></label><button type="button" class="secondary tiny focus-config-remove">Remove</button>`;
+  row.querySelector('.focus-config-remove').onclick=()=>{row.remove();if(!host.children.length)addSpecialRequestRow();renderWizardReviewSummary();};
+  host.appendChild(row);
+}
+function collectSpecialRequests(){return [...document.querySelectorAll('#specialRequestRows .focus-config-row')].map(row=>({guest:row.querySelector('.focus-config-guest')?.value||'',type:row.querySelector('.special-request-type')?.value||'',detail:row.querySelector('.special-request-detail')?.value.trim()||''})).filter(x=>x.type||x.detail);}
+function setSpecialRequestRows(items=[]){const host=$('specialRequestRows');if(!host)return;host.innerHTML='';(items||[]).forEach(addSpecialRequestRow);if(!host.children.length)addSpecialRequestRow();}
+
+function addAdaNeedRow(data={}){
+  const host=$('adaNeedRows');if(!host)return;
+  const row=document.createElement('div');row.className='focus-config-row';row.dataset.adaNeedRow=String(++adaNeedRowSeq);
+  row.innerHTML=`<label>Guest<select class="focus-config-guest">${guestSelectOptions(data.guest||'')}</select></label><label>Accessibility Need<select class="ada-need-type"><option value="">Choose need...</option>${adaNeedTypes.map(v=>`<option ${data.type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><label class="focus-config-detail">Details <span class="optional-label">optional</span><input class="ada-need-detail" value="${escapeAttr(data.detail||'')}" placeholder="Mobility details, equipment, assistance, etc." /></label><button type="button" class="secondary tiny focus-config-remove">Remove</button>`;
+  row.querySelector('.focus-config-remove').onclick=()=>{row.remove();if(!host.children.length)addAdaNeedRow();renderWizardReviewSummary();};
+  host.appendChild(row);
+}
+function collectAdaNeeds(){return [...document.querySelectorAll('#adaNeedRows .focus-config-row')].map(row=>({guest:row.querySelector('.focus-config-guest')?.value||'',type:row.querySelector('.ada-need-type')?.value||'',detail:row.querySelector('.ada-need-detail')?.value.trim()||''})).filter(x=>x.type||x.detail);}
+function setAdaNeedRows(items=[]){const host=$('adaNeedRows');if(!host)return;host.innerHTML='';(items||[]).forEach(addAdaNeedRow);if(!host.children.length)addAdaNeedRow();}
+
+function collectPricePrograms(){
+  return {all4cho:!!$('programAll4cho')?.checked,openBar:!!$('programOpenBar')?.checked,dining:!!$('programDining')?.checked,internet:!!$('programInternet')?.checked,shoreExcursions:!!$('programShoreEx')?.checked,prepaidServiceCharges:!!$('programPsc')?.checked,kosherMeals:!!$('programKosher')?.checked,flexnet:!!$('programFlexnet')?.checked,amexcpp:!!$('programAmexcpp')?.checked,other:$('programOther')?.value.trim()||''};
+}
+function setPricePrograms(data={}){
+  const ids={all4cho:'programAll4cho',openBar:'programOpenBar',dining:'programDining',internet:'programInternet',shoreExcursions:'programShoreEx',prepaidServiceCharges:'programPsc',kosherMeals:'programKosher',flexnet:'programFlexnet',amexcpp:'programAmexcpp'};
+  Object.entries(ids).forEach(([k,id])=>{if($(id))$(id).checked=!!data[k];});
+  if($('programOther'))$('programOther').value=data.other||'';
+  syncLegacyPriceProgramToggles();
+}
+function syncLegacyPriceProgramToggles(){
+  const p=collectPricePrograms();
+  const anyFas=p.all4cho||p.openBar||p.dining||p.internet||p.shoreExcursions;
+  if($('fasToggle'))$('fasToggle').checked=anyFas;
+  if($('pscToggle'))$('pscToggle').checked=p.prepaidServiceCharges;
+}
+function priceProgramLabels(p){
+  if(!p)return[];
+  const labels=[];
+  if(p.all4cho)labels.push('ALL4CHO (Unlimited Open Bar + Specialty Dining + Internet + Shore Excursions)');
+  else{
+    if(p.openBar)labels.push('Unlimited Open Bar');if(p.dining)labels.push('Specialty Dining');if(p.internet)labels.push('Internet');if(p.shoreExcursions)labels.push('Shore Excursions');
+  }
+  if(p.prepaidServiceCharges)labels.push('Prepaid Service Charges');if(p.kosherMeals)labels.push('Kosher Meals');if(p.flexnet)labels.push('FlexNet');if(p.amexcpp)labels.push('AMEXCPP');if(p.other)labels.push(p.other);
+  return labels;
+}
+
+function airGuestKey(index){return `guest-${index}`;}
+function collectAirGuestSelections(){
+  return [...document.querySelectorAll('#airGuestRows .air-guest-row')].map(row=>({guest:row.dataset.guestName||'',airProgram:row.querySelector('.air-guest-program')?.value||'none',tripType:row.querySelector('.air-guest-trip')?.value||'round_trip',gateway:row.querySelector('.air-guest-gateway')?.value.trim()||'',transfers:row.querySelector('.air-guest-transfer')?.value||'No NCL Transfers'}));
+}
+function renderAirGuestRows(saved=[]){
+  const host=$('airGuestRows');if(!host)return;
+  const old=collectAirGuestSelections();
+  const source=Array.isArray(saved)&&saved.length?saved:old;
+  const guests=guestOptionRecords();
+  host.innerHTML=guests.map((g,i)=>{
+    const prior=source.find(x=>x.guest===g.value)||source[i]||{};
+    return `<div class="air-guest-row" data-guest-name="${escapeAttr(g.value)}"><div class="air-guest-name"><span>Guest ${i+1}</span><strong>${escapeHtml(g.label)}</strong></div><label>Air Type<select class="air-guest-program">${airGuestTypes.map(a=>`<option value="${a.value}" ${prior.airProgram===a.value?'selected':''}>${escapeHtml(a.label)}</option>`).join('')}</select></label><label>Itinerary<select class="air-guest-trip"><option value="round_trip" ${prior.tripType!=='one_way'?'selected':''}>Round Trip</option><option value="one_way" ${prior.tripType==='one_way'?'selected':''}>One Way</option></select></label><label>Gateway / Airport<input class="air-guest-gateway" value="${escapeAttr(prior.gateway||'')}" placeholder="MIA, JFK, FLL..." /></label><label>Ground Transfers<select class="air-guest-transfer">${transferTypes.map(t=>`<option ${prior.transfers===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></label></div>`;
+  }).join('');
+  host.querySelectorAll('select,input').forEach(el=>el.addEventListener('change',syncLegacyAirFromGuestRows));
+  host.querySelectorAll('input').forEach(el=>el.addEventListener('input',syncLegacyAirFromGuestRows));
+  syncLegacyAirFromGuestRows();
+}
+function setAirGuestSelections(items=[]){renderAirGuestRows(items);}
+function syncLegacyAirFromGuestRows(){
+  const items=collectAirGuestSelections();
+  const first=items.find(x=>x.airProgram&&x.airProgram!=='none');
+  const hasTransfers=items.some(x=>x.transfers&&x.transfers!=='No NCL Transfers');
+  if($('airToggle'))$('airToggle').checked=airFocusActive()||!!first||hasTransfers;
+  if(first){if($('airProgram'))$('airProgram').value=first.airProgram;if($('airTripType'))$('airTripType').value=first.tripType||'round_trip';if($('airGateway'))$('airGateway').value=first.gateway||'';}
+  else if($('airProgram'))$('airProgram').value='';
+  renderWizardReviewSummary();
+}
+
+function refreshGuestSelectorsInRows(selector,selectedGetter){
+  document.querySelectorAll(selector).forEach((select,i)=>{const selected=selectedGetter?selectedGetter(select,i):select.value;select.innerHTML=guestSelectOptions(selected);if(selected&&[...select.options].some(o=>o.value===selected))select.value=selected;});
+}
+
+function refreshGuestDependentConfigs(){
+  refreshCouponGuestOptions();
+  refreshGuestSelectorsInRows('#specialRequestRows .focus-config-guest');
+  refreshGuestSelectorsInRows('#adaNeedRows .focus-config-guest');
+  if(!$('airGuestConfigPanel')?.classList.contains('hidden-field'))renderAirGuestRows();
+  if($('latitudesToggle')?.checked)renderLatitudesFields();
+  renderWizardReviewSummary();
+}
+
+function refreshFocusConfigurationPanels(){
+  const special=specialRequestFocusActive();
+  const ada=adaFocusActive();
+  const price=priceProgramFocusActive();
+  const air=airFocusActive()||!!$('airToggle')?.checked;
+  $('specialRequestConfigPanel')?.classList.toggle('hidden-field',!special);
+  $('adaConfigPanel')?.classList.toggle('hidden-field',!ada);
+  $('priceProgramConfigPanel')?.classList.toggle('hidden-field',!price);
+  $('airGuestConfigPanel')?.classList.toggle('hidden-field',!air);
+  if(special && !$('specialRequestRows')?.children.length)addSpecialRequestRow();
+  if(ada && !$('adaNeedRows')?.children.length)addAdaNeedRow();
+  if(price)syncLegacyPriceProgramToggles();
+  if(air)renderAirGuestRows();
+  const legacyAir=$('airProgramPanel');if(legacyAir)legacyAir.classList.add('focus-config-legacy-hidden');
+  renderWizardReviewSummary();
+}
+
+function detailedFocusConfigHtml(d){
+  const chunks=[];
+  if(Array.isArray(d.specialRequests)&&d.specialRequests.length){chunks.push(`<div class="focus-config-output"><h4>Special Requests</h4><ul>${d.specialRequests.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Special Request')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
+  if(Array.isArray(d.adaNeeds)&&d.adaNeeds.length){chunks.push(`<div class="focus-config-output"><h4>ADA / Accessibility Needs</h4><ul>${d.adaNeeds.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Accessibility Need')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
+  const priceLabels=priceProgramLabels(d.pricePrograms);if(priceLabels.length){chunks.push(`<div class="focus-config-output"><h4>Price Programs & Promotions</h4><ul>${priceLabels.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`);}
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.some(x=>x.airProgram!=='none'||x.transfers!=='No NCL Transfers')){chunks.push(`<div class="focus-config-output"><h4>Air & Transfers by Guest</h4><ul>${d.airGuestSelections.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(airGuestTypes.find(a=>a.value===x.airProgram)?.label||'No NCL Air')}${x.airProgram!=='none'?` • ${x.tripType==='one_way'?'One Way':'Round Trip'}`:''}${x.gateway?` • ${escapeHtml(x.gateway)}`:''} • ${escapeHtml(x.transfers||'No NCL Transfers')}</li>`).join('')}</ul></div>`);}
+  return chunks.length?`<section class="scenario-section visual-section detailed-focus-config-section"><div class="section-label">TRAINER-SELECTED DETAILS</div>${scenarioIconHeading('⚙️','Scenario-Specific Setup')}<div class="focus-config-output-grid">${chunks.join('')}</div></section>`:'';
+}
+
 function updateScenarioFocus(preferred,preferredDay,preferredList){
   const dept=$("department").value;
   const all=allFocusRecords(dept);
@@ -745,26 +995,12 @@ function updateScenarioFocus(preferred,preferredDay,preferredList){
   const requested=Array.isArray(preferredList)&&preferredList.length?preferredList:(preferred?[preferred]:[]);
   $("focusPickerOptions").innerHTML=all.map(({day,meta})=>{
     const checked=requested.some(name=>name===meta.name) || (!requested.length && all[0]?.meta.name===meta.name && all[0]?.day===day);
-    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong><button type="button" class="focus-card-toggle" aria-expanded="false">Details</button><small class="focus-card-description">${escapeHtml(meta.objective)}</small></span></label>`;
+    const category=focusActualCategory(meta),common=focusIsCommon(meta);
+    return `<label class="focus-choice" data-category="${category}" data-common="${common?'true':'false'}" title="${escapeAttr(meta.objective||meta.name)}"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong></span></label>`;
   }).join("");
 
   $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(input=>input.addEventListener('change',syncScenarioFocusSelection));
-  $("focusPickerOptions").querySelectorAll('.focus-card-toggle').forEach(btn=>btn.addEventListener('click',e=>{
-    e.preventDefault();
-    e.stopPropagation();
-    const card=btn.closest('.focus-choice');
-    const isExpanded=card?.classList.contains('expanded');
-    $("focusPickerOptions").querySelectorAll('.focus-choice.expanded').forEach(item=>{
-      item.classList.remove('expanded');
-      const toggle=item.querySelector('.focus-card-toggle');
-      if(toggle){toggle.setAttribute('aria-expanded','false');toggle.textContent='Details';}
-    });
-    if(card && !isExpanded){
-      card.classList.add('expanded');
-      btn.setAttribute('aria-expanded','true');
-      btn.textContent='Hide details';
-    }
-  }));
+  renderFocusCategoryTabs();
   if(preferred && preferredDay){
     const exact=[...$("focusPickerOptions").querySelectorAll('.focus-choice-input')].find(i=>i.value===preferred&&i.dataset.day===String(preferredDay));
     if(exact && requested.length<=1){
@@ -790,6 +1026,8 @@ function syncScenarioFocusSelection(){
   if(records.length)$("trainingDay").value=String(Math.max(...records.map(r=>r.day)));
   updateFocusPickerDisplay();
   applyFocusDefaults();
+  renderFocusCategoryTabs();
+  refreshFocusConfigurationPanels();
 }
 
 function openFocusPicker(){$("focusPickerMenu").classList.add('open');$("focusPickerBtn").setAttribute('aria-expanded','true')}
@@ -1229,9 +1467,11 @@ function getGuestProfileMix(d){
 const couponTypes=[
   "CruiseNext Credit",
   "Future Cruise Credit (FCC)",
-  "10% Discount Coupon",
   "CruiseFirst Credit",
+  "10% Discount Coupon",
+  "Percentage Discount Coupon",
   "Latitudes / Guest Coupon",
+  "Promotional / Partner Coupon",
   "Other Credit / Coupon"
 ];
 let couponRowSequence=0;
@@ -1247,9 +1487,14 @@ function couponGuestNames(){
 }
 
 function refreshCouponGuestOptions(){
+  const names=couponGuestNames();
   const list=$("couponGuestOptions");
-  if(!list)return;
-  list.innerHTML=couponGuestNames().map(name=>`<option value="${escapeAttr(name)}"></option>`).join("");
+  if(list)list.innerHTML=names.map(name=>`<option value="${escapeAttr(name)}"></option>`).join("");
+  document.querySelectorAll('#couponRows select.coupon-guest').forEach(select=>{
+    const current=select.value;
+    select.innerHTML=`<option value="">Choose source guest...</option>${names.map(name=>`<option value="${escapeAttr(name)}" ${name===current?'selected':''}>${escapeHtml(name)}</option>`).join('')}`;
+    if(current&&[...select.options].some(o=>o.value===current))select.value=current;
+  });
 }
 
 function latitudeForGuestName(name){
@@ -1277,7 +1522,7 @@ function addCouponRow(data={}){
       </select>
     </label>
     <label>Source Guest
-      <input class="coupon-guest" list="couponGuestOptions" value="${escapeAttr(data.guest||'')}" placeholder="Guest whose profile owns the coupon" />
+      <select class="coupon-guest"><option value="">Choose source guest...</option>${couponGuestNames().map(name=>`<option value="${escapeAttr(name)}" ${data.guest===name?'selected':''}>${escapeHtml(name)}</option>`).join('')}</select>
     </label>
     <label>Source Latitudes #
       <input class="coupon-latitudes" inputmode="numeric" maxlength="12" value="${escapeAttr(data.latitudes||'')}" placeholder="Latitudes number" />
@@ -1539,14 +1784,20 @@ $("trainingCardNumber").addEventListener("input",()=>{$("trainingCardNumber").va
 $("trainingCardCcv").addEventListener("input",()=>{$("trainingCardCcv").value=$("trainingCardCcv").value.replace(/[^0-9]/g,"")});
 $("paymentAction").addEventListener("change",()=>{refreshTrainingCardPanel();refreshCouponPanel()});
 $("addCouponBtn").addEventListener("click",()=>addCouponRow());
-$("couponToggle").addEventListener("change",refreshCouponPanel);
+$("couponToggle").addEventListener("change",()=>{refreshCouponPanel();refreshFocusConfigurationPanels();});
 $("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
-$("guestCount").addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions()});
-$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
-$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
-$("reservation2GuestCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions()});
-$("reservation2Guest1")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshCouponGuestOptions()});
-$("reservation2Guest2")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshCouponGuestOptions()});
+$("addSpecialRequestBtn")?.addEventListener("click",()=>addSpecialRequestRow());
+$("addAdaNeedBtn")?.addEventListener("click",()=>addAdaNeedRow());
+$("reservationCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels();});
+$("programAll4cho")?.addEventListener("change",()=>{const checked=$("programAll4cho").checked;["programOpenBar","programDining","programInternet","programShoreEx"].forEach(id=>{if($(id))$(id).checked=checked;});syncLegacyPriceProgramToggles();renderWizardReviewSummary();});
+["programOpenBar","programDining","programInternet","programShoreEx"].forEach(id=>$(id)?.addEventListener("change",()=>{if($("programAll4cho"))$("programAll4cho").checked=["programOpenBar","programDining","programInternet","programShoreEx"].every(k=>$(k)?.checked);syncLegacyPriceProgramToggles();renderWizardReviewSummary();}));
+["programPsc","programKosher","programFlexnet","programAmexcpp","programOther"].forEach(id=>{const el=$(id);if(el){el.addEventListener("change",()=>{syncLegacyPriceProgramToggles();renderWizardReviewSummary();});el.addEventListener("input",renderWizardReviewSummary);}});
+$("guestCount").addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels()});
+$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("reservation2GuestCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels()});
+$("reservation2Guest1")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("reservation2Guest2")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshGuestDependentConfigs()});
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
@@ -1558,7 +1809,7 @@ $("generateNamesBtn").onclick=()=>{
     $("reservation2Guest2").value=pair2[1];
   }
   if($("latitudesToggle").checked)renderLatitudesFields();
-  refreshCouponGuestOptions();
+  refreshGuestDependentConfigs();
 };
 
 const anchorSuggestions = {
@@ -2201,14 +2452,11 @@ function scenarioData(){
   const multipleReservations=$("reservationWorkflow")?.value==="new" && isMultipleReservationScenario(focusNames);
   const reservation1GuestCount=+$("guestCount")?.value||1;
   const reservation1Guests=reservation1GuestNamesFromForm();
-  const reservation2GuestCount=multipleReservations?(+$("reservation2GuestCount")?.value||1):0;
-  const reservation2Guests=multipleReservations?reservation2GuestNamesFromForm():[];
-  const reservations=multipleReservations?[
-    {number:1,guestCount:reservation1GuestCount,guests:reservation1Guests,category:$("category").value,location:$("locationPref").value,side:$("sidePref").value,pricing:$("pricing").value.trim()},
-    {number:2,guestCount:reservation2GuestCount,guests:reservation2Guests,category:$("reservation2Category")?.value||$("category").value,location:$("reservation2LocationPref")?.value||"Any",side:$("reservation2SidePref")?.value||"Any",pricing:$("reservation2Pricing")?.value.trim()||""}
-  ]:[];
-  const totalGuestCount=multipleReservations?reservation1GuestCount+reservation2GuestCount:reservation1GuestCount;
-  const flattenedGuestNames=multipleReservations?[...reservation1Guests,...reservation2Guests]:reservation1Guests;
+  const reservationTotal=multipleReservations?multipleReservationTotal():1;
+  const reservations=multipleReservations?Array.from({length:reservationTotal},(_,i)=>reservationFormData(i+1)):[];
+  const reservation2GuestCount=multipleReservations?(reservations[1]?.guestCount||0):0;
+  const totalGuestCount=multipleReservations?reservations.reduce((sum,r)=>sum+(+r.guestCount||0),0):reservation1GuestCount;
+  const flattenedGuestNames=multipleReservations?reservations.flatMap(r=>r.guests||[]):reservation1Guests;
   return {
     id: state.currentScenario?.id || makeUuid(),
     department:$("department").value,
@@ -2232,6 +2480,7 @@ function scenarioData(){
     guestCount:totalGuestCount,
     reservation1GuestCount,
     reservation2GuestCount,
+    reservationCount:multipleReservations?reservationTotal:1,
     multipleReservations,
     reservations,
     reservationRelationship:multipleReservations?($("reservationRelationship")?.value||"Same Sailing / Linked"):"",
@@ -2252,6 +2501,10 @@ function scenarioData(){
     airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
     couponEnabled:couponWorkflowRequested(),
     coupons:couponWorkflowRequested()?collectCoupons():[],
+    specialRequests:specialRequestFocusActive()?collectSpecialRequests():[],
+    adaNeeds:adaFocusActive()?collectAdaNeeds():[],
+    pricePrograms:priceProgramFocusActive()?collectPricePrograms():{},
+    airGuestSelections:(airFocusActive()||$("airToggle")?.checked)?collectAirGuestSelections():[],
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
     curriculumObjective:metas.map(m=>m.objective).join(" | "),
@@ -2284,7 +2537,10 @@ function focusConsiderations(d){
   if(name.includes("infant")||name.includes("guests 3-8")||name.includes("singles")) items.push("Does the selected stateroom capacity support the full occupancy?","How do deposit, promotion, and service-charge rules differ for infants, children, solos, or Guests 3–8?");
   if(name.includes("multiple")) items.push("Should the reservations be linked with TWITH?","If one caller pays for another reservation, what Authorized Person guidance and notation are required?");
   if(name.includes("ta booking")||d.curriculumKind==="ta") items.push("What information must the travel agent provide before pricing or creating a reservation?","Where is commission displayed and what servicing restrictions apply to a travel-agent booking?");
-  if(d.airEnabled){
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length){
+    const configured=d.airGuestSelections.filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");
+    configured.forEach(item=>{const label=airGuestTypes.find(a=>a.value===item.airProgram)?.label||"No NCL Air";items.push(`Confirm ${item.guest||"the assigned guest"}: ${label}${item.airProgram!=="none"?` • ${item.tripType==="one_way"?"One Way":"Round Trip"}`:""}${item.gateway?` • ${item.gateway}`:""} • ${item.transfers}.`);});
+  }else if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
     if(!airMeta)items.push("Select the applicable NCL Air Program before releasing the scenario.");
     else items.push(`Confirm the selected ${airMeta.label} terms, ${airTripLabel(d)} itinerary, payment/deposit timing, and transfer handling.`);
@@ -2462,13 +2718,13 @@ function customerStoryHtml(d,meta,sailText,guestNames){
   }
 
   if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
-    const r1=reservationGuestLabel(d.reservations[0],0);
-    const r2=reservationGuestLabel(d.reservations[1],1);
+    const count=d.reservations.length;
+    const reservationSummary=d.reservations.map((r,i)=>`Reservation ${i+1}: <strong>${escapeHtml(reservationGuestLabel(r,i))}</strong>`).join(' • ');
     const relationship=d.reservationRelationship||"Same Sailing / Linked";
     if(d.department==="Guest Services" && d.newCallerType==="travel_agent"){
-      return `<p>A travel advisor is calling Norwegian Cruise Line to create <strong>two related reservations</strong> for ${escapeHtml(sailText)}. Reservation 1 is for <strong>${escapeHtml(r1)}</strong> and Reservation 2 is for <strong>${escapeHtml(r2)}</strong>. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+      return `<p>A travel advisor is calling Norwegian Cruise Line to create <strong>${count} related reservations</strong> for ${escapeHtml(sailText)}. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
-    return `<p>The caller is planning ${escapeHtml(sailText)} and needs <strong>two related reservations</strong>. Reservation 1 is for <strong>${escapeHtml(r1)}</strong> and Reservation 2 is for <strong>${escapeHtml(r2)}</strong>. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    return `<p>The caller is planning ${escapeHtml(sailText)} and needs <strong>${count} related reservations</strong>. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
 
   if(isSoloStudioScenario(d)){
@@ -2644,16 +2900,20 @@ function fullTaskList(d,meta){
   }
 
   if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
-    const r1=d.reservations[0],r2=d.reservations[1];
-    tasks.push(`Create Reservation 1 for ${reservationGuestLabel(r1,0)}.`);
-    tasks.push(`Create Reservation 2 for ${reservationGuestLabel(r2,1)}.`);
-    tasks.push(`Use the same selected sailing for both reservations and coordinate the rooms as: ${d.reservationRelationship||"Same Sailing / Linked"}.`);
-    tasks.push(`Reservation 1 stateroom: ${reservationStateroomLabel(r1)}.`);
-    tasks.push(`Reservation 2 stateroom: ${reservationStateroomLabel(r2)}.`);
-    if(r1.pricing)tasks.push(`Quote Reservation 1 advertised pricing: ${r1.pricing}. Reconfirm the current amount in Seaweb.`);
-    if(r2.pricing)tasks.push(`Quote Reservation 2 advertised pricing: ${r2.pricing}. Reconfirm the current amount in Seaweb.`);
-    tasks.push("Keep the two reservations separate for pricing, payment, recap, comments and confirmations unless the specific workflow says otherwise.");
+    d.reservations.forEach((r,i)=>{
+      tasks.push(`Create Reservation ${i+1} for ${reservationGuestLabel(r,i)}.`);
+      tasks.push(`Reservation ${i+1} stateroom: ${reservationStateroomLabel(r)}.`);
+      if(r.pricing)tasks.push(`Quote Reservation ${i+1} advertised pricing: ${r.pricing}. Reconfirm the current amount in Seaweb.`);
+    });
+    tasks.push(`Use the same selected sailing for all ${d.reservations.length} reservations and coordinate the rooms as: ${d.reservationRelationship||"Same Sailing / Linked"}.`);
+    tasks.push("Keep each reservation separate for pricing, payment, recap, comments and confirmations unless the specific workflow says otherwise.");
   }
+
+  if(Array.isArray(d.specialRequests))d.specialRequests.forEach(x=>tasks.push(`Add ${x.type||"the special request"} for ${x.guest||"the assigned guest"}${x.detail?` (${x.detail})`:""}.`));
+  if(Array.isArray(d.adaNeeds))d.adaNeeds.forEach(x=>tasks.push(`Document ${x.type||"the accessibility need"} for ${x.guest||"the assigned guest"}${x.detail?` (${x.detail})`:""} in the correct Seaweb location and complete any required accessibility workflow.`));
+  const configuredPrograms=priceProgramLabels(d.pricePrograms);
+  if(configuredPrograms.length)tasks.push(`Add / verify the selected price programs and promotions: ${configuredPrograms.join(", ")}.`);
+  if(Array.isArray(d.airGuestSelections))d.airGuestSelections.forEach(x=>{if(x.airProgram!=="none"||x.transfers!=="No NCL Transfers")tasks.push(`For ${x.guest||"the assigned guest"}, configure ${airGuestTypes.find(a=>a.value===x.airProgram)?.label||"No NCL Air"}${x.airProgram!=="none"?` (${x.tripType==="one_way"?"One Way":"Round Trip"})`:""}${x.gateway?` from/to ${x.gateway}`:""} and ${x.transfers||"No NCL Transfers"}.`);});
 
   if(isSoloStudioScenario(d)){
     return [
@@ -2828,11 +3088,12 @@ function checklistHtml(items){
 
 function beforeEndItems(d){
   const multi=isMultipleReservationScenario(d);
-  const items=[multi?"Recap both reservations separately in plain language.":"Recap the reservation or changes in plain language."];
+  const reservationCount=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);
+  const items=[multi?`Recap all ${reservationCount} reservations separately in plain language.`:"Recap the reservation or changes in plain language."];
   if(!["No Payment / Service Only","Refund / Reinstate"].includes(d.payment))items.push(multi?"Confirm the amount due now and/or next payment deadline for each reservation shown in Seaweb.":"Confirm the amount due now and/or next payment deadline shown in Seaweb.");
   if(d.confirmation)items.push(multi?"Confirm the guest knows where each reservation confirmation will be sent.":"Confirm the guest knows where the updated confirmation will be sent.");
   if(d.commenting)items.push(multi?"Make sure required notes/comments have been saved on each reservation.":"Make sure required reservation notes/comments have been saved.");
-  if(multi)items.push("Verify both reservation numbers are saved and the reservations are linked with TWITH when required.");
+  if(multi)items.push(`Verify all ${reservationCount} reservation numbers are saved and the reservations are linked with TWITH when required.`);
   items.push("Ask the customer-satisfaction question and use the Norwegian Cruise Line branded closing.");
   return items;
 }
@@ -2899,7 +3160,7 @@ function commonMistakes(d,meta){
 function expectedCompletionState(d,meta){
   if(isMultipleAuthorizedCruisetourScenario(d))return "Two active Pride of America Cruisetour reservations are created for the same March 2027 departure, both contain the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
   if(isMultipleAuthorizedScenario(d))return "Two active reservations are created on the same March 2027 Galveston sailing, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
-  if(isMultipleReservationScenario(d))return "Two separate reservations are created on the selected sailing using the entered guest and stateroom details; each booking is reviewed and saved separately, confirmations/comments are completed as required, and the reservations are linked with TWITH when applicable.";
+  if(isMultipleReservationScenario(d)){const count=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);return `${count} separate reservations are created on the selected sailing using the entered guest and stateroom details; each booking is reviewed and saved separately, confirmations/comments are completed as required, and the reservations are linked with TWITH when applicable.`;}
   if(isReinstateRoleplay(d))return "If eligible, the cancelled training reservation is active/booked again; previous stateroom and pricing are verified, changes are stored, comments are added, confirmation is sent, and the caller receives a full recap.";
   if(d.payment==="Offer / Hold only")return "Offer / Hold — verify the first deposit deadline before ending the call.";
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
@@ -3052,6 +3313,10 @@ function resetScenarioForm(){
   $("airGateway").value="";
   updateAirProgramPreview();
   $("couponRows").innerHTML="";
+  if($("specialRequestRows"))$("specialRequestRows").innerHTML="";
+  if($("adaNeedRows"))$("adaNeedRows").innerHTML="";
+  setPricePrograms({});
+  if($("airGuestRows"))$("airGuestRows").innerHTML="";
   refreshCouponPanel();
 
   $("trainingCardProfile").value="standardSesame";
@@ -3117,7 +3382,8 @@ function completionInstructionsHtml(d){
     return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the servicing workflow, comments, confirmation and recap are complete.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
   }
   if(isMultipleReservationScenario(d)){
-    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save BOTH reservation numbers.</span><span>Post BOTH reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH when required.</span></div>`;
+    const count=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save all ${count} reservation numbers.</span><span>Post all ${count} reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH when required.</span></div>`;
   }
   return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
 }
@@ -3178,7 +3444,7 @@ function multipleReservationDetailsHtml(d){
   if(!isMultipleReservationScenario(d)||isMultipleAuthorizedAny(d))return "";
   const reservations=Array.isArray(d.reservations)?d.reservations:[];
   if(reservations.length<2)return "";
-  const cards=reservations.slice(0,2).map((r,i)=>{
+  const cards=reservations.map((r,i)=>{
     const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
     const guestItems=names.map((name,j)=>`<li><strong>${escapeHtml(name||`Guest ${j+1}`)}</strong></li>`).join("");
     return `<article class="multi-res-card">
@@ -3194,7 +3460,7 @@ function multipleReservationDetailsHtml(d){
     <div class="section-label">MULTIPLE RESERVATIONS</div>
     ${scenarioIconHeading('🧳','Reservation Details')}
     <div class="scenario-detail-grid">
-      <div><span>Reservation Count</span><strong>2 Reservations</strong><small>${d.guestCount} total guest${d.guestCount===1?'':'s'}</small></div>
+      <div><span>Reservation Count</span><strong>${reservations.length} Reservations</strong><small>${d.guestCount} total guest${d.guestCount===1?'':'s'}</small></div>
       <div><span>Relationship</span><strong>${escapeHtml(d.reservationRelationship||'Same Sailing / Linked')}</strong><small>Coordinate both bookings and use TWITH when required</small></div>
     </div>
     <div class="multi-res-grid">${cards}</div>
@@ -3316,9 +3582,11 @@ function guestInformationVisualHtml(d){
 
 function offersAddonsVisualHtml(d){
   const n=focusSearchText(d); const items=[];
-  if(d.fas||/price programs|free at sea|\bfas\b/.test(n))items.push('All applicable Free at Sea offers');
+  const configuredPrograms=priceProgramLabels(d.pricePrograms);
+  if(configuredPrograms.length)items.push(...configuredPrograms);
+  else if(d.fas||/price programs|free at sea|\bfas\b/.test(n))items.push('Applicable Free at Sea selections');
   if(d.travel||/norwegian care|travel protection/.test(n))items.push('Norwegian Care / Travel Protection');
-  if(d.psc||/prepaid service charge|ppsrvchg/.test(n))items.push('Pre-Paid Service Charges');
+  if(d.psc&&!configuredPrograms.includes('Prepaid Service Charges'))items.push('Pre-Paid Service Charges');
   if(/teacher/.test(n))items.push('Teacher Appreciation Offer, when eligible');
   if((/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext') && !(d.coupons||[]).length)items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
   if(/special request|ada|dietary/.test(n))items.push('Applicable special, accessibility, or dietary requests');
@@ -3354,19 +3622,20 @@ function requiredActionsVisualHtml(d){
     </section>`;
   }
   if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d)){
+    const reservations=Array.isArray(d.reservations)?d.reservations:[];
+    const createItems=reservations.map((r,i)=>`Create and save Reservation ${i+1} using its entered guest and stateroom details.`);
     return `<section class="scenario-section visual-section required-actions-section">
       <div class="section-label">REQUIRED ACTIONS</div>
-      ${scenarioIconHeading('✅','Complete Both Reservations')}
+      ${scenarioIconHeading('✅',`Complete All ${reservations.length||d.reservationCount||2} Reservations`)}
       ${checklistHtml([
-        "Create and save Reservation 1 using its entered guest and stateroom details.",
-        "Create and save Reservation 2 using its entered guest and stateroom details.",
+        ...createItems,
         `Coordinate the room relationship as: ${d.reservationRelationship||"Same Sailing / Linked"}.`,
         d.payment!=="No Payment / Service Only"?"Complete the required payment / booking action separately for each reservation.":null,
         d.commenting?"Add the appropriate reservation comments to EACH reservation.":null,
         d.confirmation?`Send a confirmation for EACH reservation to ${d.email||"training123@ncl.com"}.`:null,
         "Recap each reservation separately with the caller.",
         "Link the reservations with TWITH when required.",
-        "Save both reservation numbers and post both in the class chat."
+        `Save all ${reservations.length||d.reservationCount||2} reservation numbers and post them in the class chat.`
       ].filter(Boolean))}
     </section>`;
   }
@@ -3399,13 +3668,13 @@ function recapVisualHtml(d){
   }
 
   if(isMultipleReservationScenario(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
-    const recapItems=d.reservations.slice(0,2).map((r,i)=>`Reservation ${i+1} – ${reservationGuestLabel(r,i)}: ${reservationStateroomLabel(r)}`);
+    const recapItems=d.reservations.map((r,i)=>`Reservation ${i+1} – ${reservationGuestLabel(r,i)}: ${reservationStateroomLabel(r)}`);
     recapItems.push(`Room relationship: ${d.reservationRelationship||"Same Sailing / Linked"}`);
-    if(d.payment!=="No Payment / Service Only")recapItems.push("Payment / booking action completed separately for both reservations");
+    if(d.payment!=="No Payment / Service Only")recapItems.push("Payment / booking action completed separately for each reservation");
     if(d.confirmation)recapItems.push("A confirmation was sent for each reservation");
     if(d.commenting)recapItems.push("Required comments were saved on each reservation");
-    recapItems.push("Both reservation numbers saved");
-    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap Both Reservations')}<p>Review each reservation separately with the caller before ending the call.</p>${checklistHtml(recapItems)}</section>`;
+    recapItems.push(`All ${d.reservations.length} reservation numbers saved`);
+    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️',`Recap All ${d.reservations.length} Reservations`)}<p>Review each reservation separately with the caller before ending the call.</p>${checklistHtml(recapItems)}</section>`;
   }
 
   const items=isSoloStudioScenario(d)
@@ -3638,8 +3907,9 @@ function generateScenario(){
     ${sailingDetailsVisualHtml(d,pricing)}
     ${guestInformationVisualHtml(d)}
     ${offersAddonsVisualHtml(d)}
+    ${detailedFocusConfigHtml(d)}
     ${couponScenarioHtml(d)}
-    ${d.airEnabled?airScenarioHtml(d):''}
+    ${d.airEnabled && !(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length)?airScenarioHtml(d):''}
     ${paymentVisualHtml(d,paymentInstruction)}
     ${requiredActionsVisualHtml(d)}
     ${callFlowSupportHtml(d,meta)}
@@ -3728,16 +3998,16 @@ function runValidator(){
   if(isMultipleReservationScenario(d) && d.reservationWorkflow==="new"){
     const reservations=Array.isArray(d.reservations)?d.reservations:[];
     if(reservations.length<2){
-      add("error","Second reservation details missing","Multiple Reservations requires separate details for Reservation 1 and Reservation 2.");
+      add("error","Multiple reservation details missing","Multiple Reservations requires at least two separate reservation profiles.");
     }else{
-      reservations.slice(0,2).forEach((r,i)=>{
+      reservations.forEach((r,i)=>{
         const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
         if(!names[0])add("error",`Reservation ${i+1} primary guest missing`,`Enter the primary guest name for Reservation ${i+1}.`);
         const missing=names.map((name,j)=>!name?j+1:null).filter(Boolean);
         if(missing.length)add("warning",`Reservation ${i+1} guest name${missing.length===1?' is':'s are'} blank`,`Enter or intentionally leave blank Guest ${missing.join(", Guest ")} for Reservation ${i+1}.`);
         if(!r.category)add("warning",`Reservation ${i+1} stateroom missing`,`Choose a stateroom category for Reservation ${i+1}.`);
       });
-      add("passed","Two reservation profiles configured",`${reservations[0].guestCount} guest${reservations[0].guestCount===1?'':'s'} in Reservation 1 • ${reservations[1].guestCount} guest${reservations[1].guestCount===1?'':'s'} in Reservation 2.`);
+      add("passed",`${reservations.length} reservation profiles configured`,reservations.map((r,i)=>`${r.guestCount} guest${r.guestCount===1?'':'s'} in Reservation ${i+1}`).join(' • '));
       add("passed","Reservation relationship",d.reservationRelationship||"Same Sailing / Linked");
     }
   }
@@ -3877,6 +4147,22 @@ function runValidator(){
     else add("passed","Category instruction is explicit",d.category);
   }
 
+  if(specialRequestFocusActive() || (d.specialRequests||[]).length){
+    if(!(d.specialRequests||[]).length)add("warning","Special requests not specified","Choose the exact special request and the guest it applies to.");
+    else d.specialRequests.forEach((item,i)=>{if(!item.guest)add("error",`Special Request ${i+1} guest missing`,`Choose which guest the request applies to.`);if(!item.type)add("error",`Special Request ${i+1} type missing`,`Choose the type of special request.`);if(item.guest&&item.type)add("passed",`Special Request ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
+  }
+
+  if(adaFocusActive() || (d.adaNeeds||[]).length){
+    if(!(d.adaNeeds||[]).length)add("error","Accessibility need not specified","ADA / Special Requests requires the trainer to identify the guest and the type of accessibility need.");
+    else d.adaNeeds.forEach((item,i)=>{if(!item.guest)add("error",`Accessibility Need ${i+1} guest missing`,`Choose which guest has the accessibility need.`);if(!item.type)add("error",`Accessibility Need ${i+1} type missing`,`Choose the type of accessibility need.`);if(item.guest&&item.type)add("passed",`Accessibility Need ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
+  }
+
+  if(priceProgramFocusActive() || priceProgramLabels(d.pricePrograms).length){
+    const programs=priceProgramLabels(d.pricePrograms);
+    if(!programs.length)add("error","Price Programs not selected","Choose ALL4CHO or the specific Free at Sea components / price programs being added.");
+    else add("passed","Price Programs configured",programs.join(" • "));
+  }
+
   if(couponWorkflowRequested() || (d.coupons||[]).length){
     if(!(d.coupons||[]).length){
       add("warning","Credits / coupons not specified","This scenario includes a credit/coupon workflow. Add each training credit/coupon and identify the source guest and Latitudes number.");
@@ -3891,7 +4177,18 @@ function runValidator(){
     }
   }
 
-  if(d.airEnabled){
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length){
+    const configured=d.airGuestSelections.filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");
+    if(airFocusActive()&&!configured.length)add("error","Air / Transfers not configured","Select the air type and/or transfer setup for at least one guest.");
+    configured.forEach((item,i)=>{
+      const meta=airProgramMeta(item.airProgram),label=airGuestTypes.find(a=>a.value===item.airProgram)?.label||"No NCL Air";
+      add("passed",`Air / Transfer guest setup ${i+1}`,`${item.guest||"Guest"} • ${label}${item.gateway?` • ${item.gateway}`:""} • ${item.transfers}`);
+      if(item.airProgram!=="none"&&!meta)add("error",`Air type missing for ${item.guest||`Guest ${i+1}`}`,"Choose the applicable NCL Air product.");
+      if(item.airProgram==='bundled'){const eligibility=bundledAirEligibility({...d,airProgram:'bundled',airTripType:item.tripType});if(eligibility.status==='ineligible')add("error",`Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);else add("warning",`Verify Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);}
+    });
+  }
+
+  if(d.airEnabled && !(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length)){
     const airMeta=airProgramMeta(d.airProgram);
     if(!airMeta){
       add("error","NCL Air Program not selected","Choose the applicable NCL Air Program before assigning the scenario.");
@@ -4879,7 +5176,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.39",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.40",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -5778,11 +6075,13 @@ window.openSaved=(id)=>{
   $("agency").value=x.agency||($("department").value==="Guest Services"?"5":$("marketAgency").value);
   $("guest1").value=savedR1?.guests?.[0]??x.guest1??"";
   $("guest2").value=savedR1?.guests?.[1]??x.guest2??"";
+  if($("reservationCount"))$("reservationCount").value=String(Math.max(2,Math.min(8,x.reservationCount||savedReservations.length||2)));
   if($("reservation2GuestCount"))$("reservation2GuestCount").value=String(savedR2?.guestCount||x.reservation2GuestCount||2);
   if($("reservation2Guest1"))$("reservation2Guest1").value=savedR2?.guests?.[0]||"";
   if($("reservation2Guest2"))$("reservation2Guest2").value=savedR2?.guests?.[1]||"";
   if($("reservationRelationship"))$("reservationRelationship").value=x.reservationRelationship||"Same Sailing / Linked";
-  updateMultipleReservationUI();
+  const extraSaved={};savedReservations.slice(2).forEach((r,i)=>{extraSaved[i+3]=r;});
+  updateMultipleReservationUI(extraSaved);
   if(savedR1?.guests){
     savedR1.guests.slice(2).forEach((name,i)=>{const input=$(`reservation1Guest${i+3}`);if(input)input.value=name||"";});
   }
@@ -5811,6 +6110,12 @@ window.openSaved=(id)=>{
   $("airOneWayDirection").value=x.airOneWayDirection||"to_cruise";
   $("airGateway").value=x.airGateway||"";
   updateAirProgramPreview();
+  setSpecialRequestRows(x.specialRequests||[]);
+  setAdaNeedRows(x.adaNeeds||[]);
+  setPricePrograms(x.pricePrograms||{all4cho:!!x.fas,prepaidServiceCharges:!!x.psc});
+  const legacyAirSelections=Array.isArray(x.airGuestSelections)&&x.airGuestSelections.length?x.airGuestSelections:(x.airEnabled?[{guest:formGuestNames()[0]||x.guest1||"Guest 1",airProgram:x.airProgram||"none",tripType:x.airTripType||"round_trip",gateway:x.airGateway||"",transfers:"No NCL Transfers"}]:[]);
+  setAirGuestSelections(legacyAirSelections);
+  refreshFocusConfigurationPanels();
   $("trainerNotes").value=x.trainerNotes||"";
   if(x.cardProfile && trainingCards[x.cardProfile])$("trainingCardProfile").value=x.cardProfile;
   renderTrainingCard();
@@ -5863,26 +6168,27 @@ function wizardSection(host,{icon='•',title,subtitle='',className=''},nodes=[]
 }
 
 function enabledWizardTasks(){
-  return [
+  const items=[
     ['Commenting Tool',$("commentToggle")?.checked],
     ['Guest Confirmation',$("confirmToggle")?.checked],
     ['Guest Status / Latitudes',$("latitudesToggle")?.checked],
-    ['Free at Sea',$("fasToggle")?.checked],
     ['Travel Protection',$("travelToggle")?.checked],
-    ['Prepaid Service Charges',$("pscToggle")?.checked],
-    ['Air / Transfers',$("airToggle")?.checked],
     ['Credits / Coupons',$("couponToggle")?.checked]
   ].filter(([,on])=>on).map(([name])=>name);
+  const specials=collectSpecialRequests();if(specials.length)items.push(`${specials.length} Special Request${specials.length===1?'':'s'}`);
+  const ada=collectAdaNeeds();if(ada.length)items.push(`${ada.length} ADA / Accessibility Need${ada.length===1?'':'s'}`);
+  const programs=priceProgramLabels(collectPricePrograms());if(programs.length)items.push(`Price Programs: ${programs.join(', ')}`);
+  const air=collectAirGuestSelections().filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");if(air.length)items.push(`Air / Transfers for ${air.length} guest${air.length===1?'':'s'}`);
+  return items;
 }
 
 function reservationReviewText(){
   const res1=reservation1GuestNamesFromForm().filter(Boolean);
-  const res2=multipleReservationFormActive()?reservation2GuestNamesFromForm().filter(Boolean):[];
   const bits=[];
   bits.push(`${res1.length||+$('guestCount')?.value||1} guest${(res1.length||+$('guestCount')?.value||1)===1?'':'s'}`);
   if($('category')?.value)bits.push($('category').value);
   if(state.selectedSailing?.ship)bits.push(state.selectedSailing.ship);
-  if(multipleReservationFormActive())bits.push(`Reservation 2: ${res2.length||+$('reservation2GuestCount')?.value||1} guests`);
+  if(multipleReservationFormActive())bits.push(`${multipleReservationTotal()} reservations total`);
   if($('paymentAction')?.value)bits.push($('paymentAction').value);
   return bits.join(' • ');
 }
@@ -5998,6 +6304,7 @@ function setupGeneratorWizard(){
   if($("curriculumNote"))step3.appendChild($("curriculumNote"));
   const scenarioTasks=document.querySelector('#generator fieldset');
   if(scenarioTasks)step3.appendChild(scenarioTasks);
+  if($("focusConfigurationHub"))step3.appendChild($("focusConfigurationHub"));
   ["airProgramPanel","latitudesNumberPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
 
   const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
