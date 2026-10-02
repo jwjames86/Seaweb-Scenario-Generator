@@ -1181,3 +1181,22 @@ The presentation walks trainees through the full customer interaction in stages 
 - Print / Save PDF prints each presentation slide on its own page.
 - Reset clears responses and progress.
 - The existing Interactive Worksheet, PDF, PNG, print, and copy options remain available as alternate formats.
+
+
+## V1.9.43 – Generate Fix + Validator Removed
+
+### Generate Scenario fix
+- Fixed the UUID helper that caused `globalThis.makeUuid is not a function` when generating a new scenario in modern browsers.
+- Scenario generation now creates the ID with `crypto.randomUUID()` when supported and uses the existing fallback otherwise.
+- Generated scenarios now move directly to **Ready for Trainee** without depending on the removed Validator screen.
+
+### Scenario Validator removed
+- Removed Scenario Validator from the left navigation.
+- Removed the Validator page and dashboard instructions that directed trainers to it.
+- Saved/generated scenarios no longer require a visible validation step before sharing.
+- The dashboard now uses the former review tile to show the number of available Call Simulations.
+
+### Latitudes verification
+- Confirmed the generated scenario retains the dedicated **Guest Status / Latitudes** section.
+- Past Guests display their entered Latitudes number in the generated scenario; New Guests are clearly labeled as new profiles.
+- The call-simulation presentation also carries each guest's Past/New Guest status and Latitudes number into the Reservation Details portion.
