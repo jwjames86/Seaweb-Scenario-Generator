@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.41" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.43" />
 </head>
 <body>
   <header class="topbar">
@@ -17,7 +17,7 @@
     <div class="topbar-copy">
       <div class="eyebrow">TRAINING &amp; DEVELOPMENT • SEAweb</div>
       <h1>Seaweb Scenario Generator</h1>
-      <p>Build, validate and reuse realistic training scenarios.</p>
+      <p>Build, present and reuse realistic training scenarios.</p>
       <div class="brand-accent-bars" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
     <div class="mode-switch" role="group" aria-label="View mode">
@@ -31,8 +31,7 @@
       <button class="nav active" data-page="dashboard">Dashboard</button>
       <button class="nav" data-page="search">Real Sailing Search</button>
       <button class="nav" data-page="generator">Scenario Generator</button>
-      <button class="nav" data-page="validator">Scenario Validator</button>
-      <button class="nav" data-page="library">Saved Scenario Library</button>
+            <button class="nav" data-page="library">Saved Scenario Library</button>
       <div class="sidebar-note">
         <strong>Local Scenario Storage</strong>
         <span>Saved scenarios stay in this browser unless exported. Regenerate older scenarios to use the V1.6 trainee layout.</span>
@@ -43,9 +42,9 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.41 • Focus Categories & Detailed Setup</span>
+            <span class="pill">V1.9.43 • Generate Fix + Validator Removed</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
-            <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
+            <p>Search real NCL public sailings, build guided call simulations, and save reusable training scenarios.</p>
             <div class="actions">
               <button class="primary" data-go="search">Find Real Sailing</button>
               <button class="secondary" data-go="generator">Generate Scenario</button>
@@ -70,8 +69,7 @@
               <div class="instruction-step"><span>2</span><div><strong>Find a real sailing when needed</strong><p>Use Real Sailing Search for new-booking exercises. Modification exercises usually use an existing training reservation instead.</p></div></div>
               <div class="instruction-step"><span>3</span><div><strong>Build the scenario</strong><p>Select the department, workflow, scenario focus, guests, booking action, and any required servicing details. Guest Services modifications automatically include the GDPR workflow.</p></div></div>
               <div class="instruction-step"><span>4</span><div><strong>Generate and review</strong><p>Generate the scenario, switch between Trainer and Trainee views, and make adjustments until the exercise matches the skill you want to practice.</p></div></div>
-              <div class="instruction-step"><span>5</span><div><strong>Validate before assigning</strong><p>Run Scenario Validator to catch missing guest information, GDPR requirements, payment conflicts, or other setup issues.</p></div></div>
-              <div class="instruction-step"><span>6</span><div><strong>Share, print, or save</strong><p>Use Share Scenario to download an interactive Trainee or Trainer scenario, or use the other export options for PDF, PNG, copy, and print. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
+              <div class="instruction-step"><span>5</span><div><strong>Share, print, or save</strong><p>Use Share Scenario to download an interactive Trainee or Trainer scenario, or use the other export options for PDF, PNG, copy, and print. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
             </div>
             <div class="instruction-tip"><strong>Tip:</strong> Use <em>Start New Scenario</em> whenever you want to clear the current exercise and begin again without carrying over guest names, reservation numbers, notes, payment details, or the previously generated card.</div>
           </div>
@@ -80,7 +78,7 @@
         <div class="stat-grid">
           <div class="stat"><span>Saved Scenarios</span><strong id="savedCount">0</strong></div>
           <div class="stat"><span>Ready for Trainee</span><strong id="readyCount">0</strong></div>
-          <div class="stat"><span>Needs Review</span><strong id="reviewCount">0</strong></div>
+          <div class="stat"><span>Call Simulations</span><strong id="reviewCount">0</strong></div>
           <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
         </div>
 
@@ -719,8 +717,11 @@
 
           <div class="panel output-panel generated-scenario-panel">
             <div class="generated-success-banner">
-              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Review, share, print, or save it below.</small></div></div>
-              <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Launch the trainee call simulation, or review the standard scenario below.</small></div></div>
+              <div class="generated-success-actions">
+                <button id="launchTraineePresentationBtn" type="button" class="primary presentation-launch-btn">▶ Launch Trainee Presentation</button>
+                <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+              </div>
             </div>
             <div class="generated-tabs" role="tablist" aria-label="Generated scenario view">
               <button type="button" class="generated-tab active" data-generated-tab="scenario">Scenario Output</button>
@@ -734,10 +735,21 @@
                     Share Scenario <span aria-hidden="true">⌄</span>
                   </button>
                   <div id="shareScenarioMenu" class="share-menu interactive-share-menu" role="menu">
-                    <div class="share-menu-group-label">INTERACTIVE SCENARIO</div>
-                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="recommended-share-option interactive-share-primary">
+                    <div class="share-menu-group-label">CALL SIMULATION PRESENTATION</div>
+                    <button id="downloadTraineePresentationBtn" type="button" role="menuitem" class="recommended-share-option presentation-share-primary">
+                      <span class="share-menu-icon">▶</span>
+                      <span><strong>Download Trainee Presentation</strong><small>Recommended — story-first call simulation with reading comprehension, call development, full call flow, and reflection</small></span>
+                    </button>
+                    <button id="downloadTrainerPresentationBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">TR</span>
+                      <span><strong>Download Trainer Presentation</strong><small>Same call simulation plus trainer prompts, expected answers, and coaching guidance</small></span>
+                    </button>
+
+                    <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">INTERACTIVE WORKSHEET</div>
+                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="interactive-share-primary">
                       <span class="share-menu-icon">HTML</span>
-                      <span><strong>Download Interactive Trainee Scenario</strong><small>Recommended — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
+                      <span><strong>Download Interactive Trainee Scenario</strong><small>Alternate format — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
                     </button>
                     <button id="downloadInteractiveTrainerBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">TR</span>
@@ -790,27 +802,6 @@
             </article>
           </div>
         </div>
-      </section>
-
-      <section id="validator" class="page">
-        <div class="section-head">
-          <div><h2>Scenario Validator</h2><p>Checks the scenario against the selected sailing and its own instructions.</p></div>
-          <button id="runValidatorBtn" class="primary">Run Validator</button>
-        </div>
-        <details class="trainer-instructions tab-instructions trainer-only">
-          <summary><span>How to Use Scenario Validator</span><small>Check the exercise before giving it to trainees</small></summary>
-          <div class="instructions-body">
-            <ul>
-              <li>Generate a scenario first, then select <strong>Run Validator</strong>.</li>
-              <li><strong>Errors</strong> are blocking issues that should be fixed before assigning the exercise.</li>
-              <li><strong>Warnings</strong> identify details a trainer should review or verify.</li>
-              <li><strong>Passed</strong> checks confirm that required information is present and internally consistent.</li>
-              <li>For Guest Services modifications, the validator checks reservation identification, GDPR caller type, and special PCC/Direct Group handling when applicable.</li>
-            </ul>
-          </div>
-        </details>
-        <div id="validatorSummary" class="validator-summary"></div>
-        <div id="validatorResults" class="validation-list"></div>
       </section>
 
       <section id="library" class="page">
@@ -910,6 +901,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.41"></script>
+  <script src="/app.js?v=1.9.43"></script>
 </body>
 </html>
