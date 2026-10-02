@@ -38,7 +38,7 @@ fieldset{border:1px solid var(--line);border-radius:12px;margin:18px 0;padding:1
 .inline-form{display:flex;gap:10px;margin-top:14px}.inline-form input{flex:1}details summary{cursor:pointer;font-weight:750}
 .library-actions{display:flex;gap:8px;flex-wrap:wrap}.star{font-size:18px;border:0;background:none}.archived{opacity:.58}
 footer{padding:18px 28px;text-align:center;color:#667085;font-size:12px;border-top:1px solid var(--line);background:#fff}
-.trainee-mode .trainer-only{display:none!important}.trainee-mode #validator{display:none!important}.trainee-mode .sidebar .nav[data-page="validator"]{display:none}.trainee-mode .scenario-paper .trainer-section{display:none}
+.trainee-mode .trainer-only{display:none!important}.trainee-mode .scenario-paper .trainer-section{display:none}
 @media(max-width:1050px){.shell{grid-template-columns:1fr}.sidebar{flex-direction:row;overflow:auto;border-right:0;border-bottom:1px solid var(--line)}.sidebar-note{display:none}.two-col,.hero{grid-template-columns:1fr}.output-panel{position:static}.card-grid{grid-template-columns:repeat(2,1fr)}.search-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:680px){.topbar{padding:18px;align-items:flex-start;flex-direction:column}.content{padding:18px}.form-grid,.search-grid,.stat-grid,.card-grid{grid-template-columns:1fr}.hero{padding:22px}.hero h2{font-size:28px}.sidebar{padding:10px}.nav{white-space:nowrap}.inline-form{flex-direction:column}}
 @media print{.topbar,.sidebar,footer,.output-toolbar,.section-head,.panel:not(.output-panel){display:none!important}.shell{display:block}.content{padding:0}.page{display:none!important}#generator.page{display:block!important}.two-col{display:block}.two-col>.panel:first-child{display:none}.output-panel{border:0;box-shadow:none;padding:0}.scenario-paper{border:0;padding:0}body:not(.print-trainer) .trainer-section{display:none!important}body.print-trainer .trainer-section{display:block!important}}
@@ -1721,3 +1721,77 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 
 /* V1.9.42 trainee call simulation presentation */
 .generated-success-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.presentation-launch-btn{padding:10px 15px!important;box-shadow:0 5px 16px rgba(10,132,189,.16)}.presentation-share-primary{background:#eef8fb!important;border-left:4px solid var(--ncl-blue)!important}.call-simulation-overlay{display:none;position:fixed;inset:0;z-index:3000;background:#e9edf0}.call-simulation-overlay.open{display:grid;grid-template-rows:auto 1fr}.call-simulation-overlay-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 14px;background:#fff;border-bottom:1px solid #d0d5dd;box-shadow:0 4px 16px rgba(16,24,40,.08)}.call-simulation-overlay-bar strong{color:#002b49;font-size:14px}.call-simulation-overlay-bar>div{display:flex;gap:8px}.call-simulation-overlay iframe{width:100%;height:100%;border:0;background:#e9edf0}body.presentation-open{overflow:hidden}@media(max-width:700px){.generated-success-actions{width:100%}.presentation-launch-btn{flex:1}.call-simulation-overlay-bar{align-items:flex-start}.call-simulation-overlay-bar>div{flex-wrap:wrap;justify-content:flex-end}}
+
+
+/* V1.9.44 visual reservation details step */
+.wizard-hidden-bindings{display:none!important}
+#wizardStep3Content #guestStatusTaskControl,#wizardStep3Content #latitudesNumberPanel{display:none!important}
+.reservation-details-visual-shell{display:grid;grid-template-columns:minmax(0,1.65fr) 320px;gap:18px;align-items:start}
+.reservation-details-main{display:flex;flex-direction:column;gap:16px}
+.reservation-details-sidebar{display:flex;flex-direction:column;gap:16px;position:sticky;top:16px}
+.visual-detail-card,.reservation-visual-card,.reservation-sidebar-card{border:1px solid #d7e2ea;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 20px rgba(16,24,40,.04)}
+.visual-detail-card{display:grid;grid-template-columns:170px minmax(180px,240px) minmax(0,1fr);gap:16px;align-items:start}
+.visual-section-icon{width:100%;min-height:108px;border-radius:16px;background:linear-gradient(135deg,#e9f5ff 0%,#d9edf8 100%);position:relative;overflow:hidden}
+.visual-section-icon:before{content:'';position:absolute;inset:18px;border-radius:14px;background:rgba(255,255,255,.55)}
+.visual-section-icon:after{position:absolute;left:24px;bottom:20px;font-size:46px;line-height:1}
+.visual-section-icon.caller:after{content:'☎'}
+.visual-section-icon.rooms:after{content:'🛏️'}
+.visual-section-icon.sailing:after{content:'🛳️'}
+.visual-section-icon.pricing:after{content:'💳'}
+.visual-detail-copy h4,.reservation-visual-header h4{margin:0 0 6px;font-size:18px;color:#17325c}
+.visual-detail-copy p,.reservation-visual-header p{margin:0;color:#667085;line-height:1.45;font-size:13px}
+.visual-detail-controls{display:flex;flex-direction:column;gap:14px;min-width:0}
+.visual-standalone-field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.visual-standalone-field>span,.visual-pref-label,.reservation-guest-count-wrap>span,.visual-status-label{font-size:12px;font-weight:800;color:#17325c}
+.visual-standalone-field input,.visual-standalone-field select{width:100%;min-height:42px;border:1px solid #bcc8d4;border-radius:10px;padding:10px 12px;font:inherit;background:#fff}
+.visual-standalone-field.compact input{min-height:40px}
+.visual-inline-hint{font-size:12px;line-height:1.45;color:#667085}
+.visual-choice-group{display:flex;flex-wrap:wrap;gap:10px}
+.visual-choice-btn{border:1px solid #c7d3de;background:#fff;border-radius:12px;padding:10px 12px;display:flex;align-items:center;justify-content:center;gap:8px;text-align:center;cursor:pointer;transition:.16s ease all;color:#17325c;min-height:46px}
+.visual-choice-btn span{display:flex;flex-direction:column;gap:2px}.visual-choice-btn strong{font-size:13px;line-height:1.2}.visual-choice-btn small{font-size:10px;color:#667085;line-height:1.2;font-weight:600}
+.visual-choice-btn.active{border-color:#117ec5;background:#f1f9ff;box-shadow:0 0 0 3px rgba(17,126,197,.12)}
+.visual-choice-group.count .visual-choice-btn{min-width:46px;padding:0 14px}.visual-choice-group.count .visual-choice-btn span{display:block}.visual-choice-group.count .visual-choice-btn strong{font-size:15px}
+.visual-choice-group.caller .visual-choice-btn{min-width:140px;flex:1 1 0}.visual-choice-icon{font-size:18px}
+.reservation-visual-card{display:flex;flex-direction:column;gap:16px}
+.reservation-visual-header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.reservation-visual-actions{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}.small{padding:9px 12px;font-size:12px}
+.visual-guest-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.visual-guest-card{border:1px solid #dde6ee;background:#f8fbfd;border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.visual-guest-card-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.visual-guest-card-head strong{font-size:15px;color:#17325c}.visual-remove-link{border:0;background:none;color:#98a2b3;font-size:12px}
+.visual-status-toggle{display:flex;flex-wrap:wrap;gap:8px}.visual-status-toggle label{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;border:1px solid #ccd8e3;background:#fff;color:#17325c;cursor:pointer;font-size:12px;font-weight:700}.visual-status-toggle label.active{border-color:#117ec5;background:#eef8ff}.visual-status-toggle input{accent-color:#117ec5}
+.visual-latitudes-wrap.is-hidden{display:none}.visual-card-tip{font-size:12px;color:#667085;line-height:1.4}
+.visual-preference-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.visual-pref-block{display:flex;flex-direction:column;gap:8px}
+.visual-choice-group.tile{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.visual-choice-group.tile .visual-choice-btn{min-height:72px;padding:12px}
+.pricing-inline input{max-width:320px}
+.visual-sailing-summary .selected-sailing{margin:0}.visual-sailing-controls{display:flex;gap:12px;align-items:flex-start}.visual-sailing-controls .visual-sailing-summary{flex:1}
+.visual-pricing-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.reservation-sidebar-card.ship-card{overflow:hidden;padding:0}.ship-hero{height:130px;background:linear-gradient(135deg,#0f5ea8 0%,#5fb3f4 60%,#d6f0ff 100%)}.ship-copy{padding:16px;display:flex;flex-direction:column;gap:4px}.ship-copy strong{font-size:24px;color:#17325c}.ship-copy span{font-size:14px;color:#4b5565}
+.reservation-sidebar-card .selected-sailing{padding:0;border:0;background:transparent}.reservation-sidebar-card .selected-sailing.empty{padding:0}
+.visual-modify-note{padding:18px;border:1px dashed #c8d3df;border-radius:14px;background:#f8fafc;display:flex;flex-direction:column;gap:6px;color:#475467}
+@media(max-width:1280px){.reservation-details-visual-shell{grid-template-columns:1fr}.reservation-details-sidebar{position:static;order:-1}.visual-detail-card{grid-template-columns:120px 1fr}.visual-detail-copy{grid-column:2}.visual-detail-controls{grid-column:1/-1}.reservation-visual-header{flex-direction:column}.visual-pricing-controls,.visual-preference-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.visual-choice-group.caller .visual-choice-btn,.visual-choice-group.tile .visual-choice-btn{min-width:unset}.visual-detail-card{grid-template-columns:1fr}.visual-section-icon{min-height:86px}.visual-guest-grid{grid-template-columns:1fr}.visual-sailing-controls{flex-direction:column}.visual-pricing-controls{grid-template-columns:1fr}}
+
+
+/* V1.9.45 visual additional options step */
+.step3-visual-shell{display:grid;grid-template-columns:minmax(0,1.65fr) 320px;gap:18px;align-items:start}
+.step3-main{display:flex;flex-direction:column;gap:16px}
+.step3-sidebar{position:sticky;top:16px}
+.step3-visual-section{border:1px solid #d7e2ea;background:#fff;border-radius:16px;padding:18px;box-shadow:0 8px 20px rgba(16,24,40,.04);display:flex;flex-direction:column;gap:16px}
+.step3-section-copy{display:grid;grid-template-columns:54px minmax(0,1fr);gap:14px;align-items:start}
+.step3-section-icon{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#eaf6ff;color:#0d78bb;font-size:24px;font-weight:800}
+.step3-section-copy h4{margin:2px 0 5px;font-size:19px;color:#17325c}.step3-section-copy p{margin:0;color:#667085;font-size:13px;line-height:1.45}
+.step3-option-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.price-program-options{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}
+.step3-option-tile,.step3-add-tile{position:relative;min-height:92px;border:1px solid #cbd8e3;background:#fff;border-radius:13px;padding:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;color:#17325c;cursor:pointer;transition:.16s ease all}
+.step3-option-tile:hover,.step3-add-tile:hover{border-color:#83bfe2;background:#f8fcff}.step3-option-tile.active{border-color:#117ec5;background:#eef8ff;box-shadow:0 0 0 3px rgba(17,126,197,.11)}
+.step3-option-icon{font-size:23px;font-weight:800;color:#0e7fbe}.step3-option-tile strong,.step3-add-tile strong{font-size:12px;line-height:1.25}.step3-option-tile small{font-size:10px;line-height:1.3;color:#667085}.step3-selected-mark{position:absolute;right:8px;top:7px;color:#0a7bb8;font-weight:900;font-size:11px}
+.step3-other-field{display:flex;flex-direction:column;gap:6px}.step3-other-field span,.step3-inline-field>span,.step3-assignment-label,.step3-air-choice-label{font-size:12px;font-weight:800;color:#17325c}.step3-other-field em,.step3-inline-field em{font-weight:500;color:#98a2b3;font-style:normal}.step3-other-field input,.step3-inline-field input,.step3-inline-field select{min-height:42px;border:1px solid #bdc9d5;border-radius:10px;padding:9px 11px;background:#fff;font:inherit;width:100%}
+.step3-air-guests{display:grid;gap:12px}.step3-air-guest-card{border:1px solid #dfe7ee;border-radius:14px;background:#f9fcfe;padding:14px;display:flex;flex-direction:column;gap:10px}.step3-air-guest-head{display:flex;gap:10px;align-items:baseline}.step3-air-guest-head span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#667085;font-weight:800}.step3-air-guest-head strong{font-size:15px;color:#17325c}
+.step3-air-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.step3-air-choice{border:1px solid #cbd8e3;background:#fff;border-radius:10px;padding:9px 10px;min-height:42px;color:#294260;font-size:11px;font-weight:700;cursor:pointer}.step3-air-choice.active{border-color:#117ec5;background:#eef8ff;color:#0d5d8f}.step3-air-choice-grid.transfers{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}.step3-air-meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}.step3-air-meta.is-muted{opacity:.55}
+.step3-add-buttons,.step3-coupon-type-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}.step3-add-tile{min-height:78px}.step3-add-tile>span{font-size:21px;color:#0e7fbe;font-weight:800}.step3-add-tile.coupon-type>span{font-size:13px;border:1px solid #8ec4e3;border-radius:999px;padding:4px 8px;background:#eef8ff}
+.step3-entry-list{display:grid;gap:12px}.step3-assignment-card{border:1px solid #dbe5ed;border-radius:14px;padding:14px;background:#fbfdff;display:flex;flex-direction:column;gap:10px}.step3-assignment-card.accessibility{background:#fbfcff}.step3-assignment-card.coupon{background:#fffdfa}.step3-assignment-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.step3-assignment-head>div{display:flex;flex-direction:column;gap:4px}.step3-assignment-head strong{font-size:14px;color:#17325c}.step3-mini-badge{font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-weight:900;color:#0e7fbe}.step3-remove{border:0;background:none;color:#9a4750;font-size:11px;font-weight:700;cursor:pointer}
+.step3-guest-chips{display:flex;gap:8px;flex-wrap:wrap}.step3-guest-chip{border:1px solid #cbd8e3;background:#fff;border-radius:999px;padding:7px 10px;font-size:11px;font-weight:700;color:#294260;cursor:pointer}.step3-guest-chip.active{border-color:#117ec5;background:#eef8ff;color:#0e659a}.step3-coupon-source{font-size:11px;color:#667085;background:#f5f8fa;border-radius:8px;padding:8px 10px}.step3-empty-state{padding:14px;border:1px dashed #c8d5df;border-radius:12px;color:#667085;background:#fafcfd;font-size:12px}
+.task-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+.assignment-section{background:#fcfeff}.step3-assignment-summary{display:flex;flex-direction:column;gap:10px}.step3-reservation-tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}.step3-reservation-tabs button{border:1px solid #ccd9e3;background:#fff;border-radius:10px;padding:9px 12px;color:#294260;display:flex;flex-direction:column;gap:2px;cursor:pointer}.step3-reservation-tabs button.active{border-color:#117ec5;background:#0f5f96;color:#fff}.step3-reservation-tabs button strong{font-size:12px}.step3-reservation-tabs button small{font-size:10px;opacity:.78}.step3-reservation-level{display:flex;flex-direction:column;gap:4px;background:#f4f9fc;border-radius:10px;padding:11px 12px}.step3-reservation-level strong{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#17325c}.step3-reservation-level span{font-size:12px;color:#4d5d70}.step3-summary-guest{display:grid;grid-template-columns:minmax(190px,260px) minmax(0,1fr);gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid #e9eef2}.step3-summary-guest:last-child{border-bottom:0}.step3-summary-person{display:flex;flex-direction:column;gap:3px}.step3-summary-person strong{font-size:13px;color:#17325c}.step3-summary-person span{font-size:10px;color:#3f8a66;font-weight:700}.step3-summary-tags{display:flex;gap:7px;flex-wrap:wrap}.step3-summary-tags span{font-size:10px;border:1px solid #d1dee7;background:#fff;border-radius:8px;padding:6px 8px;color:#41566d}.step3-summary-tags .empty{color:#98a2b3;font-style:italic}
+@media(max-width:1280px){.step3-visual-shell{grid-template-columns:1fr}.step3-sidebar{position:static;order:-1}.task-options{grid-template-columns:1fr 1fr 1fr}}
+@media(max-width:900px){.step3-air-meta,.step3-summary-guest{grid-template-columns:1fr}.task-options{grid-template-columns:1fr}.step3-option-grid,.price-program-options{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.step3-option-grid,.price-program-options,.step3-add-buttons,.step3-coupon-type-grid{grid-template-columns:1fr}.step3-section-copy{grid-template-columns:44px 1fr}.step3-section-icon{width:44px;height:44px;font-size:20px}}

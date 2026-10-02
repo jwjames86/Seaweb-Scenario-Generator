@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const makeUuid = () => (globalThis.crypto?.randomUUID ? globalThis.makeUuid() : `seaweb-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`);
+const makeUuid = () => (globalThis.crypto?.randomUUID ? globalThis.crypto.randomUUID() : `seaweb-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`);
 const state = {
   mode: "trainer",
   selectedSailing: null,
@@ -1376,13 +1376,21 @@ function refreshTrainingCardPanel(preferredProfile){
 }
 
 function collectLatitudesNumbers(){
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return visualCards.map(card=>(card.querySelector('.visual-latitudes-input')?.value||'').trim());
+  }
   const count=effectiveFormGuestCount();
-  return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
+  return Array.from({length:count},(_,i)=>(document.querySelector(`#latitudesGuestFields #latitudeNumber${i+1}`)?.value||'').trim());
 }
 
 function collectPastGuestFlags(){
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return visualCards.map(card=>!!card.querySelector('.visual-past-radio')?.checked);
+  }
   const count=effectiveFormGuestCount();
-  return Array.from({length:count},(_,i)=>!!$(`pastGuest${i+1}`)?.checked);
+  return Array.from({length:count},(_,i)=>!!document.querySelector(`#latitudesGuestFields #pastGuest${i+1}`)?.checked);
 }
 
 function guestDisplayName(index){
@@ -1465,14 +1473,10 @@ function getGuestProfileMix(d){
 }
 
 const couponTypes=[
-  "CruiseNext Credit",
   "Future Cruise Credit (FCC)",
+  "CruiseNext Credit",
   "CruiseFirst Credit",
-  "10% Discount Coupon",
-  "Percentage Discount Coupon",
-  "Latitudes / Guest Coupon",
-  "Promotional / Partner Coupon",
-  "Other Credit / Coupon"
+  "Discount Coupon"
 ];
 let couponRowSequence=0;
 
@@ -2499,12 +2503,12 @@ function scenarioData(){
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
-    couponEnabled:couponWorkflowRequested(),
-    coupons:couponWorkflowRequested()?collectCoupons():[],
-    specialRequests:specialRequestFocusActive()?collectSpecialRequests():[],
-    adaNeeds:adaFocusActive()?collectAdaNeeds():[],
-    pricePrograms:priceProgramFocusActive()?collectPricePrograms():{},
-    airGuestSelections:(airFocusActive()||$("airToggle")?.checked)?collectAirGuestSelections():[],
+    couponEnabled:couponWorkflowRequested()||collectCoupons().length>0,
+    coupons:collectCoupons(),
+    specialRequests:collectSpecialRequests(),
+    adaNeeds:collectAdaNeeds(),
+    pricePrograms:collectPricePrograms(),
+    airGuestSelections:collectAirGuestSelections(),
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
     curriculumObjective:metas.map(m=>m.objective).join(" | "),
@@ -3861,7 +3865,7 @@ function createFollowUpRoleplay(){
   const sourceCard=current.card||currentTrainingCard();
   const now=new Date().toISOString();
   const d={...current,id:makeUuid(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
-  d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();runValidator();$("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";$("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
+  d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();$("scenarioStatus").textContent="Ready for Trainee";$("scenarioStatus").className="status-badge ready";updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
 }
 
 function updateFollowUpRoleplayButton(){
@@ -3930,9 +3934,9 @@ function generateScenario(){
     ${trainerGuideHtml(d,meta,approachText,s)}`;
 
   $("scenarioOutput").innerHTML=html;
-  d.html=html;state.currentScenario=d;runValidator();
-  $("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";
-  $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
+  d.html=html;state.currentScenario=d;
+  $("scenarioStatus").textContent="Ready for Trainee";
+  $("scenarioStatus").className="status-badge ready";
   updateRoleplayScenarioButton();
   updateFollowUpRoleplayButton();
   return d;
@@ -3977,283 +3981,6 @@ $("followUpRoleplayDialog").addEventListener("click",e=>{if(e.target===$("follow
 
 $("generateBtn").onclick=generateScenario;
 $("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
-
-function runValidator(){
-  const d=state.currentScenario||scenarioData(), s=d.sailing, checks=[];
-  const add=(severity,title,detail)=>checks.push({severity,title,detail});
-  const meta=currentFocusMeta()||{};
-  const metas=selectedFocusMetas();
-
-  if(d.followUpRoleplay){
-    const cfg=d.followUpConfig||{};
-    add("passed","Follow-up servicing roleplay","Uses the reservation created in the original practice scenario.");
-    add("passed","Reservation verification rule","Reservation Number is REQUIRED before discussing or servicing the reservation.");
-    add("passed","GDPR caller path",d.gdprCallerType==="travel_agent"?"Travel Agent GDPR":"Direct Guest GDPR");
-    if(d.gdprCallerType==="travel_agent"&&!cfg.agency)add("warning","Travel Agency identifier not entered","Provide an Agency ID or agency phone number for the Travel Agent GDPR path.");
-    if(!(cfg.changes||[]).length&&!cfg.customChanges)add("error","No servicing change selected","Choose at least one follow-up change or enter a custom caller request.");
-    else add("passed","Servicing request configured",[...(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),cfg.customChanges?"Custom request details":null].filter(Boolean).join(" • "));
-    if(d.cardRequired&&d.card)add("passed","Training payment fallback included",`${d.card.label||"Training Card"} • TRAINING / TEST DATA ONLY`);
-    if(d.confirmation&&d.email)add("passed","Updated confirmation required",d.email);
-    if(d.commenting)add("passed","Compass comments required","The generated roleplay requires reservation comments.");
-    state.validation=checks;
-    renderValidator();
-    return checks;
-  }
-
-  if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
-  else add("passed","Department selected",`${d.department} • ${focusNamesForData(d).join(" + ")}`);
-  add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
-  if(d.reservationWorkflow==="new"&&!d.guest1 && !metas.some(m=>m.kind==="demo"))add("error","Missing primary guest","Guest 1 is required for new-reservation trainee scenarios.");
-  else if(d.guest1)add("passed","Primary guest present",d.guest1);
-  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo") && !isMultipleReservationScenario(d))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
-  if(isMultipleReservationScenario(d) && d.reservationWorkflow==="new"){
-    const reservations=Array.isArray(d.reservations)?d.reservations:[];
-    if(reservations.length<2){
-      add("error","Multiple reservation details missing","Multiple Reservations requires at least two separate reservation profiles.");
-    }else{
-      reservations.forEach((r,i)=>{
-        const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
-        if(!names[0])add("error",`Reservation ${i+1} primary guest missing`,`Enter the primary guest name for Reservation ${i+1}.`);
-        const missing=names.map((name,j)=>!name?j+1:null).filter(Boolean);
-        if(missing.length)add("warning",`Reservation ${i+1} guest name${missing.length===1?' is':'s are'} blank`,`Enter or intentionally leave blank Guest ${missing.join(", Guest ")} for Reservation ${i+1}.`);
-        if(!r.category)add("warning",`Reservation ${i+1} stateroom missing`,`Choose a stateroom category for Reservation ${i+1}.`);
-      });
-      add("passed",`${reservations.length} reservation profiles configured`,reservations.map((r,i)=>`${r.guestCount} guest${r.guestCount===1?'':'s'} in Reservation ${i+1}`).join(' • '));
-      add("passed","Reservation relationship",d.reservationRelationship||"Same Sailing / Linked");
-    }
-  }
-  if(d.latitudes){
-    const mix=getGuestProfileMix(d);
-    const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
-    if(missing.length)add("warning","Past Guest Latitudes number missing",`Guest ${missing.join(", Guest ")} ${missing.length===1?"is":"are"} marked Past Guest but missing a training Latitudes number.`);
-    else add("passed","Guest status configured",`${mix.pastCount} Past Guest${mix.pastCount===1?"":"s"} • ${mix.newCount} New Guest${mix.newCount===1?"":"s"}.`);
-  }
-
-  if(isMultipleAuthorizedAny(d)){
-    if(d.reservationWorkflow!=="new")add("error","Multiple-reservation workflow mismatch","This scenario must use Create New Reservation.");
-    if(d.newCallerType!=="direct_us")add("error","Caller type mismatch","Maria Lopez is a Direct Guest — U.S. caller.");
-    if(d.guestCount!==4)add("warning","Travel party should contain four guests","Maria, Sofia, Ana and Luis are traveling across two reservations.");
-    if(d.category!=="Balcony" || d.reservations?.[1]?.category!=="Balcony")add("warning","Balcony category expected","Both reservations require connecting Balcony staterooms.");
-    if(d.reservationRelationship!=="Connecting")add("warning","Connecting rooms required","The Authorized Person scenario requires two staterooms that actually connect, not just adjacent rooms.");
-    if(d.payment!=="Initial Deposit")add("warning","Separate deposits required","Process the $250 deposit on each reservation separately.");
-    if(!d.cardRequired||!d.card)add("error","Training card required","Maria is paying both deposits with the training credit card.");
-    if(d.sailing){
-      if(isMultipleAuthorizedCruisetourScenario(d) && String(d.sailing.ship||"").toLowerCase()!=="pride of america")add("error","Pride of America required","The Cruisetour scenario must use Pride of America.");
-      if(isMultipleAuthorizedCruisetourScenario(d) && !/honolulu/i.test(d.sailing.departure||""))add("warning","Honolulu departure expected","Verify the selected Pride of America sailing departs Honolulu.");
-      if(isMultipleAuthorizedScenario(d) && !/galveston/i.test(d.sailing.departure||""))add("warning","Galveston departure expected","The standard scenario requires a March 2027 Caribbean sailing from Galveston.");
-    }else{
-      add("warning","Select the training sailing","Use Real Sailing Search to choose the exact March 2027 sailing before assigning the scenario.");
-    }
-    add("passed","Authorized Person requirement","Parents' reservation must include: Authorized Person: Maria Lopez, CC 0000.");
-    add("passed","TWITH requirement","Both reservations must be linked using TWITH before ending the call.");
-    if(isMultipleAuthorizedCruisetourScenario(d))add("passed","Cruisetour requirement","Use the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour with the 4-day pre-cruise component on both reservations.");
-  }
-
-  if(isSoloStudioScenario(d)){
-    if(d.reservationWorkflow!=="new")add("error","Solo practice workflow mismatch","Solo Guest / Studio Booking must use Create New Reservation.");
-    if(d.newCallerType!=="travel_agent")add("error","Solo practice caller mismatch","Kyle James must be set as a Travel Agent caller.");
-    if(d.guestCount!==1)add("error","Solo occupancy mismatch","This practice scenario requires exactly 1 guest.");
-    if(d.category!=="Studio / Solo")add("warning","Studio category not selected","The Solo practice requires a Studio category.");
-    if(d.payment!=="Minimum Deposit")add("warning","Minimum deposit expected","The Solo practice requires taking the minimum deposit.");
-  }
-
-  if(isAddGuestUpgradeRoleplay(d)){
-    if(d.reservationWorkflow!=="modify")add("error","Service roleplay workflow mismatch","Add Guest & Upgrade Stateroom – Roleplay must use Modify Existing Reservation.");
-    if(d.gdprCallerType!=="travel_agent")add("error","Travel Agent GDPR required","Kyle James is the Travel Agent caller for this roleplay.");
-    if(d.modificationType!=="add_guest")add("error","Add Guest modification required","The service roleplay must use Add Guest.");
-    if(d.modificationLatitudes!=="272279126")add("warning","Taylor Latitudes number","Expected training Latitudes #272279126 for Taylor.");
-    add("passed","Reservation verification rule","Reservation Number is REQUIRED before servicing the reservation.");
-  }
-
-  if(d.department==="Guest Services"){
-    if(d.reservationWorkflow==="new"){
-      const caller=newReservationCallerInfo(d.newCallerType);
-      if(caller.type==="direct_us"){
-        if(String(d.agency)!=="5")add("error","Direct Guest agency mismatch","Direct Guest — US must use Agency 5.");
-        else add("passed","Caller / booking source","Direct Guest — US • Agency 5");
-      }else if(caller.type==="direct_ca"){
-        if(String(d.agency)!=="7")add("error","Direct Guest agency mismatch","Direct Guest — Canada must use Agency 7.");
-        else add("passed","Caller / booking source","Direct Guest — Canada • Agency 7");
-      }else{
-        if(!d.agency)add("error","Travel Agent identifier missing","Enter the Travel Agent's Agency ID or phone number.");
-        else if(["5","7"].includes(String(d.agency)))add("error","Travel Agent identifier invalid","Agency 5 and Agency 7 are Direct Guest bookings. Enter the Travel Agent's Agency ID or phone number.");
-        else add("passed","Caller / booking source",`Travel Agent • Agency ID / Phone: ${d.agency}`);
-      }
-      if(focusNamesForData(d).includes("Agencies: TA Booking") && caller.type!=="travel_agent"){
-        add("error","Caller type does not match scenario focus","Agencies: TA Booking requires Caller Type = Travel Agent.");
-      }
-    }else{
-      const source=guestServicesAgencyInfo(d.agency);
-      if(source.type==="unknown"){
-        add("error","Agency / booking identifier missing","Use Agency 5 for a US Direct Guest, Agency 7 for a Canadian Direct Guest, or enter the Travel Agent's Agency ID / phone number.");
-      }else if(source.type==="direct_us"){
-        add("passed","Guest Services booking source","Agency 5 • Direct Guest (US)");
-        if(d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 5 is always a Direct Guest. Use the Direct Guest GDPR requirements.");
-      }else if(source.type==="direct_ca"){
-        add("passed","Guest Services booking source","Agency 7 • Direct Guest (Canada)");
-        if(d.gdprCallerType!=="direct_guest")add("error","GDPR caller mismatch","Agency 7 is always a Direct Guest from Canada. Use the Direct Guest GDPR requirements.");
-      }else{
-        add("passed","Guest Services Travel Agent identifier",`Agency ID / Phone: ${d.agency}`);
-        if(["travel_agent","ta_group"].includes(d.gdprCallerType)){
-          add("passed","Travel Agent caller setup","Travel Agent booking uses an Agency ID / phone number and the Travel Agent GDPR path.");
-        }
-        if(d.gdprCallerType==="direct_guest"){
-          add("error","Agency / caller mismatch","Direct Guest bookings should use Agency 5 (US) or Agency 7 (Canada), not a Travel Agent identifier.");
-        }
-      }
-    }
-  }else if(d.department==="Outbound Sales"){
-    if(!d.agency)add("error","Outbound agency missing","Choose the market/currency agency before assigning the scenario.");
-    else add("passed","Outbound market agency selected",`${d.market}`);
-  }
-
-  if(d.reservationWorkflow==="modify"){
-    if(isReinstateRoleplay(d)){
-      if(d.department!=="Guest Services")add("error","Roleplay department mismatch","Reinstate Cancelled Reservation – Roleplay is designed for Guest Services.");
-      if(d.modificationType!=="cancel_reinstate")add("error","Roleplay workflow mismatch","This roleplay must use Cancel / Reinstate Reservation.");
-      if(!["direct_guest","travel_agent","ta_group"].includes(d.gdprCallerType))add("warning","Select the roleplay caller type","Choose Direct Guest or Travel Agent based on the cancelled reservation being used.");
-      else add("passed","Roleplay caller type selected",gdprProfile(d.gdprCallerType)?.label||d.gdprCallerType);
-      add("passed","Roleplay verification rule","Reservation Number is REQUIRED before servicing the reservation.");
-    }
-    if(d.existingReservationNumber)add("passed","Existing reservation identified",d.existingReservationNumber);
-    else add("warning","Training reservation number not entered","Enter the previously created training reservation number or provide it to the trainee separately.");
-
-    if(d.department==="Guest Services"){
-      const profile=gdprProfile(d.gdprCallerType);
-      if(!profile)add("error","GDPR caller type required","Guest Services modifications must identify the caller / reservation type so the correct GDPR verification can be completed.");
-      else add("passed","GDPR verification required",`${profile.label} • Ask primary items first • Reservation Number always mandatory${["travel_agent","ta_group"].includes(d.gdprCallerType)?" • Agency identifier mandatory for Travel Agent path":""}`);
-      if(["travel_agent","ta_group"].includes(d.gdprCallerType) && ["5","7"].includes(String(d.agency).trim())){
-        add("error","Travel Agent identifier required","Agency 5 and Agency 7 are Direct Guest bookings. Enter the Travel Agent's Agency ID or phone number for a Travel Agent / TA Group scenario.");
-      }
-      if(d.gdprCallerType==="pcc_guest")add("info","PCC Guest handling included",pccActionText(d));
-      if(d.gdprCallerType==="direct_group")add("info","Direct Group transfer included",directGroupActionText(d));
-    }
-
-    add("passed","Modification selected",modificationLabel(d.modificationType));
-    if(d.modificationType==="add_guest" && d.modificationGuestStatus==="past" && !d.modificationLatitudes){
-      add("warning","Past Guest being added is missing Latitudes number","Enter the training Latitudes number or instruct the trainee to verify it in Seaweb.");
-    }
-  }else{
-    if(s){
-      add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
-      if(!s.sailingDate){
-        add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
-      }else if(s.sailingDateSourceType==="ncl"){
-        add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
-      }else if(s.sailingDateSourceType==="public-schedule"){
-        add("warning","Public schedule date selected",`${formatSailingDate(s.sailingDate)} • ${s.sailingDateSource||"Public schedule"}. Verify the final date in NCL.com U.S. or Seaweb before class.`);
-      }else{
-        add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer. Verify it in NCL.com U.S. or Seaweb before class.`);
-      }
-      if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
-      if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
-      else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
-      if(s.ports?.length) add("info","Port-of-call review available","Confirm any scenario-specific port requirement after selecting the sailing rather than over-filtering the initial search.");
-    }else add("warning","No real sailing attached","Trainer must verify ship, itinerary and dates manually.");
-
-    if(d.pricing)add("info","Trainer-entered pricing","Pricing is not being treated as verified public data. Reconfirm in Seaweb before class.");
-    else add("passed","No fabricated pricing","The scenario instructs the trainee to quote the current Seaweb price.");
-
-    if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
-    else add("passed","Category instruction is explicit",d.category);
-  }
-
-  if(specialRequestFocusActive() || (d.specialRequests||[]).length){
-    if(!(d.specialRequests||[]).length)add("warning","Special requests not specified","Choose the exact special request and the guest it applies to.");
-    else d.specialRequests.forEach((item,i)=>{if(!item.guest)add("error",`Special Request ${i+1} guest missing`,`Choose which guest the request applies to.`);if(!item.type)add("error",`Special Request ${i+1} type missing`,`Choose the type of special request.`);if(item.guest&&item.type)add("passed",`Special Request ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
-  }
-
-  if(adaFocusActive() || (d.adaNeeds||[]).length){
-    if(!(d.adaNeeds||[]).length)add("error","Accessibility need not specified","ADA / Special Requests requires the trainer to identify the guest and the type of accessibility need.");
-    else d.adaNeeds.forEach((item,i)=>{if(!item.guest)add("error",`Accessibility Need ${i+1} guest missing`,`Choose which guest has the accessibility need.`);if(!item.type)add("error",`Accessibility Need ${i+1} type missing`,`Choose the type of accessibility need.`);if(item.guest&&item.type)add("passed",`Accessibility Need ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
-  }
-
-  if(priceProgramFocusActive() || priceProgramLabels(d.pricePrograms).length){
-    const programs=priceProgramLabels(d.pricePrograms);
-    if(!programs.length)add("error","Price Programs not selected","Choose ALL4CHO or the specific Free at Sea components / price programs being added.");
-    else add("passed","Price Programs configured",programs.join(" • "));
-  }
-
-  if(couponWorkflowRequested() || (d.coupons||[]).length){
-    if(!(d.coupons||[]).length){
-      add("warning","Credits / coupons not specified","This scenario includes a credit/coupon workflow. Add each training credit/coupon and identify the source guest and Latitudes number.");
-    }else{
-      d.coupons.forEach((item,i)=>{
-        const n=i+1;
-        if(!item.type)add("error",`Credit / Coupon ${n} type missing`,`Choose the credit or coupon being applied.`);
-        if(!item.guest)add("error",`Credit / Coupon ${n} source guest missing`,`Identify which guest owns the credit/coupon.`);
-        if(!item.latitudes)add("error",`Credit / Coupon ${n} Latitudes number missing`,`Enter the training Latitudes number the credit/coupon is being applied from.`);
-        if(item.type&&item.guest&&item.latitudes)add("passed",`Credit / Coupon ${n} configured`,`${couponLabel(item)} • ${item.guest} • Latitudes # ${item.latitudes}`);
-      });
-    }
-  }
-
-  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length){
-    const configured=d.airGuestSelections.filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");
-    if(airFocusActive()&&!configured.length)add("error","Air / Transfers not configured","Select the air type and/or transfer setup for at least one guest.");
-    configured.forEach((item,i)=>{
-      const meta=airProgramMeta(item.airProgram),label=airGuestTypes.find(a=>a.value===item.airProgram)?.label||"No NCL Air";
-      add("passed",`Air / Transfer guest setup ${i+1}`,`${item.guest||"Guest"} • ${label}${item.gateway?` • ${item.gateway}`:""} • ${item.transfers}`);
-      if(item.airProgram!=="none"&&!meta)add("error",`Air type missing for ${item.guest||`Guest ${i+1}`}`,"Choose the applicable NCL Air product.");
-      if(item.airProgram==='bundled'){const eligibility=bundledAirEligibility({...d,airProgram:'bundled',airTripType:item.tripType});if(eligibility.status==='ineligible')add("error",`Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);else add("warning",`Verify Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);}
-    });
-  }
-
-  if(d.airEnabled && !(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length)){
-    const airMeta=airProgramMeta(d.airProgram);
-    if(!airMeta){
-      add("error","NCL Air Program not selected","Choose the applicable NCL Air Program before assigning the scenario.");
-    }else{
-      add("passed","Air program selected",`${airMeta.label} • ${airTripLabel(d)}`);
-      if(airMeta.nclAir)add("info","Pre-cruise transfer reminder","Remove the pre-cruise transfer because NCL Air guests are scheduled to arrive at least one day before embarkation. Review hotel and related ground-transportation responsibility.");
-    }
-    if(d.airProgram==="bundled"){
-      const eligibility=bundledAirEligibility(d);
-      if(eligibility.status==="ineligible")add("error","Bundled Air sailing is not eligible",eligibility.message);
-      else add("warning","Verify Bundled Air sailing eligibility",eligibility.message);
-      if(d.airTripType==="one_way")add("info","Bundled Air one-way pricing","Use 50% of the applicable promotional air pricing for the selected gateway.");
-    }
-    if(d.airProgram==="independent_no_flights"){
-      add("info","Independent Air transfer setup","Use T1 / flight 999, the approved generic time ranges, and the correct airport transfer.");
-      if(d.airTripType==="one_way")add("warning","Verify Independent Air one-way setup","The source article describes required information for both outbound and inbound flight records. Confirm the intended one-way training setup in NCLHelp before class.");
-    }
-  }
-
-  if(/\bada\b|accessible/i.test(focusSearchText(d))){
-    if(d.category!=="ADA / Accessible")add("error","ADA category mismatch","This training focus requires an ADA / accessible stateroom category. Do not assign a standard Balcony/Oceanview/Inside category.");
-    else add("passed","Accessible category aligned","ADA / Accessible is selected and location/side should remain availability-driven.");
-  }
-
-  if(d.cardRequired){
-    if(!d.card)add("error","Training credit card missing","This scenario requires a card payment, but no training card profile is attached.");
-    else add("passed","Training credit card included",`${d.card.label} • TRAINING / TEST DATA ONLY`);
-    if(metas.some(m=>m.cardRequired) && ["No Payment / Service Only","Offer / Hold only","FCC / CruiseNext","Refund / Reinstate"].includes(d.payment)) add("warning","Payment action may conflict with curriculum","The selected training focus is tagged as requiring a card payment, but the current payment action may not collect one.");
-    if(!metas.some(m=>m.cardRequired) && paymentActionNeedsCard()) add("info","Trainer-added card payment","This variation adds a card payment even though the source curriculum focus does not require one by default.");
-  }else add("passed","Payment method aligned","No training credit card is required for this focus by default.");
-
-  if((focusSearchText(d).includes("fcc")||focusSearchText(d).includes("price programs")) && d.payment!=="FCC / CruiseNext" && !focusSearchText(d).includes("price programs")) add("warning","FCC workflow review","Confirm the selected payment action preserves the offer-first coupon/FCC workflow.");
-  if(d.confirmation && !d.email)add("error","Confirmation email missing","Confirmation is required but no training email is entered.");
-  else if(d.confirmation)add("passed","Confirmation task included",d.email);
-  if(metas.some(m=>m.commenting) && !d.commenting)add("warning","Commenting Tool expected","The current curriculum focus includes reservation notation/comments.");
-
-  if(d.html){
-    if(d.html.includes("Thank you for choosing Norwegian Cruise Line."))add("passed","Branded closing present","Required NCL closing is included.");
-    else add("warning","Branded closing missing","Add the appropriate NCL branded closing.");
-    if(/Category & Category/i.test(d.html))add("warning","Repeated heading detected","Review duplicated wording in the scenario.");
-  }
-  add("info","Cabin-specific attributes need Seaweb verification","Capacity, exact square footage, minibar, exact inventory, policy deadlines, and internal promo codes are not inferred from public NCL search data.");
-  state.validation=checks;
-  renderValidator();
-  return checks;
-}
-$("runValidatorBtn").onclick=()=>{runValidator();go("validator")};
-function blockingErrors(){return state.validation.some(c=>c.severity==="error")}
-function renderValidator(){
-  const errors=state.validation.filter(x=>x.severity==="error").length;
-  const warnings=state.validation.filter(x=>x.severity==="warning").length;
-  $("validatorSummary").innerHTML=state.validation.length?`<div class="notice ${errors?"error":warnings?"warning":"success"}"><strong>${errors?`${errors} blocking error${errors>1?"s":""}`:warnings?`${warnings} warning${warnings>1?"s":""}`:"Scenario ready for trainee"}</strong>${errors?" — resolve errors before assigning.":warnings?" — review recommended.":" — no blocking errors detected."}</div>`:"";
-  $("validatorResults").innerHTML=state.validation.map(c=>`<div class="validation-item ${c.severity}"><strong>${c.severity.toUpperCase()} • ${escapeHtml(c.title)}</strong><span>${escapeHtml(c.detail)}</span></div>`).join("");
-}
 
 function ensureScenarioReady(){
   if(!state.currentScenario) generateScenario();
@@ -5369,7 +5096,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.42",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.45",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -6196,7 +5923,7 @@ function saved(){try{return JSON.parse(localStorage.getItem("seawebScenarios")||
 function setSaved(items){localStorage.setItem("seawebScenarios",JSON.stringify(items));updateStats()}
 $("saveScenarioBtn").onclick=()=>{
   if(!state.currentScenario)generateScenario();
-  state.currentScenario.validationStatus=blockingErrors()?"Needs Review":"Ready";
+  state.currentScenario.validationStatus="Ready";
   const items=saved(), idx=items.findIndex(x=>x.id===state.currentScenario.id);
   if(idx>=0)items[idx]=state.currentScenario; else items.unshift(state.currentScenario);
   setSaved(items);flash("Scenario saved to this browser.");
@@ -6204,8 +5931,8 @@ $("saveScenarioBtn").onclick=()=>{
 function updateStats(){
   const items=saved().filter(x=>!x.archived);
   $("savedCount").textContent=items.length;
-  $("readyCount").textContent=items.filter(x=>x.validationStatus==="Ready").length;
-  $("reviewCount").textContent=items.filter(x=>x.validationStatus!=="Ready").length;
+  $("readyCount").textContent=items.length;
+  $("reviewCount").textContent=items.length;
   $("favoriteCount").textContent=items.filter(x=>x.favorite).length;
 }
 function renderLibrary(){
@@ -6219,7 +5946,7 @@ function renderLibrary(){
     <div class="result-card ${x.archived?"archived":""}">
       <div style="display:flex;justify-content:space-between;gap:12px">
         <div>
-          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span>${(x.focuses||[x.type]).filter(Boolean).slice(0,3).map(f=>`<span class="chip">${escapeHtml(f)}</span>`).join("")}<span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ${x.validationStatus==="Ready"?"ready":"review"}">${escapeHtml(x.validationStatus||"Draft")}</span></div>
+          <div class="meta"><span class="chip">${escapeHtml(x.department||"Legacy")}</span>${(x.focuses||[x.type]).filter(Boolean).slice(0,3).map(f=>`<span class="chip">${escapeHtml(f)}</span>`).join("")}<span class="chip">${escapeHtml(x.difficulty)}</span><span class="status-badge ready">Saved</span></div>
           <h3>${escapeHtml(x.title)}</h3>
           <div class="muted">${escapeHtml(x.sailing?.ship||"No real sailing")} ${x.sailing?.title?"• "+escapeHtml(x.sailing.title):""}</div>
           <div class="muted" style="font-size:11px;margin-top:6px">Updated ${new Date(x.updatedAt).toLocaleString()}</div>
@@ -6322,7 +6049,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";$("scenarioStatus").textContent="Ready for Trainee";$("scenarioStatus").className="status-badge ready";updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderAdditionalOptionsVisual();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -6430,6 +6157,8 @@ function showGeneratorWizardStep(step){
     const num=btn.querySelector('.wizard-step-number');
     if(num)num.textContent=stepNum<normalized?'✓':String(stepNum);
   });
+  if(normalized===2)renderReservationDetailsVisual();
+  if(normalized===3)renderAdditionalOptionsVisual();
   if(normalized===4)renderWizardReviewSummary();
   $("generatorWizard")?.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -6459,6 +6188,341 @@ function setupGeneratedScreenTabs(){
   }));
 }
 
+
+function currentSelectedSailingSummaryHtml(){
+  return $('selectedSailingSummary')?.innerHTML || '<div class="selected-sailing empty">No real sailing selected yet.</div>';
+}
+
+function reservationHiddenIds(number){
+  if(number===1)return {guestCount:'guestCount',category:'category',location:'locationPref',side:'sidePref',pricing:'pricing'};
+  if(number===2)return {guestCount:'reservation2GuestCount',category:'reservation2Category',location:'reservation2LocationPref',side:'reservation2SidePref',pricing:'reservation2Pricing'};
+  return {guestCount:`reservation${number}GuestCount`,category:`reservation${number}Category`,location:`reservation${number}LocationPref`,side:`reservation${number}SidePref`,pricing:`reservation${number}Pricing`};
+}
+
+function reservationGuestInputId(number,index){
+  if(number===1){
+    if(index===1)return 'guest1';
+    if(index===2)return 'guest2';
+    return `reservation1Guest${index}`;
+  }
+  if(number===2){
+    if(index===1)return 'reservation2Guest1';
+    if(index===2)return 'reservation2Guest2';
+    return `reservation2Guest${index}`;
+  }
+  return `reservation${number}Guest${index}`;
+}
+
+function step2ProfileDefaults(){
+  const total=effectiveFormGuestCount();
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return {
+      flags:visualCards.map(card=>!!card.querySelector('.visual-past-radio')?.checked),
+      numbers:visualCards.map(card=>(card.querySelector('.visual-latitudes-input')?.value||'').trim())
+    };
+  }
+  const hiddenFlags=Array.from({length:total},(_,i)=>!!document.querySelector(`#latitudesGuestFields #pastGuest${i+1}`)?.checked);
+  const hiddenNumbers=Array.from({length:total},(_,i)=>(document.querySelector(`#latitudesGuestFields #latitudeNumber${i+1}`)?.value||'').trim());
+  const anyHidden=hiddenFlags.some(Boolean)||hiddenNumbers.some(Boolean);
+  if(anyHidden)return {flags:hiddenFlags,numbers:hiddenNumbers};
+  return {flags:Array.from({length:total},()=>true),numbers:Array.from({length:total},()=>"")};
+}
+
+function visualChoiceButtons(targetId,options,current,kind='chip'){
+  return `<div class="visual-choice-group ${kind}" data-target="${escapeAttr(targetId)}">${options.map(opt=>{
+    const value=typeof opt==='string'?opt:opt.value;
+    const label=typeof opt==='string'?opt:(opt.label||opt.value);
+    const active=String(current)===String(value);
+    const icon=(typeof opt==='object'&&opt.icon)?`<span class="visual-choice-icon">${opt.icon}</span>`:'';
+    const sub=(typeof opt==='object'&&opt.sub)?`<small>${escapeHtml(opt.sub)}</small>`:'';
+    return `<button type="button" class="visual-choice-btn ${active?'active':''}" data-target="${escapeAttr(targetId)}" data-value="${escapeAttr(value)}">${icon}<span><strong>${escapeHtml(label)}</strong>${sub}</span></button>`;
+  }).join('')}</div>`;
+}
+
+function paymentActionSelectMarkup(){
+  const source=$('paymentAction');
+  if(!source)return '';
+  return `<label class="visual-standalone-field"><span>Payment / Booking Action</span><select id="visualPaymentAction">${source.innerHTML}</select></label>`;
+}
+
+function visualGuestCardMarkup(reservationNumber,guestNumber,globalIndex,name,profile){
+  const past=!!profile?.past;
+  const number=profile?.number||'';
+  return `<div class="visual-guest-card" data-guest-index="${globalIndex}" data-reservation="${reservationNumber}">
+    <div class="visual-guest-card-head"><strong>${guestNumber===1?'Guest 1 (Primary)':`Guest ${guestNumber}`}</strong><button type="button" class="visual-remove-link ${guestNumber<=2?'hidden-field':''}" data-unused="true">Remove</button></div>
+    <label class="visual-standalone-field compact"><span>Full Name</span><input class="visual-guest-name-input" data-source-id="${reservationGuestInputId(reservationNumber,guestNumber)}" value="${escapeAttr(name||'')}" placeholder="${escapeAttr(`Reservation ${reservationNumber} guest ${guestNumber}`)}" /></label>
+    <div class="visual-guest-status-row">
+      <div class="visual-status-label">Guest Status</div>
+      <div class="visual-status-toggle">
+        <label class="${!past?'active':''}"><input type="radio" class="visual-status-radio visual-new-radio" name="visualGuestStatus${globalIndex}" value="new" ${!past?'checked':''}/> <span>New Guest</span></label>
+        <label class="${past?'active':''}"><input type="radio" class="visual-status-radio visual-past-radio" name="visualGuestStatus${globalIndex}" value="past" ${past?'checked':''}/> <span>Past Guest</span></label>
+      </div>
+    </div>
+    <label class="visual-standalone-field compact visual-latitudes-wrap ${past?'':'is-hidden'}"><span>Latitudes Number</span><input class="visual-latitudes-input" inputmode="numeric" maxlength="12" value="${escapeAttr(number)}" placeholder="Latitudes number" /></label>
+    <div class="visual-card-tip">${past?'Past Guest — this Latitudes number will carry into the scenario.':'New Guest — no Latitudes number is required.'}</div>
+  </div>`;
+}
+
+function reservationVisualCardMarkup(number,globalStartIndex,profileData,multi){
+  const data=reservationFormData(number);
+  const ids=reservationHiddenIds(number);
+  const guestOptions=Array.from({length:8},(_,i)=>({value:String(i+1),label:String(i+1)}));
+  const categoryOptions=['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible'];
+  const locationOptions=['Any','Forward','Midship','Aft'];
+  const sideOptions=['Any','Port','Starboard'];
+  let guestCards='';
+  for(let i=0;i<data.guestCount;i++){
+    const globalIndex=globalStartIndex+i+1;
+    guestCards += visualGuestCardMarkup(number,i+1,globalIndex,data.guests[i]||'',{past:!!profileData.flags[globalIndex-1],number:profileData.numbers[globalIndex-1]||''});
+  }
+  return `<section class="reservation-visual-card" data-reservation-card="${number}">
+    <div class="reservation-visual-header">
+      <div><h4>${multi?`Reservation ${number}`:'Guests & Stateroom'}</h4><p>${multi?'Add the guests and room preferences for this reservation.':'Enter guest names, guest type, Latitudes number (if applicable), and stateroom preferences.'}</p></div>
+      <div class="reservation-visual-actions">
+        <div class="reservation-guest-count-wrap"><span>Number of Guests</span>${visualChoiceButtons(ids.guestCount,guestOptions,String(data.guestCount),'count')}</div>
+        ${number===1?'<button type="button" class="secondary small visual-generate-names-btn">✦ Generate Fictional Names</button>':''}
+      </div>
+    </div>
+    <div class="visual-guest-grid">${guestCards}</div>
+    <div class="visual-preference-grid">
+      <div class="visual-pref-block"><span class="visual-pref-label">Stateroom Category</span>${visualChoiceButtons(ids.category,categoryOptions,data.category||'Balcony','tile')}</div>
+      <div class="visual-pref-block"><span class="visual-pref-label">Location Preference</span>${visualChoiceButtons(ids.location,locationOptions,data.location||'Any','tile')}</div>
+      <div class="visual-pref-block"><span class="visual-pref-label">Side Preference</span>${visualChoiceButtons(ids.side,sideOptions,data.side||'Any','tile')}</div>
+    </div>
+    <label class="visual-standalone-field pricing-inline"><span>${multi?`Reservation ${number} Advertised Pricing (optional)`:'Advertised Pricing (optional)'}</span><input id="visualPricing${number}" data-source-id="${ids.pricing}" value="${escapeAttr(data.pricing||'')}" placeholder="$1,559 pp / $3,118 total" /></label>
+  </section>`;
+}
+
+function renderReservationDetailsVisual(){
+  const host=$('reservationDetailsVisual');
+  if(!host)return;
+  const workflow=$('reservationWorkflow')?.value||'new';
+  if(workflow!=='new'){
+    host.innerHTML='<div class="visual-modify-note"><strong>Modification scenario</strong><span>This workflow continues to use the standard modification setup below.</span></div>';
+    host.classList.add('is-modify');
+    return;
+  }
+  host.classList.remove('is-modify');
+  const profileData=step2ProfileDefaults();
+  const multi=multipleReservationFormActive();
+  const totalReservations=multi?multipleReservationTotal():1;
+  let start=0;
+  let reservationsHtml='';
+  for(let n=1;n<=totalReservations;n++){
+    reservationsHtml += reservationVisualCardMarkup(n,start,profileData,multi);
+    start += reservationFormData(n).guestCount;
+  }
+  const callerCurrent=$('newCallerType')?.value||'direct_us';
+  const callerOptions=[{value:'direct_us',label:'Direct Guest',sub:'U.S.',icon:'👤'},{value:'direct_ca',label:'Direct Guest',sub:'Canada',icon:'🌐'},{value:'travel_agent',label:'Travel Agent',sub:'Agency / TA booking',icon:'👥'}];
+  host.innerHTML=`<div class="reservation-details-visual-shell">
+    <div class="reservation-details-main">
+      <section class="visual-detail-card visual-caller-card">
+        <div class="visual-section-icon caller"></div>
+        <div class="visual-detail-copy"><h4>Caller & Booking Source</h4><p>Who is calling and which booking source should be used?</p></div>
+        <div class="visual-detail-controls">
+          ${visualChoiceButtons('newCallerType',callerOptions,callerCurrent,'caller')}
+          <label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" /></label>
+          <div class="visual-inline-hint">${escapeHtml($('agencyHint')?.textContent||'')}</div>
+        </div>
+      </section>
+      ${multi?`<section class="visual-detail-card visual-reservation-count-card"><div class="visual-section-icon rooms"></div><div class="visual-detail-copy"><h4>Total Reservations</h4><p>Choose how many stateroom reservations should be included in this scenario.</p></div><div class="visual-detail-controls"><div class="reservation-guest-count-wrap"><span>Reservations</span>${visualChoiceButtons('reservationCount',Array.from({length:7},(_,i)=>({value:String(i+2),label:String(i+2)})),String(totalReservations),'count')}</div><div class="visual-inline-hint">Each reservation below has its own guests, stateroom preferences, and pricing field.</div></div></section>`:''}
+      ${reservationsHtml}
+      <section class="visual-detail-card visual-sailing-card">
+        <div class="visual-section-icon sailing"></div>
+        <div class="visual-detail-copy"><h4>Sailing Details</h4><p>Use a real NCL sailing when the scenario requires one.</p></div>
+        <div class="visual-detail-controls visual-sailing-controls"><div class="visual-sailing-summary">${currentSelectedSailingSummaryHtml()}</div><button type="button" class="secondary visual-change-sailing-btn">Find / Change Sailing</button></div>
+      </section>
+      <section class="visual-detail-card visual-pricing-card">
+        <div class="visual-section-icon pricing"></div>
+        <div class="visual-detail-copy"><h4>Pricing & Booking Action</h4><p>Set the payment action and confirmation email for this scenario.</p></div>
+        <div class="visual-detail-controls visual-pricing-controls">${paymentActionSelectMarkup()}<label class="visual-standalone-field"><span>Training Confirmation Email</span><input id="visualConfirmationEmail" value="${escapeAttr($('confirmationEmail')?.value||'')}" /></label></div>
+      </section>
+    </div>
+    <aside class="reservation-details-sidebar">
+      <div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Select a real sailing when needed')}</span></div></div>
+      <div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div>
+    </aside>
+  </div>`;
+
+  const visualPayment=$('visualPaymentAction');
+  if(visualPayment){visualPayment.value=$('paymentAction')?.value||visualPayment.value; visualPayment.addEventListener('change',()=>{$('paymentAction').value=visualPayment.value;renderWizardReviewSummary();});}
+  $('visualAgencyField')?.addEventListener('input',e=>{$('agency').value=e.target.value;syncAgencyCallerLogic();renderWizardReviewSummary();});
+  $('visualConfirmationEmail')?.addEventListener('input',e=>{$('confirmationEmail').value=e.target.value;renderWizardReviewSummary();});
+  host.querySelectorAll('[data-source-id]').forEach(input=>input.addEventListener('input',e=>{const src=$(e.target.dataset.sourceId); if(src){src.value=e.target.value; if(src.id==='guest1'||src.id==='guest2'||src.id.startsWith('reservation')) refreshGuestDependentConfigs(); renderWizardReviewSummary();}}));
+  host.querySelectorAll('.visual-choice-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=$(btn.dataset.target); if(!target)return;
+    target.value=btn.dataset.value;
+    if(target.id==='newCallerType')syncAgencyCallerLogic();
+    if(target.id==='guestCount' || /reservation\d+GuestCount/.test(target.id) || target.id==='reservationCount'){
+      updateMultipleReservationUI();
+      refreshCouponGuestOptions();
+      refreshFocusConfigurationPanels();
+      renderReservationDetailsVisual();
+      renderWizardReviewSummary();
+      return;
+    }
+    renderReservationDetailsVisual();
+    renderWizardReviewSummary();
+  }));
+  host.querySelectorAll('.visual-status-radio').forEach(radio=>radio.addEventListener('change',()=>{
+    const card=radio.closest('.visual-guest-card');
+    const isPast=card.querySelector('.visual-past-radio')?.checked;
+    card.querySelectorAll('.visual-status-toggle label').forEach(label=>label.classList.remove('active'));
+    if(isPast){card.querySelector('.visual-past-radio')?.closest('label')?.classList.add('active');} else {card.querySelector('.visual-new-radio')?.closest('label')?.classList.add('active');}
+    card.querySelector('.visual-latitudes-wrap')?.classList.toggle('is-hidden',!isPast);
+    const tip=card.querySelector('.visual-card-tip'); if(tip) tip.textContent=isPast?'Past Guest — this Latitudes number will carry into the scenario.':'New Guest — no Latitudes number is required.';
+    if(!isPast && card.querySelector('.visual-latitudes-input')) card.querySelector('.visual-latitudes-input').value='';
+    renderWizardReviewSummary();
+  }));
+  host.querySelectorAll('.visual-latitudes-input').forEach(input=>input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,''); renderWizardReviewSummary();}));
+  host.querySelector('.visual-generate-names-btn')?.addEventListener('click',()=>{$('generateNamesBtn')?.click(); setTimeout(renderReservationDetailsVisual,25);});
+  host.querySelector('.visual-change-sailing-btn')?.addEventListener('click',()=>go('search'));
+}
+
+
+function visualToggleTile(id,label,icon,sub=''){
+  const input=$(id);
+  const active=!!input?.checked;
+  return `<button type="button" class="step3-option-tile ${active?'active':''}" data-step3-toggle="${escapeAttr(id)}"><span class="step3-option-icon">${icon}</span><strong>${escapeHtml(label)}</strong>${sub?`<small>${escapeHtml(sub)}</small>`:''}<span class="step3-selected-mark">${active?'✓':''}</span></button>`;
+}
+
+function priceProgramVisualTile(id,label,icon,sub=''){
+  const active=!!$(id)?.checked;
+  return `<button type="button" class="step3-option-tile ${active?'active':''}" data-price-program="${escapeAttr(id)}"><span class="step3-option-icon">${icon}</span><strong>${escapeHtml(label)}</strong>${sub?`<small>${escapeHtml(sub)}</small>`:''}<span class="step3-selected-mark">${active?'✓':''}</span></button>`;
+}
+
+function guestChipsMarkup(selected,index,kind){
+  return `<div class="step3-guest-chips">${guestOptionRecords().map((g,i)=>`<button type="button" class="step3-guest-chip ${g.value===selected?'active':''}" data-${kind}-index="${index}" data-guest-value="${escapeAttr(g.value)}">${escapeHtml(g.label)}</button>`).join('')}</div>`;
+}
+
+function renderVisualSpecialEntries(){
+  const host=$('visualSpecialEntries');if(!host)return;
+  const rows=[...document.querySelectorAll('#specialRequestRows .focus-config-row')];
+  const adaRows=[...document.querySelectorAll('#adaNeedRows .focus-config-row')];
+  const requestCards=rows.map((row,i)=>{
+    const type=row.querySelector('.special-request-type')?.value||'';
+    const guest=row.querySelector('.focus-config-guest')?.value||'';
+    const detail=row.querySelector('.special-request-detail')?.value||'';
+    return `<div class="step3-assignment-card"><div class="step3-assignment-head"><div><span class="step3-mini-badge">SPECIAL REQUEST</span><strong>${escapeHtml(type||'Choose request type')}</strong></div><button type="button" class="step3-remove" data-special-remove="${i}">Remove</button></div><label class="step3-inline-field"><span>Exact Request</span><select data-special-type="${i}"><option value="">Choose request...</option>${specialRequestTypes.map(v=>`<option ${type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><div class="step3-assignment-label">Assign to Guest</div>${guestChipsMarkup(guest,i,'special-guest')}<label class="step3-inline-field"><span>Details <em>optional</em></span><input data-special-detail="${i}" value="${escapeAttr(detail)}" placeholder="Allergy, celebration, location, or other details" /></label></div>`;
+  });
+  const adaCards=adaRows.map((row,i)=>{
+    const type=row.querySelector('.ada-need-type')?.value||'';
+    const guest=row.querySelector('.focus-config-guest')?.value||'';
+    const detail=row.querySelector('.ada-need-detail')?.value||'';
+    return `<div class="step3-assignment-card accessibility"><div class="step3-assignment-head"><div><span class="step3-mini-badge">ACCESSIBILITY / ADA</span><strong>${escapeHtml(type||'Choose accessibility need')}</strong></div><button type="button" class="step3-remove" data-ada-remove="${i}">Remove</button></div><label class="step3-inline-field"><span>Accessibility Need</span><select data-ada-type="${i}"><option value="">Choose need...</option>${adaNeedTypes.map(v=>`<option ${type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><div class="step3-assignment-label">Assign to Guest</div>${guestChipsMarkup(guest,i,'ada-guest')}<label class="step3-inline-field"><span>Details <em>optional</em></span><input data-ada-detail="${i}" value="${escapeAttr(detail)}" placeholder="Mobility, equipment, assistance, or accommodation details" /></label></div>`;
+  });
+  const all=[...requestCards,...adaCards];
+  host.innerHTML=all.length?all.join(''):'<div class="step3-empty-state">No special or accessibility requests added yet.</div>';
+}
+
+function renderVisualCouponEntries(){
+  const host=$('visualCouponEntries');if(!host)return;
+  const rows=[...document.querySelectorAll('#couponRows .coupon-row')];
+  host.innerHTML=rows.length?rows.map((row,i)=>{
+    const type=row.querySelector('.coupon-type')?.value||'';
+    const guest=row.querySelector('.coupon-guest')?.value||'';
+    const lat=row.querySelector('.coupon-latitudes')?.value||latitudeForGuestName(guest)||'';
+    const detail=row.querySelector('.coupon-detail')?.value||'';
+    return `<div class="step3-assignment-card coupon"><div class="step3-assignment-head"><div><span class="step3-mini-badge">CREDIT / COUPON</span><strong>${escapeHtml(type||'Choose credit / coupon')}</strong></div><button type="button" class="step3-remove" data-coupon-remove="${i}">Remove</button></div><div class="step3-assignment-label">Guest Using Credit / Coupon</div>${guestChipsMarkup(guest,i,'coupon-guest')}<div class="step3-coupon-source">${lat?`Latitudes # <strong>${escapeHtml(lat)}</strong>`:'Select a Past Guest to use their Latitudes number when applicable.'}</div><label class="step3-inline-field"><span>Details / Value <em>optional</em></span><input data-coupon-detail="${i}" value="${escapeAttr(detail)}" placeholder="Example: 10% off, $250, certificate #..." /></label></div>`;
+  }).join(''):'<div class="step3-empty-state">Choose a credit or coupon above to add it to the scenario.</div>';
+}
+
+function renderVisualAirGuests(){
+  const host=$('visualAirGuests');if(!host)return;
+  if(!$('airGuestRows')?.children.length)renderAirGuestRows();
+  const items=collectAirGuestSelections();
+  const guests=guestOptionRecords();
+  host.innerHTML=guests.map((g,i)=>{
+    const item=items[i]||{guest:g.value,airProgram:'none',tripType:'round_trip',gateway:'',transfers:'No NCL Transfers'};
+    return `<div class="step3-air-guest-card"><div class="step3-air-guest-head"><span>Guest ${i+1}</span><strong>${escapeHtml(g.label)}</strong></div><div class="step3-air-choice-label">Air Type</div><div class="step3-air-choice-grid">${airGuestTypes.map(a=>`<button type="button" class="step3-air-choice ${item.airProgram===a.value?'active':''}" data-air-index="${i}" data-air-program="${a.value}">${escapeHtml(a.label)}</button>`).join('')}</div><div class="step3-air-choice-label">Ground Transfers</div><div class="step3-air-choice-grid transfers">${transferTypes.map(t=>`<button type="button" class="step3-air-choice ${item.transfers===t?'active':''}" data-transfer-index="${i}" data-transfer-value="${escapeAttr(t)}">${escapeHtml(t)}</button>`).join('')}</div><div class="step3-air-meta ${item.airProgram==='none'?'is-muted':''}"><label class="step3-inline-field"><span>Itinerary</span><select data-air-trip="${i}" ${item.airProgram==='none'?'disabled':''}><option value="round_trip" ${item.tripType!=='one_way'?'selected':''}>Round Trip</option><option value="one_way" ${item.tripType==='one_way'?'selected':''}>One Way</option></select></label><label class="step3-inline-field"><span>Gateway / Airport</span><input data-air-gateway="${i}" value="${escapeAttr(item.gateway||'')}" placeholder="MIA, JFK, FLL..." ${item.airProgram==='none'?'disabled':''}/></label></div></div>`;
+  }).join('');
+}
+
+function reservationForGuestIndex(index){
+  if(!multipleReservationFormActive())return 1;
+  let cursor=0;
+  for(let n=1;n<=multipleReservationTotal();n++){
+    const count=reservationFormData(n).guestCount;
+    if(index>=cursor && index<cursor+count)return n;
+    cursor+=count;
+  }
+  return 1;
+}
+
+function renderStep3AssignmentSummary(activeReservation){
+  const host=$('visualAssignmentSummary');if(!host)return;
+  const total=multipleReservationFormActive()?multipleReservationTotal():1;
+  const active=Math.max(1,Math.min(total,+activeReservation||+host.dataset.activeReservation||1));
+  host.dataset.activeReservation=String(active);
+  const names=formGuestNames();
+  const flags=collectPastGuestFlags();
+  const numbers=collectLatitudesNumbers();
+  const specials=collectSpecialRequests();
+  const ada=collectAdaNeeds();
+  const coupons=collectCoupons();
+  const air=collectAirGuestSelections();
+  const programs=priceProgramLabels(collectPricePrograms());
+  const tabs=total>1?`<div class="step3-reservation-tabs">${Array.from({length:total},(_,i)=>{const n=i+1;const guests=names.filter((_,idx)=>reservationForGuestIndex(idx)===n);return `<button type="button" class="${n===active?'active':''}" data-summary-reservation="${n}"><strong>Reservation ${n}</strong><small>${guests.length} Guest${guests.length===1?'':'s'}</small></button>`;}).join('')}</div>`:'';
+  const guestRows=names.map((name,i)=>({name,index:i,reservation:reservationForGuestIndex(i)})).filter(x=>x.reservation===active).map(x=>{
+    const s=specials.filter(v=>v.guest===x.name).map(v=>v.type);
+    const a=ada.filter(v=>v.guest===x.name).map(v=>v.type);
+    const c=coupons.filter(v=>v.guest===x.name).map(v=>v.type);
+    const airItem=air[x.index];
+    const tags=[];
+    if(airItem&&(airItem.airProgram!=='none'||airItem.transfers!=='No NCL Transfers'))tags.push(airGuestTypes.find(v=>v.value===airItem.airProgram)?.label||'Air / Transfers');
+    tags.push(...s,...a,...c);
+    return `<div class="step3-summary-guest"><div class="step3-summary-person"><strong>${escapeHtml(x.name||`Guest ${x.index+1}`)}</strong><span>${flags[x.index]?`Past Guest${numbers[x.index]?` • Latitudes # ${escapeHtml(numbers[x.index])}`:''}`:'New Guest'}</span></div><div class="step3-summary-tags">${tags.length?tags.map(t=>`<span>${escapeHtml(t)}</span>`).join(''):'<span class="empty">No guest-specific options assigned</span>'}</div></div>`;
+  }).join('');
+  host.innerHTML=`${tabs}<div class="step3-reservation-level"><strong>Reservation ${active} Programs</strong><span>${programs.length?escapeHtml(programs.join(' • ')):'No price programs selected'}</span></div>${guestRows||'<div class="step3-empty-state">No guests found for this reservation.</div>'}`;
+}
+
+function renderAdditionalOptionsVisual(){
+  const host=$('additionalOptionsVisual');if(!host)return;
+  const programs=collectPricePrograms();
+  const coupons=collectCoupons();
+  host.innerHTML=`<div class="step3-visual-shell"><div class="step3-main">
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">%</div><div><h4>Price Programs</h4><p>Select the program(s) to include. ALL4CHO includes Unlimited Open Bar, Specialty Dining, Internet, and Shore Excursions.</p></div></div><div class="step3-option-grid price-program-options">${priceProgramVisualTile('programAll4cho','ALL4CHO','ALL4CHO','All four Free at Sea components')}${priceProgramVisualTile('programOpenBar','Unlimited Open Bar','≈')}${priceProgramVisualTile('programDining','Specialty Dining','🍽')}${priceProgramVisualTile('programInternet','Internet','⌁')}${priceProgramVisualTile('programShoreEx','Shore Excursions','⚓')}${priceProgramVisualTile('programPsc','PPSRVCHG','▣','Prepaid Service Charges')}${priceProgramVisualTile('programKosher','Kosher Meals','✡')}${priceProgramVisualTile('programFlexnet','FlexNet','▤','Travel Agent promotion')}${priceProgramVisualTile('programAmexcpp','AMEXCPP','▥','Travel Agent promotion')}</div><label class="step3-other-field"><span>Other Price Program / TA Promotion <em>optional</em></span><input id="visualProgramOther" value="${escapeAttr(programs.other||'')}" placeholder="Enter another program or promotion" /></label></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✈</div><div><h4>Air &amp; Transfers</h4><p>Configure air and transfer choices independently for each guest. Guests can have different air products or no air at all.</p></div></div><div id="visualAirGuests" class="step3-air-guests"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">★</div><div><h4>Special Requests &amp; Accessibility</h4><p>Add exact requests and assign them to the correct guest.</p></div></div><div class="step3-add-buttons"><button type="button" class="step3-add-tile" data-add-special="Food Allergy"><span>⊘</span><strong>Allergy</strong></button><button type="button" class="step3-add-tile" data-add-special="Kosher Meals"><span>🍽</span><strong>Dining</strong></button><button type="button" class="step3-add-tile" data-add-special="Celebration / Cake"><span>★</span><strong>Celebration</strong></button><button type="button" class="step3-add-tile" data-add-ada="Wheelchair User / Limited Mobility"><span>♿</span><strong>Accessibility</strong></button><button type="button" class="step3-add-tile" data-add-special="Other Special Request"><span>•••</span><strong>Other</strong></button></div><div id="visualSpecialEntries" class="step3-entry-list"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">◇</div><div><h4>Coupons / Future Cruise Credits</h4><p>Mix and match credits and coupons by guest. Each selected item can come from a different guest profile.</p></div></div><div class="step3-coupon-type-grid">${couponTypes.map(type=>`<button type="button" class="step3-add-tile coupon-type" data-add-coupon="${escapeAttr(type)}"><span>${type.includes('FCC')?'FCC':type.includes('CruiseNext')?'CN':type.includes('CruiseFirst')?'CF':'%'}</span><strong>${escapeHtml(type)}</strong></button>`).join('')}</div><div id="visualCouponEntries" class="step3-entry-list"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✓</div><div><h4>Other Call Requirements</h4><p>Turn on the remaining scenario tasks you want trainees to complete.</p></div></div><div class="step3-option-grid task-options">${visualToggleTile('commentToggle','Commenting Tool','💬','Reservation comments')}${visualToggleTile('confirmToggle','Guest Confirmation','✉','Send confirmation')}${visualToggleTile('travelToggle','Travel Protection','◈','Norwegian Care discussion')}</div></section>
+    <section class="step3-visual-section assignment-section"><div class="step3-section-copy"><div class="step3-section-icon">👥</div><div><h4>Assign to Guests / Reservations</h4><p>Review where each guest-specific option is assigned before continuing.</p></div></div><div id="visualAssignmentSummary" class="step3-assignment-summary"></div></section>
+  </div><aside class="reservation-details-sidebar step3-sidebar"><div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Additional options for this scenario')}</span></div></div><div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div></aside></div>`;
+
+  renderVisualAirGuests();renderVisualSpecialEntries();renderVisualCouponEntries();renderStep3AssignmentSummary();
+
+  host.querySelectorAll('[data-price-program]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.priceProgram;const input=$(id);if(!input)return;
+    const newValue=!input.checked;
+    input.checked=newValue;
+    if(id==='programAll4cho'&&newValue)['programOpenBar','programDining','programInternet','programShoreEx'].forEach(x=>{if($(x))$(x).checked=false;});
+    if(['programOpenBar','programDining','programInternet','programShoreEx'].includes(id)&&newValue&&$('programAll4cho'))$('programAll4cho').checked=false;
+    syncLegacyPriceProgramToggles();renderAdditionalOptionsVisual();renderWizardReviewSummary();
+  }));
+  $('visualProgramOther')?.addEventListener('input',e=>{$('programOther').value=e.target.value;renderStep3AssignmentSummary();renderWizardReviewSummary();});
+  host.querySelectorAll('[data-step3-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const input=$(btn.dataset.step3Toggle);if(input){input.checked=!input.checked;input.dispatchEvent(new Event('change',{bubbles:true}));}renderAdditionalOptionsVisual();renderWizardReviewSummary();}));
+  host.querySelectorAll('[data-air-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+btn.dataset.airIndex];if(row){row.querySelector('.air-guest-program').value=btn.dataset.airProgram;syncLegacyAirFromGuestRows();}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-transfer-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+btn.dataset.transferIndex];if(row){row.querySelector('.air-guest-transfer').value=btn.dataset.transferValue;syncLegacyAirFromGuestRows();}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-air-trip]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+sel.dataset.airTrip];if(row)row.querySelector('.air-guest-trip').value=sel.value;syncLegacyAirFromGuestRows();renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-air-gateway]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+input.dataset.airGateway];if(row)row.querySelector('.air-guest-gateway').value=input.value;syncLegacyAirFromGuestRows();renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-add-special]').forEach(btn=>btn.addEventListener('click',()=>{addSpecialRequestRow({type:btn.dataset.addSpecial,guest:guestOptionRecords()[0]?.value||''});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-add-ada]').forEach(btn=>btn.addEventListener('click',()=>{addAdaNeedRow({type:btn.dataset.addAda,guest:guestOptionRecords()[0]?.value||''});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-type]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+sel.dataset.specialType];if(row)row.querySelector('.special-request-type').value=sel.value;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+input.dataset.specialDetail];if(row)row.querySelector('.special-request-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-special-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+btn.dataset.specialGuestIndex];if(row)row.querySelector('.focus-config-guest').value=btn.dataset.guestValue;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+btn.dataset.specialRemove];row?.remove();renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-type]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+sel.dataset.adaType];if(row)row.querySelector('.ada-need-type').value=sel.value;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+input.dataset.adaDetail];if(row)row.querySelector('.ada-need-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-ada-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+btn.dataset.adaGuestIndex];if(row)row.querySelector('.focus-config-guest').value=btn.dataset.guestValue;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+btn.dataset.adaRemove];row?.remove();renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-add-coupon]').forEach(btn=>btn.addEventListener('click',()=>{const guest=guestOptionRecords()[0]?.value||'';if($('couponToggle'))$('couponToggle').checked=true;addCouponRow({type:btn.dataset.addCoupon,guest,latitudes:latitudeForGuestName(guest)});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-coupon-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+btn.dataset.couponGuestIndex];if(row){const guest=row.querySelector('.coupon-guest');const lat=row.querySelector('.coupon-latitudes');guest.value=btn.dataset.guestValue;lat.value=latitudeForGuestName(guest.value)||'';}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-coupon-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+input.dataset.couponDetail];if(row)row.querySelector('.coupon-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-coupon-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+btn.dataset.couponRemove];row?.remove();if(!$('couponRows')?.children.length&&$('couponToggle'))$('couponToggle').checked=false;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-summary-reservation]').forEach(btn=>btn.addEventListener('click',()=>renderStep3AssignmentSummary(btn.dataset.summaryReservation)));
+}
+
 function setupGeneratorWizard(){
   const wizard=$("generatorWizard");
   if(!wizard || generatorWizardState.ready)return;
@@ -6482,26 +6546,27 @@ function setupGeneratorWizard(){
   if(focusField)step1.appendChild(focusField);
   if($('trainingDay'))step1.appendChild($('trainingDay'));
 
-  const sailingTools=document.createElement('div');
-  sailingTools.className='wizard-sailing-tools';
-  const findSailing=document.createElement('button');
-  findSailing.type='button';findSailing.className='secondary tiny';findSailing.textContent='Find / Change Sailing';findSailing.onclick=()=>go('search');
-  sailingTools.appendChild(findSailing);
-  wizardSection(step2,{icon:'☎',title:'Caller & Booking Source',subtitle:'Who is calling and which booking source should be used?'},[$("marketAgencyField"),$("agencyField")]);
-  const guestSection=wizardSection(step2,{icon:'♟',title:'Guests & Stateroom',subtitle:'Enter guest names, count, category and location preferences.'},[$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField")]);
-  if(guestSection){
-    const tools=document.createElement('div');tools.className='wizard-inline-tools';tools.appendChild($("generateNamesBtn"));guestSection.querySelector('.wizard-detail-card-body').appendChild(tools);
-  }
-  wizardSection(step2,{icon:'⚓',title:'Sailing Details',subtitle:'Use a real NCL sailing when the scenario requires one.'},[$("selectedSailingSummary"),sailingTools]);
-  wizardSection(step2,{icon:'$',title:'Pricing & Booking Action',subtitle:'Set the payment action, advertised quote, and confirmation email.'},[wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail"))]);
-  if($("multipleReservationPanel"))step2.appendChild($("multipleReservationPanel"));
-  if($("modificationPanel"))step2.appendChild($("modificationPanel"));
+  const reservationVisual=document.createElement('div');
+  reservationVisual.id='reservationDetailsVisual';
+  step2.appendChild(reservationVisual);
+  const hiddenBindings=document.createElement('div');
+  hiddenBindings.className='wizard-hidden-bindings';
+  [$("marketAgencyField"),$("agencyField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
+  step2.appendChild(hiddenBindings);
+  renderReservationDetailsVisual();
 
-  if($("curriculumNote"))step3.appendChild($("curriculumNote"));
+  const additionalVisual=document.createElement('div');
+  additionalVisual.id='additionalOptionsVisual';
+  step3.appendChild(additionalVisual);
+  const step3Hidden=document.createElement('div');
+  step3Hidden.className='wizard-hidden-bindings step3-hidden-bindings';
+  if($("curriculumNote"))step3Hidden.appendChild($("curriculumNote"));
   const scenarioTasks=document.querySelector('#generator fieldset');
-  if(scenarioTasks)step3.appendChild(scenarioTasks);
-  if($("focusConfigurationHub"))step3.appendChild($("focusConfigurationHub"));
-  ["airProgramPanel","latitudesNumberPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
+  if(scenarioTasks)step3Hidden.appendChild(scenarioTasks);
+  if($("focusConfigurationHub"))step3Hidden.appendChild($("focusConfigurationHub"));
+  ["airProgramPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3Hidden.appendChild($(id));});
+  step3.appendChild(step3Hidden);
+  renderAdditionalOptionsVisual();
 
   const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
   const reviewAction=document.createElement('div');
@@ -6566,4 +6631,6 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderWizardReviewSummary();
+
+["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
