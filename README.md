@@ -1150,3 +1150,34 @@ The generated trainee/trainer scenario now includes a dedicated **Scenario-Speci
 - Past Guest Latitudes numbers now display directly in the generated scenario.
 - Multiple-reservation scenarios also show each guest's Past/New Guest status and Latitudes number inside the applicable Reservation card.
 - The existing validator still flags any Past Guest that is missing a required training Latitudes number.
+
+
+## V1.9.42 – Trainee Call Simulation Presentation
+
+The Generator now creates a story-first, presentation-style call simulation in addition to the existing scenario worksheet.
+
+### New trainee presentation
+- **Launch Trainee Presentation** appears prominently after a scenario is generated.
+- The presentation opens full-screen inside the Generator and can also be opened in a separate window.
+- Trainers can download a standalone **Trainee Presentation HTML** to send directly to trainees.
+- A separate **Trainer Presentation** includes coaching prompts and expected-answer guidance.
+
+### Call simulation flow
+The presentation walks trainees through the full customer interaction in stages instead of showing every detail at once:
+1. The Call Begins — realistic caller story and reason for the call.
+2. Reading Comprehension — trainees identify the caller, reason, known details, and what still needs clarification.
+3. Reservation Details — sailing, booking source, stateroom, pricing, reservation count, and payment action.
+4. Guest Profiles — guest status and **Latitudes numbers are displayed for Past Guests**.
+5. The Call Develops — selected special requests, ADA needs, Price Programs, FCC/coupons, and Air/Transfers are revealed as new information during the conversation.
+6. Build the Reservation — interactive task checklist.
+7. Full Call Flow — opening, qualification/verification, research, build, approval, transaction, recap/documentation, satisfaction, and branded closing.
+8. Expected Outcome — final quality check and reservation-number entry.
+9. Reflection — trainee explains the decisions made during the call.
+
+### Interactive behavior
+- Previous / Next navigation and keyboard arrow navigation.
+- Full-screen mode.
+- Trainee response fields and task checkboxes autosave locally.
+- Print / Save PDF prints each presentation slide on its own page.
+- Reset clears responses and progress.
+- The existing Interactive Worksheet, PDF, PNG, print, and copy options remain available as alternate formats.
