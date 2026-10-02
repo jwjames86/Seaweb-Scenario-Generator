@@ -1303,3 +1303,16 @@ Follow-up servicing scenarios now use the actual source reservation and trainer-
 - The **Branded Introduction** conversation now has the caller state the actual servicing request after the Cruise Specialist asks how they can assist.
 - The **Reservation Details** presentation slide now includes a Reason for Call card on follow-up scenarios.
 - Follow-up source snapshots now preserve the complete original guest list rather than only the first two guest fields.
+
+
+## V1.9.49 – Guided Journey Call Simulation
+
+The SEAweb Call Simulation now uses the approved **Option 3 – Guided Journey** design.
+
+### Updates
+- Added a persistent four-stage journey rail: **The Call Begins**, **Listen & Ask**, **Service the Call**, and **Review & Recap**.
+- Rebuilt the opening simulation screen into structured scenario cards for caller, reason for call, sailing details, GDPR/call path, trainee role, and skills.
+- Made **Reservation Number — REQUIRED** the primary visual callout on Guest Services existing-reservation GDPR screens.
+- Added stage-aware navigation so the left journey rail highlights the trainee's current portion of the call and can jump to each stage.
+- Updated responsive and print styling for the new guided layout.
+- Fixed duplicated cruise-duration wording such as **“7-Day 7-Day Caribbean...”** by detecting when the sailing title already includes the duration before adding a duration prefix.
