@@ -3444,9 +3444,18 @@ function multipleReservationDetailsHtml(d){
   if(!isMultipleReservationScenario(d)||isMultipleAuthorizedAny(d))return "";
   const reservations=Array.isArray(d.reservations)?d.reservations:[];
   if(reservations.length<2)return "";
+  const mix=getGuestProfileMix(d);
+  let guestOffset=0;
   const cards=reservations.map((r,i)=>{
     const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
-    const guestItems=names.map((name,j)=>`<li><strong>${escapeHtml(name||`Guest ${j+1}`)}</strong></li>`).join("");
+    const guestItems=names.map((name,j)=>{
+      const globalIndex=guestOffset+j;
+      const isPast=!!(d.latitudes&&mix.flags[globalIndex]);
+      const number=mix.numbers[globalIndex]||"";
+      const status=d.latitudes?(isPast?(number?` • Latitudes #${escapeHtml(number)}`:" • Past Guest — verify Latitudes #"):" • New Guest"):"";
+      return `<li><strong>${escapeHtml(name||`Guest ${j+1}`)}</strong>${status}</li>`;
+    }).join("");
+    guestOffset+=names.length;
     return `<article class="multi-res-card">
       <div class="multi-res-card-head"><span>RESERVATION ${i+1}</span><strong>${escapeHtml(reservationGuestLabel(r,i))}</strong></div>
       <ul>
@@ -3906,6 +3915,7 @@ function generateScenario(){
     ${modificationDetailsVisualHtml(d)}
     ${sailingDetailsVisualHtml(d,pricing)}
     ${guestInformationVisualHtml(d)}
+    ${latitudesScenarioHtml(d)}
     ${offersAddonsVisualHtml(d)}
     ${detailedFocusConfigHtml(d)}
     ${couponScenarioHtml(d)}
@@ -3925,6 +3935,7 @@ function generateScenario(){
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
   updateRoleplayScenarioButton();
   updateFollowUpRoleplayButton();
+  return d;
 }
 
 function updateRoleplayScenarioButton(){
@@ -5165,6 +5176,188 @@ async function copyCardFormatted(){
 }
 
 
+
+function presentationFilename(mode="trainee"){
+  const d=state.currentScenario||scenarioData();
+  const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const focus=(focusTitle(d)||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54);
+  return `${dept}-${focus}-${mode==="trainer"?"Trainer":"Trainee"}-Call-Simulation.html`;
+}
+
+function presentationSailText(d){
+  const s=d.sailing;
+  if(!s)return "Trainer-selected Norwegian Cruise Line sailing";
+  return [s.ship||"Norwegian Cruise Line",s.title||"Cruise",s.sailingDate?formatSailingDate(s.sailingDate):((s.sailingMonths||[]).join(", ")||"Date to verify"),s.departure?`From ${s.departure}`:""].filter(Boolean).join(" • ");
+}
+
+function presentationCallerLabel(d){
+  if(isMultipleAuthorizedAny(d))return "Maria Lopez";
+  if(isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))return "Kyle James — Travel Agent";
+  if(d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent")return `Travel Agent${d.agency?` • ${d.agency}`:""}`;
+  if(d.reservationWorkflow==="modify")return d.guest1||"Existing reservation caller";
+  return scenarioGuestNames(d).filter(Boolean)[0]||"Guest";
+}
+
+function presentationStoryHtml(d){
+  const records=(d.focuses||[]).map(name=>allFocusRecords(d.department).find(r=>r.meta.name===name)).filter(Boolean);
+  const meta=records[0]?.meta||{};
+  const guests=scenarioGuestNames(d).filter(Boolean);
+  const s=d.sailing;
+  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
+  return customerStoryHtml(d,meta,sailText,guests);
+}
+
+function presentationGuestRows(d){
+  const names=scenarioGuestNames(d);
+  const flags=Array.isArray(d.pastGuestFlags)?d.pastGuestFlags:[];
+  const nums=Array.isArray(d.latitudesNumbers)?d.latitudesNumbers:[];
+  return names.map((name,i)=>({
+    name:name||`Guest ${i+1}`,
+    status:flags[i]===false?"New Guest":"Past Guest",
+    latitudes:flags[i]===false?"Not applicable":(nums[i]||"Not entered")
+  }));
+}
+
+function presentationReservationCards(d){
+  if(d.multipleReservations&&Array.isArray(d.reservations)&&d.reservations.length){
+    return d.reservations.map((r,i)=>`<div class="sim-info-card"><span>Reservation ${i+1}</span><strong>${escapeHtml((r.guests||[]).filter(Boolean).join(" & ")||`Reservation ${i+1}`)}</strong><small>${escapeHtml([r.category,r.location,r.side].filter(Boolean).join(" • ")||"Stateroom details to verify")}</small></div>`).join("");
+  }
+  return `<div class="sim-info-card"><span>Stateroom</span><strong>${escapeHtml(d.category||"Verify in Seaweb")}</strong><small>${escapeHtml([d.location,d.side].filter(Boolean).join(" • ")||"No location preference")}</small></div>`;
+}
+
+function presentationDevelopments(d){
+  const items=[];
+  (d.specialRequests||[]).forEach(x=>items.push({icon:"★",title:`${x.guest||"Guest"} shares a special request`,text:`${x.type||"Special Request"}${x.detail?` — ${x.detail}`:""}`}));
+  (d.adaNeeds||[]).forEach(x=>items.push({icon:"♿",title:`Accessibility information for ${x.guest||"Guest"}`,text:`${x.type||"Accessibility Need"}${x.detail?` — ${x.detail}`:""}`}));
+  const programs=priceProgramLabels(d.pricePrograms);
+  if(programs.length)items.push({icon:"◆",title:"The caller discusses price programs",text:programs.join(" • ")});
+  (d.coupons||[]).forEach(x=>items.push({icon:"%",title:`${x.guest||"A guest"} wants to use a credit or discount`,text:`${couponLabel(x)}${x.latitudes?` • Source Latitudes # ${x.latitudes}`:""}`}));
+  (d.airGuestSelections||[]).filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers").forEach(x=>items.push({icon:"✈",title:`Air / transfers for ${x.guest||"Guest"}`,text:`${airGuestTypes.find(a=>a.value===x.airProgram)?.label||"No NCL Air"}${x.airProgram!=="none"?` • ${x.tripType==="one_way"?"One Way":"Round Trip"}`:""}${x.gateway?` • ${x.gateway}`:""} • ${x.transfers||"No NCL Transfers"}`}));
+  if(d.travel)items.push({icon:"◇",title:"Travel Protection",text:"The caller wants Norwegian Care / Travel Protection included or discussed."});
+  if(!items.length)items.push({icon:"i",title:"Continue the conversation",text:"No additional caller developments were preselected. Use the scenario focus and NCLHelp to guide the interaction."});
+  return items;
+}
+
+function presentationBuildTasks(d){
+  const records=(d.focuses||[]).map(name=>allFocusRecords(d.department).find(r=>r.meta.name===name)).filter(Boolean);
+  const meta=records[0]?.meta||{};
+  return fullTaskList(d,meta).slice(0,14);
+}
+
+function presentationOutcomeItems(d){
+  const items=[];
+  if(d.multipleReservations)items.push(`${d.reservationCount||d.reservations?.length||2} related reservations completed and linked when required.`);
+  else if(d.reservationWorkflow==="modify")items.push("The requested servicing change is completed accurately on the existing reservation.");
+  else items.push("The reservation is created with the correct sailing, guests, stateroom, and selected options.");
+  if((d.specialRequests||[]).length)items.push("Special requests are attached to the correct guest(s).");
+  if((d.adaNeeds||[]).length)items.push("Accessibility needs are documented and handled using the correct Seaweb / NCLHelp workflow.");
+  if(priceProgramLabels(d.pricePrograms).length)items.push("The selected price programs and promotions are applied exactly as requested.");
+  if((d.coupons||[]).length)items.push("Credits and coupons are applied from the correct guest profile and in the correct sequence.");
+  if((d.airGuestSelections||[]).some(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers"))items.push("Air and transfer selections match each individual guest's request.");
+  if(d.payment!=="No Payment / Service Only")items.push(`The ${d.payment||"required payment"} is completed or explained correctly.`);
+  if(d.commenting)items.push("Required reservation comments are completed.");
+  if(d.confirmation)items.push("The appropriate confirmation(s) are sent.");
+  items.push("The caller receives a complete recap, satisfaction check, and branded closing.");
+  return [...new Set(items)];
+}
+
+function buildCallSimulationSlides(d,mode="trainee"){
+  const guests=presentationGuestRows(d);
+  const developments=presentationDevelopments(d);
+  const tasks=presentationBuildTasks(d);
+  const trainer=mode==="trainer";
+  const caller=presentationCallerLabel(d);
+  const focus=focusTitle(d);
+  const source=d.department==="Outbound Sales"?`${d.market||"Outbound"} • Agency ${d.agency||"—"}`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`Travel Agent • ${d.agency||"Agency to verify"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency||"—"}`):guestServicesAgencyDisplay(d.agency));
+  const profileCards=guests.map((g,i)=>`<div class="sim-guest-card"><span>Guest ${i+1}</span><strong>${escapeHtml(g.name)}</strong><small>${escapeHtml(g.status)}</small>${g.status==="Past Guest"?`<b>Latitudes # ${escapeHtml(g.latitudes)}</b>`:""}</div>`).join("");
+  const devCards=developments.map((x,i)=>`<div class="sim-development"><span class="sim-development-num">${i+1}</span><div><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.text)}</p></div></div>`).join("");
+  const taskList=tasks.map(x=>`<li><input type="checkbox" data-save-field><span>${escapeHtml(x)}</span></li>`).join("");
+  const outcomes=presentationOutcomeItems(d).map(x=>`<li>${escapeHtml(x)}</li>`).join("");
+  const comprehensionTrainer=trainer?`<aside class="sim-trainer-note"><strong>Trainer Guide</strong><p><b>Caller:</b> ${escapeHtml(caller)}</p><p><b>Reason:</b> ${escapeHtml(focus)}</p><p>Listen for whether the trainee identifies information already provided by the caller and avoids making the caller repeat it. Coach them to clarify only what is still missing.</p></aside>`:"";
+  const devTrainer=trainer?`<aside class="sim-trainer-note"><strong>Trainer Guide</strong><p>The trainee should connect each new piece of information to the correct guest and Seaweb workflow. Do not let them treat reservation-level options as if they automatically apply to every guest when the scenario specifies otherwise.</p></aside>`:"";
+  const outcomeTrainer=trainer?`<aside class="sim-trainer-note"><strong>Trainer Debrief</strong><p>Ask the trainee to explain why they chose each workflow, where they verified uncertain information, and what they would do if inventory, pricing, or eligibility differed from the scenario expectation.</p></aside>`:"";
+  return [
+    {kicker:"THE CALL BEGINS",title:"Your Caller Is on the Line",subtitle:"Read the story like a real call. The caller will not hand you a checklist.",body:`<div class="sim-story-card"><div class="sim-call-icon">☎</div><div><span class="sim-caller-label">Incoming Call • ${escapeHtml(caller)}</span>${presentationStoryHtml(d)}</div></div><div class="sim-pause"><strong>Your role:</strong> You are the Cruise Specialist. Listen for what the caller has already told you before deciding what to ask next.</div>`},
+    {kicker:"READING COMPREHENSION",title:"What Did You Hear?",subtitle:"Before touching Seaweb, make sure you understand the call.",body:`<div class="sim-question-grid"><label><span>1. Who is calling, and who are they booking or servicing for?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>2. What is the main reason for the call?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>3. What important details did the caller already provide?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>4. What do you still need to clarify before moving forward?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label></div>${comprehensionTrainer}`},
+    {kicker:"RESERVATION DETAILS",title:"Now Open Seaweb",subtitle:"Use these details to locate or build the correct reservation.",body:`<div class="sim-info-grid"><div class="sim-info-card"><span>Booking Source</span><strong>${escapeHtml(source)}</strong></div><div class="sim-info-card"><span>Sailing</span><strong>${escapeHtml(presentationSailText(d))}</strong></div><div class="sim-info-card"><span>Reservation Workflow</span><strong>${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</strong></div><div class="sim-info-card"><span>Payment / Booking Action</span><strong>${escapeHtml(d.payment||"Verify")}</strong></div>${presentationReservationCards(d)}</div>${d.pricing?`<div class="sim-quote"><span>Advertised Pricing Practice</span><strong>${escapeHtml(d.pricing)}</strong></div>`:""}`},
+    {kicker:"GUEST PROFILES",title:"Know Who Is Traveling",subtitle:"Guest status matters. Use the correct profile and Latitudes information for each traveler.",body:`<div class="sim-guest-grid">${profileCards}</div><div class="sim-pause"><strong>Before you continue:</strong> Confirm legal names and required guest information. A Past Guest's Latitudes number belongs to that individual guest profile.</div>`},
+    {kicker:"THE CALL DEVELOPS",title:"The Caller Shares More Information",subtitle:"Real calls evolve. Process each new detail and decide where it belongs.",body:`<div class="sim-development-list">${devCards}</div><div class="sim-question-single"><label><span>What do these new details change about your workflow?</span><textarea data-save-field placeholder="Think through the next steps before continuing..."></textarea></label></div>${devTrainer}`},
+    {kicker:"BUILD THE RESERVATION",title:"Complete the Seaweb Work",subtitle:"Use the caller's story and the reservation details to complete the required work.",body:`<ul class="sim-task-list">${taskList}</ul><div class="sim-research-callout"><strong>Use NCLHelp when needed.</strong><span>Verify policies, eligibility, deadlines, inventory rules, and workflows instead of guessing.</span></div>`},
+    {kicker:"FULL CALL FLOW",title:"Bring the Call to Completion",subtitle:"The Seaweb work is only part of the interaction. Complete the entire call experience.",body:`<div class="sim-flow"><div><b>1</b><span><strong>Open & Understand</strong><small>Greeting, reason for call, willingness to assist.</small></span></div><div><b>2</b><span><strong>Qualify / Verify</strong><small>${d.reservationWorkflow==="modify"?"Complete GDPR and reservation verification before servicing.":"Clarify only the information still needed to build the reservation."}</small></span></div><div><b>3</b><span><strong>Research & Build</strong><small>Use Seaweb and NCLHelp to complete the requested work accurately.</small></span></div><div><b>4</b><span><strong>Review & Gain Agreement</strong><small>Review pricing, options, deadlines, and changes before saving or taking payment.</small></span></div><div><b>5</b><span><strong>Complete the Transaction</strong><small>Process the required booking action, deposit, payment, credit, or servicing change.</small></span></div><div><b>6</b><span><strong>Recap & Document</strong><small>Recap the completed reservation, add required comments, and send confirmations.</small></span></div><div><b>7</b><span><strong>Ensure Satisfaction</strong><small>Ask whether there is anything else you can help with today.</small></span></div><div><b>8</b><span><strong>Branded Closing</strong><small>Thank the caller for choosing Norwegian Cruise Line.</small></span></div></div>`},
+    {kicker:"EXPECTED OUTCOME",title:"What Should Be True When the Call Ends?",subtitle:"Use this as your final quality check before you tell the trainer you are complete.",body:`<ul class="sim-outcome-list">${outcomes}</ul><div class="sim-reservation-entry"><label>Reservation Number${d.multipleReservations?"s":""}<input data-save-field placeholder="Enter your completed training reservation number${d.multipleReservations?"s":""}..." /></label></div>${outcomeTrainer}`},
+    {kicker:"REFLECTION",title:"Think Like a Cruise Specialist",subtitle:"The goal is not just to finish Seaweb. Explain the decisions you made during the call.",body:`<div class="sim-question-grid"><label><span>What was the most important detail you had to catch from the caller's story?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>What did you verify in NCLHelp or Seaweb before acting?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>What would you do if the requested stateroom, pricing, promotion, or air option was unavailable?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>How did you make sure the caller understood the final outcome?</span><textarea data-save-field placeholder="Type your response..."></textarea></label></div><div class="sim-finish"><strong>Call Simulation Complete</strong><span>Be ready to discuss your reservation and your decision-making with your trainer.</span></div>`}
+  ];
+}
+
+function callSimulationCss(){return `
+:root{--ncl-navy:#002b49;--ncl-blue:#0076a8;--ncl-bright:#0a84bd;--ncl-teal:#007f83;--ncl-aqua:#dff3f1;--sand:#f4f1eb;--ink:#101828;--muted:#667085;--line:#d0d5dd;--success:#147a5b;--white:#fff}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Arial,"Helvetica Neue",sans-serif;color:var(--ink);background:#e9edf0}body{overflow:hidden}
+.sim-shell{height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:var(--sand)}
+.sim-header{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:18px}
+.sim-brand{display:flex;align-items:center;gap:12px}.sim-logo-box{width:46px;height:38px;border-radius:4px;background:linear-gradient(150deg,#1a9dcc,#00629b);color:#fff;font-weight:900;display:grid;place-items:center;font-size:14px}.sim-brand-copy strong{display:block;letter-spacing:.08em;font-size:14px;color:#001f3f}.sim-brand-copy small{display:block;font-size:9px;letter-spacing:.16em;color:#475467;margin-top:1px}.sim-title{font-weight:800;color:var(--ncl-navy);font-size:19px}.sim-meta{text-align:right;color:var(--muted);font-size:11px;line-height:1.45}.sim-meta strong{display:block;color:var(--ncl-navy);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.sim-stage{min-height:0;padding:18px 22px;display:flex;align-items:stretch;justify-content:center}.sim-deck{width:min(1180px,100%);min-height:0;position:relative}.sim-slide{display:none;height:100%;background:#fff;border:1px solid #cad4dc;border-radius:14px;box-shadow:0 18px 48px rgba(0,43,73,.10);padding:32px 40px;overflow:auto}.sim-slide.active{display:block}.sim-kicker{font-size:11px;color:var(--ncl-blue);font-weight:900;letter-spacing:.12em;text-transform:uppercase}.sim-slide h1{font-size:34px;line-height:1.08;color:var(--ncl-navy);margin:7px 0}.sim-subtitle{font-size:15px;color:var(--muted);margin:0 0 24px;line-height:1.5}
+.sim-story-card{display:grid;grid-template-columns:72px 1fr;gap:22px;padding:24px;border-radius:14px;background:linear-gradient(135deg,#edf8fb,#fff);border-left:6px solid var(--ncl-bright);font-size:18px;line-height:1.7}.sim-story-card p{margin:0}.sim-call-icon{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;background:var(--ncl-blue);color:#fff;font-size:28px}.sim-caller-label{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ncl-blue);font-weight:900;margin-bottom:6px}.sim-pause{margin-top:20px;padding:14px 16px;border-left:4px solid var(--ncl-teal);background:#f3faf8;border-radius:0 9px 9px 0;line-height:1.5}.sim-pause strong{color:var(--ncl-teal)}
+.sim-question-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.sim-question-grid label,.sim-question-single label{display:flex;flex-direction:column;gap:8px;padding:16px;border:1px solid var(--line);border-radius:10px;background:#fbfcfd}.sim-question-grid span,.sim-question-single span{font-weight:800;color:var(--ncl-navy);font-size:13px}.sim-question-grid textarea,.sim-question-single textarea{min-height:100px;border:1px solid #b7c3cc;border-radius:7px;padding:10px;font:inherit;resize:vertical}.sim-question-single{margin-top:16px}
+.sim-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.sim-info-card{display:flex;flex-direction:column;gap:5px;padding:16px;border:1px solid var(--line);border-left:4px solid #7ab9c2;border-radius:9px;background:#fbfcfd;min-height:90px}.sim-info-card span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.sim-info-card strong{font-size:14px;color:var(--ncl-navy);line-height:1.35}.sim-info-card small{font-size:11px;color:var(--muted);line-height:1.4}.sim-quote{margin-top:14px;padding:15px 18px;background:#fff8dd;border-left:4px solid #d4b035;border-radius:0 9px 9px 0}.sim-quote span{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#6c5717}.sim-quote strong{display:block;margin-top:4px}
+.sim-guest-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.sim-guest-card{display:flex;flex-direction:column;gap:5px;padding:18px;border:1px solid var(--line);border-top:4px solid var(--ncl-teal);border-radius:10px;background:#fff}.sim-guest-card span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}.sim-guest-card strong{font-size:15px;color:var(--ncl-navy)}.sim-guest-card small{font-size:11px;color:var(--muted)}.sim-guest-card b{font-size:12px;color:var(--ncl-blue);margin-top:3px}
+.sim-development-list{display:grid;gap:10px}.sim-development{display:grid;grid-template-columns:38px 1fr;gap:12px;padding:13px 15px;border:1px solid var(--line);border-radius:9px;background:#fff}.sim-development-num{width:30px;height:30px;border-radius:50%;background:#e7f5f8;color:var(--ncl-blue);display:grid;place-items:center;font-weight:900}.sim-development strong{color:var(--ncl-navy);font-size:13px}.sim-development p{margin:4px 0 0;color:#475467;font-size:12px;line-height:1.45}
+.sim-task-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:9px 16px}.sim-task-list li{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border:1px solid #e4e7ec;border-radius:8px;background:#fbfcfd;font-size:12px;line-height:1.4}.sim-task-list input{width:18px;height:18px;accent-color:var(--ncl-teal);flex:0 0 18px}.sim-research-callout{margin-top:15px;padding:13px 15px;border-radius:9px;background:#eef7f6;border-left:4px solid var(--ncl-teal);display:flex;flex-direction:column;gap:3px}.sim-research-callout strong{color:var(--ncl-teal);font-size:12px}.sim-research-callout span{font-size:11px;color:#475467}
+.sim-flow{display:grid;grid-template-columns:1fr 1fr;gap:10px}.sim-flow>div{display:flex;gap:12px;align-items:flex-start;padding:13px;border:1px solid var(--line);border-radius:9px;background:#fff}.sim-flow b{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:var(--ncl-blue);color:#fff;flex:0 0 31px}.sim-flow span{display:flex;flex-direction:column;gap:3px}.sim-flow strong{font-size:13px;color:var(--ncl-navy)}.sim-flow small{font-size:11px;line-height:1.4;color:var(--muted)}
+.sim-outcome-list{margin:0;padding-left:22px;display:grid;grid-template-columns:1fr 1fr;gap:10px 26px}.sim-outcome-list li{line-height:1.5;font-size:13px}.sim-reservation-entry{margin-top:20px;padding:16px;border:1px solid #b8d9d6;border-radius:10px;background:#f2faf8}.sim-reservation-entry label{display:flex;align-items:center;gap:12px;font-weight:800;color:var(--ncl-teal)}.sim-reservation-entry input{flex:1;border:1px solid #9fb8b6;border-radius:7px;padding:10px;font:inherit}
+.sim-trainer-note{margin-top:16px;padding:14px 16px;border:1px solid #a9c5dc;border-left:5px solid var(--ncl-blue);border-radius:8px;background:#f4f9fd}.sim-trainer-note strong{display:block;color:var(--ncl-blue);margin-bottom:6px}.sim-trainer-note p{margin:4px 0;font-size:12px;line-height:1.5}.sim-finish{margin-top:18px;padding:20px;text-align:center;border-radius:12px;background:linear-gradient(135deg,#eaf7f5,#eef7fb);border:1px solid #b8d9d6}.sim-finish strong{display:block;color:var(--ncl-teal);font-size:20px}.sim-finish span{display:block;margin-top:5px;color:var(--muted)}
+.sim-footer{background:#fff;border-top:1px solid var(--line);padding:11px 22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px}.sim-nav-btn,.sim-tool-btn{border:1px solid #9ba9b4;background:#fff;color:var(--ncl-navy);border-radius:6px;padding:9px 14px;font-weight:800;cursor:pointer}.sim-nav-btn.primary{background:var(--ncl-blue);border-color:var(--ncl-blue);color:#fff}.sim-nav-btn:disabled{opacity:.35;cursor:not-allowed}.sim-progress-area{display:flex;align-items:center;gap:10px;justify-content:center}.sim-progress{width:min(520px,65vw);height:8px;border-radius:99px;background:#dfe6eb;overflow:hidden}.sim-progress-bar{height:100%;background:linear-gradient(90deg,var(--ncl-teal),var(--ncl-bright));width:0;transition:width .2s}.sim-counter{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}.sim-tools{display:flex;gap:8px}.sim-help{font-size:10px;color:var(--muted);text-align:center;margin-top:8px}
+@media(max-width:900px){body{overflow:auto}.sim-shell{height:auto;min-height:100vh}.sim-slide{padding:24px 20px;min-height:72vh}.sim-question-grid,.sim-info-grid,.sim-guest-grid,.sim-task-list,.sim-flow,.sim-outcome-list{grid-template-columns:1fr}.sim-story-card{grid-template-columns:1fr}.sim-call-icon{display:none}.sim-footer{grid-template-columns:1fr 1fr}.sim-progress-area{grid-column:1/-1;grid-row:1}.sim-tools{display:flex;justify-content:flex-end}.sim-tools .sim-tool-btn{display:none}.sim-meta{display:none}.sim-title{font-size:15px}.sim-slide h1{font-size:28px}}
+@media print{body{overflow:visible;background:#fff}.sim-shell{display:block;height:auto}.sim-header,.sim-footer{display:none}.sim-stage{padding:0;display:block}.sim-deck{width:100%}.sim-slide{display:block!important;box-shadow:none;border:0;border-radius:0;min-height:10in;height:auto;page-break-after:always;padding:.45in}.sim-slide:last-child{page-break-after:auto}.sim-question-grid textarea,.sim-question-single textarea{border:1px solid #999}.sim-trainer-note{break-inside:avoid}}
+`;}
+
+function callSimulationClient(){
+  const slides=[...document.querySelectorAll('.sim-slide')];
+  let index=0;
+  const key=document.body.dataset.storageKey||'seaweb-call-simulation';
+  const prev=document.getElementById('simPrev'),next=document.getElementById('simNext'),bar=document.getElementById('simProgressBar'),counter=document.getElementById('simCounter');
+  function save(){const data={};document.querySelectorAll('[data-save-field]').forEach((el,i)=>{data[i]=el.type==='checkbox'?el.checked:el.value});try{localStorage.setItem(key,JSON.stringify(data))}catch(_){}}
+  function load(){try{const data=JSON.parse(localStorage.getItem(key)||'{}');document.querySelectorAll('[data-save-field]').forEach((el,i)=>{if(!(i in data))return;if(el.type==='checkbox')el.checked=!!data[i];else el.value=data[i]||'';});}catch(_){}}
+  function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===index));prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;slides[index]?.scrollTo?.(0,0);}
+  prev.onclick=()=>{if(index>0){index--;render();}};next.onclick=()=>{if(index<slides.length-1){index++;render();}else{index=0;render();}};
+  document.getElementById('simFullscreen')?.addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();});
+  document.getElementById('simPrint')?.addEventListener('click',()=>window.print());
+  document.getElementById('simReset')?.addEventListener('click',()=>{if(confirm('Clear all responses and checklist progress?')){try{localStorage.removeItem(key)}catch(_){}document.querySelectorAll('[data-save-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value='';});}});
+  document.querySelectorAll('[data-save-field]').forEach(el=>{el.addEventListener('change',save);el.addEventListener('input',save)});
+  document.addEventListener('keydown',e=>{if(['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowRight'&&index<slides.length-1){index++;render();}if(e.key==='ArrowLeft'&&index>0){index--;render();}});
+  load();render();
+}
+
+function buildCallSimulationDocument(mode="trainee"){
+  if(!ensureScenarioReady())return "";
+  const d=state.currentScenario;
+  const slides=buildCallSimulationSlides(d,mode);
+  const title=`SEAweb Call Simulation – ${focusTitle(d)}`;
+  const storageKey=`seawebCallSimulation-${String(d.id||focusTitle(d)).replace(/[^A-Za-z0-9_-]+/g,"-")}-${mode}`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}</style></head><body data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell"><header class="sim-header"><div class="sim-brand"><div class="sim-logo-box">NCL</div><div class="sim-brand-copy"><strong>NORWEGIAN CRUISE LINE</strong><small>IT'S DIFFERENT OUT HERE</small></div></div><div class="sim-title">SEAweb Call Simulation</div><div class="sim-meta"><strong>${escapeHtml(mode==="trainer"?"Trainer Presentation":"Trainee Presentation")}</strong>${escapeHtml(d.department)} • ${escapeHtml(focusTitle(d))}</div></header><main class="sim-stage"><div class="sim-deck">${slides.map((slide,i)=>`<section class="sim-slide${i===0?' active':''}" data-slide="${i+1}"><div class="sim-kicker">${escapeHtml(slide.kicker)}</div><h1>${escapeHtml(slide.title)}</h1><p class="sim-subtitle">${escapeHtml(slide.subtitle)}</p>${slide.body}<div class="sim-help">Use the Previous / Next buttons or the left and right arrow keys to move through the call.</div></section>`).join('')}</div></main><footer class="sim-footer"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
+}
+
+function ensureCallSimulationOverlay(){
+  let overlay=document.getElementById('callSimulationOverlay');
+  if(overlay)return overlay;
+  overlay=document.createElement('div');overlay.id='callSimulationOverlay';overlay.className='call-simulation-overlay';overlay.innerHTML=`<div class="call-simulation-overlay-bar"><strong>Trainee Call Simulation</strong><div><button id="callSimulationNewWindow" class="secondary tiny" type="button">Open in New Window</button><button id="callSimulationClose" class="secondary tiny" type="button">Close</button></div></div><iframe id="callSimulationFrame" title="SEAweb Trainee Call Simulation"></iframe>`;document.body.appendChild(overlay);
+  document.getElementById('callSimulationClose').onclick=()=>{overlay.classList.remove('open');document.body.classList.remove('presentation-open');document.getElementById('callSimulationFrame').srcdoc='';};
+  document.getElementById('callSimulationNewWindow').onclick=()=>{const html=buildCallSimulationDocument('trainee');const w=window.open('','_blank');if(w){w.document.open();w.document.write(html);w.document.close();}};
+  return overlay;
+}
+
+function launchCallSimulation(mode="trainee"){
+  if(!ensureScenarioReady())return;
+  const html=buildCallSimulationDocument(mode);if(!html)return;
+  const overlay=ensureCallSimulationOverlay();document.getElementById('callSimulationFrame').srcdoc=html;overlay.classList.add('open');document.body.classList.add('presentation-open');closeShareMenu();
+}
+
+function downloadCallSimulation(mode="trainee"){
+  if(!ensureScenarioReady())return;
+  const btn=mode==="trainer"?$("downloadTrainerPresentationBtn"):$("downloadTraineePresentationBtn");const old=btn?.innerHTML||"";
+  if(btn){btn.disabled=true;btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Presentation…</strong><small>Creating the story-first call simulation</small></span>`;}
+  try{const html=buildCallSimulationDocument(mode);if(!html)throw new Error('The call simulation could not be created.');const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=presentationFilename(mode);document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500);closeShareMenu();flash(`${mode==='trainer'?'Trainer':'Trainee'} call simulation downloaded.`);}catch(err){alert(`Could not create the presentation: ${err.message}`);}finally{if(btn){btn.disabled=false;btn.innerHTML=old;}}
+}
+
 function interactiveScenarioFilename(mode="trainee"){
   const d=state.currentScenario||scenarioData();
   const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
@@ -5176,7 +5369,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.40",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.42",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -5954,6 +6147,9 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("launchTraineePresentationBtn").onclick=()=>launchCallSimulation("trainee");
+$("downloadTraineePresentationBtn").onclick=()=>downloadCallSimulation("trainee");
+$("downloadTrainerPresentationBtn").onclick=()=>downloadCallSimulation("trainer");
 $("downloadInteractiveTraineeBtn").onclick=()=>downloadInteractiveScenario("trainee");
 $("downloadInteractiveTrainerBtn").onclick=()=>downloadInteractiveScenario("trainer");
 $("downloadAdaptivePdfBtn").onclick=downloadAdaptivePdf;
@@ -6335,8 +6531,23 @@ function setupGeneratorWizard(){
 
   const originalGenerate=generateScenario;
   generateBtn.onclick=()=>{
-    originalGenerate();
-    if(state.currentScenario)showGeneratedScenarioScreen();
+    generateBtn.disabled=true;
+    const previousText=generateBtn.textContent;
+    generateBtn.textContent='Generating…';
+    try{
+      const generated=originalGenerate();
+      if(generated||state.currentScenario){
+        showGeneratedScenarioScreen();
+        requestAnimationFrame(()=>$("scenarioOutput")?.scrollIntoView({behavior:'smooth',block:'start'}));
+      }
+    }catch(error){
+      console.error('Scenario generation failed:',error);
+      const message=error?.message?`Scenario could not be generated: ${error.message}`:'Scenario could not be generated. Please review the selected options and try again.';
+      alert(message);
+    }finally{
+      generateBtn.disabled=false;
+      generateBtn.textContent=previousText||'Generate Scenario →';
+    }
   };
 
   setupGeneratedScreenTabs();

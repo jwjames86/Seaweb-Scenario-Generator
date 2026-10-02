@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.40" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.42" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.40 • Focus Categories & Detailed Setup</span>
+            <span class="pill">V1.9.42 • Trainee Call Simulation Presentation</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -719,8 +719,11 @@
 
           <div class="panel output-panel generated-scenario-panel">
             <div class="generated-success-banner">
-              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Review, share, print, or save it below.</small></div></div>
-              <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Launch the trainee call simulation, or review the standard scenario below.</small></div></div>
+              <div class="generated-success-actions">
+                <button id="launchTraineePresentationBtn" type="button" class="primary presentation-launch-btn">▶ Launch Trainee Presentation</button>
+                <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+              </div>
             </div>
             <div class="generated-tabs" role="tablist" aria-label="Generated scenario view">
               <button type="button" class="generated-tab active" data-generated-tab="scenario">Scenario Output</button>
@@ -734,10 +737,21 @@
                     Share Scenario <span aria-hidden="true">⌄</span>
                   </button>
                   <div id="shareScenarioMenu" class="share-menu interactive-share-menu" role="menu">
-                    <div class="share-menu-group-label">INTERACTIVE SCENARIO</div>
-                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="recommended-share-option interactive-share-primary">
+                    <div class="share-menu-group-label">CALL SIMULATION PRESENTATION</div>
+                    <button id="downloadTraineePresentationBtn" type="button" role="menuitem" class="recommended-share-option presentation-share-primary">
+                      <span class="share-menu-icon">▶</span>
+                      <span><strong>Download Trainee Presentation</strong><small>Recommended — story-first call simulation with reading comprehension, call development, full call flow, and reflection</small></span>
+                    </button>
+                    <button id="downloadTrainerPresentationBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">TR</span>
+                      <span><strong>Download Trainer Presentation</strong><small>Same call simulation plus trainer prompts, expected answers, and coaching guidance</small></span>
+                    </button>
+
+                    <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">INTERACTIVE WORKSHEET</div>
+                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="interactive-share-primary">
                       <span class="share-menu-icon">HTML</span>
-                      <span><strong>Download Interactive Trainee Scenario</strong><small>Recommended — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
+                      <span><strong>Download Interactive Trainee Scenario</strong><small>Alternate format — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
                     </button>
                     <button id="downloadInteractiveTrainerBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">TR</span>
@@ -910,6 +924,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.40"></script>
+  <script src="/app.js?v=1.9.42"></script>
 </body>
 </html>
