@@ -1235,3 +1235,20 @@ The available credit/coupon types are now exactly:
 - **Discount Coupon**
 
 Trainers can add multiple credits/coupons and independently assign each one to the guest using it, allowing any mix-and-match combination across guests. Past Guest Latitudes numbers from Step 2 automatically carry into the coupon setup when applicable.
+
+
+## V1.9.46 – Branded Call Simulation
+
+The trainee call simulation presentation was refreshed to better reflect the NCL 2026 Brand Guidelines and a more realistic call-flow experience.
+
+### What changed
+- Updated the **call simulation presentation theme** to align more closely with the NCL 2026 brand direction using the approved color palette and a more premium presentation style.
+- Added **visual hero / scenic panels** and branded presentation cards so the trainee experience feels more like a guided presentation instead of a plain worksheet.
+- Added a dedicated **Branded Introduction** slide with sample opening call dialogue.
+- Added a dedicated **Verification / GDPR** slide showing what the trainee must verify based on the call type.
+- Strengthened the **Full Call Flow** slide to explicitly include Branded Introduction, verification, recap, satisfaction check, and branded closing.
+- Added a **Branded Closing** example to reinforce the expected end of the call.
+
+### Notes
+- New-reservation scenarios use a discovery / verification slide with a GDPR reminder in case the interaction changes into servicing an existing reservation.
+- Existing-reservation scenarios show the correct GDPR path and required verification items.
