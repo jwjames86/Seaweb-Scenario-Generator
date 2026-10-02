@@ -1136,3 +1136,17 @@ One guest can select air while another guest declines it, or guests can use diff
 
 ### Generated scenario + validation
 The generated trainee/trainer scenario now includes a dedicated **Scenario-Specific Setup** section showing the trainer-selected special requests, ADA needs, price programs, and per-guest air/transfer setup. Validation also checks that the required focus-specific details were completed.
+
+
+## V1.9.41 – Generate Scenario + Latitudes Fix
+
+### Generate Scenario
+- Hardened the final **Generate Scenario** action so the generated scenario screen is explicitly opened after successful generation.
+- Added visible error handling so a generation problem can no longer fail silently.
+- Added a temporary Generating state to prevent accidental double-clicks.
+
+### Latitudes numbers
+- Restored the **Guest Status / Latitudes** section to the generated scenario output.
+- Past Guest Latitudes numbers now display directly in the generated scenario.
+- Multiple-reservation scenarios also show each guest's Past/New Guest status and Latitudes number inside the applicable Reservation card.
+- The existing validator still flags any Past Guest that is missing a required training Latitudes number.
