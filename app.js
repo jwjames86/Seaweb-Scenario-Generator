@@ -1376,13 +1376,21 @@ function refreshTrainingCardPanel(preferredProfile){
 }
 
 function collectLatitudesNumbers(){
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return visualCards.map(card=>(card.querySelector('.visual-latitudes-input')?.value||'').trim());
+  }
   const count=effectiveFormGuestCount();
-  return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
+  return Array.from({length:count},(_,i)=>(document.querySelector(`#latitudesGuestFields #latitudeNumber${i+1}`)?.value||'').trim());
 }
 
 function collectPastGuestFlags(){
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return visualCards.map(card=>!!card.querySelector('.visual-past-radio')?.checked);
+  }
   const count=effectiveFormGuestCount();
-  return Array.from({length:count},(_,i)=>!!$(`pastGuest${i+1}`)?.checked);
+  return Array.from({length:count},(_,i)=>!!document.querySelector(`#latitudesGuestFields #pastGuest${i+1}`)?.checked);
 }
 
 function guestDisplayName(index){
@@ -1465,14 +1473,10 @@ function getGuestProfileMix(d){
 }
 
 const couponTypes=[
-  "CruiseNext Credit",
   "Future Cruise Credit (FCC)",
+  "CruiseNext Credit",
   "CruiseFirst Credit",
-  "10% Discount Coupon",
-  "Percentage Discount Coupon",
-  "Latitudes / Guest Coupon",
-  "Promotional / Partner Coupon",
-  "Other Credit / Coupon"
+  "Discount Coupon"
 ];
 let couponRowSequence=0;
 
@@ -2499,12 +2503,12 @@ function scenarioData(){
     latitudes:$("reservationWorkflow").value==="new"&&$("latitudesToggle").checked,commenting:$("commentToggle").checked,confirmation:$("confirmToggle").checked,
     fas:$("fasToggle").checked,travel:$("travelToggle").checked,psc:$("pscToggle").checked,
     airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
-    couponEnabled:couponWorkflowRequested(),
-    coupons:couponWorkflowRequested()?collectCoupons():[],
-    specialRequests:specialRequestFocusActive()?collectSpecialRequests():[],
-    adaNeeds:adaFocusActive()?collectAdaNeeds():[],
-    pricePrograms:priceProgramFocusActive()?collectPricePrograms():{},
-    airGuestSelections:(airFocusActive()||$("airToggle")?.checked)?collectAirGuestSelections():[],
+    couponEnabled:couponWorkflowRequested()||collectCoupons().length>0,
+    coupons:collectCoupons(),
+    specialRequests:collectSpecialRequests(),
+    adaNeeds:collectAdaNeeds(),
+    pricePrograms:collectPricePrograms(),
+    airGuestSelections:collectAirGuestSelections(),
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
     curriculumObjective:metas.map(m=>m.objective).join(" | "),
@@ -5092,7 +5096,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.43",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.45",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -6045,7 +6049,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";$("scenarioStatus").textContent="Ready for Trainee";$("scenarioStatus").className="status-badge ready";updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";$("scenarioStatus").textContent="Ready for Trainee";$("scenarioStatus").className="status-badge ready";updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderAdditionalOptionsVisual();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -6153,6 +6157,8 @@ function showGeneratorWizardStep(step){
     const num=btn.querySelector('.wizard-step-number');
     if(num)num.textContent=stepNum<normalized?'✓':String(stepNum);
   });
+  if(normalized===2)renderReservationDetailsVisual();
+  if(normalized===3)renderAdditionalOptionsVisual();
   if(normalized===4)renderWizardReviewSummary();
   $("generatorWizard")?.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -6182,6 +6188,341 @@ function setupGeneratedScreenTabs(){
   }));
 }
 
+
+function currentSelectedSailingSummaryHtml(){
+  return $('selectedSailingSummary')?.innerHTML || '<div class="selected-sailing empty">No real sailing selected yet.</div>';
+}
+
+function reservationHiddenIds(number){
+  if(number===1)return {guestCount:'guestCount',category:'category',location:'locationPref',side:'sidePref',pricing:'pricing'};
+  if(number===2)return {guestCount:'reservation2GuestCount',category:'reservation2Category',location:'reservation2LocationPref',side:'reservation2SidePref',pricing:'reservation2Pricing'};
+  return {guestCount:`reservation${number}GuestCount`,category:`reservation${number}Category`,location:`reservation${number}LocationPref`,side:`reservation${number}SidePref`,pricing:`reservation${number}Pricing`};
+}
+
+function reservationGuestInputId(number,index){
+  if(number===1){
+    if(index===1)return 'guest1';
+    if(index===2)return 'guest2';
+    return `reservation1Guest${index}`;
+  }
+  if(number===2){
+    if(index===1)return 'reservation2Guest1';
+    if(index===2)return 'reservation2Guest2';
+    return `reservation2Guest${index}`;
+  }
+  return `reservation${number}Guest${index}`;
+}
+
+function step2ProfileDefaults(){
+  const total=effectiveFormGuestCount();
+  const visualCards=[...document.querySelectorAll('#reservationDetailsVisual .visual-guest-card')].sort((a,b)=>(+a.dataset.guestIndex||0)-(+b.dataset.guestIndex||0));
+  if(visualCards.length){
+    return {
+      flags:visualCards.map(card=>!!card.querySelector('.visual-past-radio')?.checked),
+      numbers:visualCards.map(card=>(card.querySelector('.visual-latitudes-input')?.value||'').trim())
+    };
+  }
+  const hiddenFlags=Array.from({length:total},(_,i)=>!!document.querySelector(`#latitudesGuestFields #pastGuest${i+1}`)?.checked);
+  const hiddenNumbers=Array.from({length:total},(_,i)=>(document.querySelector(`#latitudesGuestFields #latitudeNumber${i+1}`)?.value||'').trim());
+  const anyHidden=hiddenFlags.some(Boolean)||hiddenNumbers.some(Boolean);
+  if(anyHidden)return {flags:hiddenFlags,numbers:hiddenNumbers};
+  return {flags:Array.from({length:total},()=>true),numbers:Array.from({length:total},()=>"")};
+}
+
+function visualChoiceButtons(targetId,options,current,kind='chip'){
+  return `<div class="visual-choice-group ${kind}" data-target="${escapeAttr(targetId)}">${options.map(opt=>{
+    const value=typeof opt==='string'?opt:opt.value;
+    const label=typeof opt==='string'?opt:(opt.label||opt.value);
+    const active=String(current)===String(value);
+    const icon=(typeof opt==='object'&&opt.icon)?`<span class="visual-choice-icon">${opt.icon}</span>`:'';
+    const sub=(typeof opt==='object'&&opt.sub)?`<small>${escapeHtml(opt.sub)}</small>`:'';
+    return `<button type="button" class="visual-choice-btn ${active?'active':''}" data-target="${escapeAttr(targetId)}" data-value="${escapeAttr(value)}">${icon}<span><strong>${escapeHtml(label)}</strong>${sub}</span></button>`;
+  }).join('')}</div>`;
+}
+
+function paymentActionSelectMarkup(){
+  const source=$('paymentAction');
+  if(!source)return '';
+  return `<label class="visual-standalone-field"><span>Payment / Booking Action</span><select id="visualPaymentAction">${source.innerHTML}</select></label>`;
+}
+
+function visualGuestCardMarkup(reservationNumber,guestNumber,globalIndex,name,profile){
+  const past=!!profile?.past;
+  const number=profile?.number||'';
+  return `<div class="visual-guest-card" data-guest-index="${globalIndex}" data-reservation="${reservationNumber}">
+    <div class="visual-guest-card-head"><strong>${guestNumber===1?'Guest 1 (Primary)':`Guest ${guestNumber}`}</strong><button type="button" class="visual-remove-link ${guestNumber<=2?'hidden-field':''}" data-unused="true">Remove</button></div>
+    <label class="visual-standalone-field compact"><span>Full Name</span><input class="visual-guest-name-input" data-source-id="${reservationGuestInputId(reservationNumber,guestNumber)}" value="${escapeAttr(name||'')}" placeholder="${escapeAttr(`Reservation ${reservationNumber} guest ${guestNumber}`)}" /></label>
+    <div class="visual-guest-status-row">
+      <div class="visual-status-label">Guest Status</div>
+      <div class="visual-status-toggle">
+        <label class="${!past?'active':''}"><input type="radio" class="visual-status-radio visual-new-radio" name="visualGuestStatus${globalIndex}" value="new" ${!past?'checked':''}/> <span>New Guest</span></label>
+        <label class="${past?'active':''}"><input type="radio" class="visual-status-radio visual-past-radio" name="visualGuestStatus${globalIndex}" value="past" ${past?'checked':''}/> <span>Past Guest</span></label>
+      </div>
+    </div>
+    <label class="visual-standalone-field compact visual-latitudes-wrap ${past?'':'is-hidden'}"><span>Latitudes Number</span><input class="visual-latitudes-input" inputmode="numeric" maxlength="12" value="${escapeAttr(number)}" placeholder="Latitudes number" /></label>
+    <div class="visual-card-tip">${past?'Past Guest — this Latitudes number will carry into the scenario.':'New Guest — no Latitudes number is required.'}</div>
+  </div>`;
+}
+
+function reservationVisualCardMarkup(number,globalStartIndex,profileData,multi){
+  const data=reservationFormData(number);
+  const ids=reservationHiddenIds(number);
+  const guestOptions=Array.from({length:8},(_,i)=>({value:String(i+1),label:String(i+1)}));
+  const categoryOptions=['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible'];
+  const locationOptions=['Any','Forward','Midship','Aft'];
+  const sideOptions=['Any','Port','Starboard'];
+  let guestCards='';
+  for(let i=0;i<data.guestCount;i++){
+    const globalIndex=globalStartIndex+i+1;
+    guestCards += visualGuestCardMarkup(number,i+1,globalIndex,data.guests[i]||'',{past:!!profileData.flags[globalIndex-1],number:profileData.numbers[globalIndex-1]||''});
+  }
+  return `<section class="reservation-visual-card" data-reservation-card="${number}">
+    <div class="reservation-visual-header">
+      <div><h4>${multi?`Reservation ${number}`:'Guests & Stateroom'}</h4><p>${multi?'Add the guests and room preferences for this reservation.':'Enter guest names, guest type, Latitudes number (if applicable), and stateroom preferences.'}</p></div>
+      <div class="reservation-visual-actions">
+        <div class="reservation-guest-count-wrap"><span>Number of Guests</span>${visualChoiceButtons(ids.guestCount,guestOptions,String(data.guestCount),'count')}</div>
+        ${number===1?'<button type="button" class="secondary small visual-generate-names-btn">✦ Generate Fictional Names</button>':''}
+      </div>
+    </div>
+    <div class="visual-guest-grid">${guestCards}</div>
+    <div class="visual-preference-grid">
+      <div class="visual-pref-block"><span class="visual-pref-label">Stateroom Category</span>${visualChoiceButtons(ids.category,categoryOptions,data.category||'Balcony','tile')}</div>
+      <div class="visual-pref-block"><span class="visual-pref-label">Location Preference</span>${visualChoiceButtons(ids.location,locationOptions,data.location||'Any','tile')}</div>
+      <div class="visual-pref-block"><span class="visual-pref-label">Side Preference</span>${visualChoiceButtons(ids.side,sideOptions,data.side||'Any','tile')}</div>
+    </div>
+    <label class="visual-standalone-field pricing-inline"><span>${multi?`Reservation ${number} Advertised Pricing (optional)`:'Advertised Pricing (optional)'}</span><input id="visualPricing${number}" data-source-id="${ids.pricing}" value="${escapeAttr(data.pricing||'')}" placeholder="$1,559 pp / $3,118 total" /></label>
+  </section>`;
+}
+
+function renderReservationDetailsVisual(){
+  const host=$('reservationDetailsVisual');
+  if(!host)return;
+  const workflow=$('reservationWorkflow')?.value||'new';
+  if(workflow!=='new'){
+    host.innerHTML='<div class="visual-modify-note"><strong>Modification scenario</strong><span>This workflow continues to use the standard modification setup below.</span></div>';
+    host.classList.add('is-modify');
+    return;
+  }
+  host.classList.remove('is-modify');
+  const profileData=step2ProfileDefaults();
+  const multi=multipleReservationFormActive();
+  const totalReservations=multi?multipleReservationTotal():1;
+  let start=0;
+  let reservationsHtml='';
+  for(let n=1;n<=totalReservations;n++){
+    reservationsHtml += reservationVisualCardMarkup(n,start,profileData,multi);
+    start += reservationFormData(n).guestCount;
+  }
+  const callerCurrent=$('newCallerType')?.value||'direct_us';
+  const callerOptions=[{value:'direct_us',label:'Direct Guest',sub:'U.S.',icon:'👤'},{value:'direct_ca',label:'Direct Guest',sub:'Canada',icon:'🌐'},{value:'travel_agent',label:'Travel Agent',sub:'Agency / TA booking',icon:'👥'}];
+  host.innerHTML=`<div class="reservation-details-visual-shell">
+    <div class="reservation-details-main">
+      <section class="visual-detail-card visual-caller-card">
+        <div class="visual-section-icon caller"></div>
+        <div class="visual-detail-copy"><h4>Caller & Booking Source</h4><p>Who is calling and which booking source should be used?</p></div>
+        <div class="visual-detail-controls">
+          ${visualChoiceButtons('newCallerType',callerOptions,callerCurrent,'caller')}
+          <label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" /></label>
+          <div class="visual-inline-hint">${escapeHtml($('agencyHint')?.textContent||'')}</div>
+        </div>
+      </section>
+      ${multi?`<section class="visual-detail-card visual-reservation-count-card"><div class="visual-section-icon rooms"></div><div class="visual-detail-copy"><h4>Total Reservations</h4><p>Choose how many stateroom reservations should be included in this scenario.</p></div><div class="visual-detail-controls"><div class="reservation-guest-count-wrap"><span>Reservations</span>${visualChoiceButtons('reservationCount',Array.from({length:7},(_,i)=>({value:String(i+2),label:String(i+2)})),String(totalReservations),'count')}</div><div class="visual-inline-hint">Each reservation below has its own guests, stateroom preferences, and pricing field.</div></div></section>`:''}
+      ${reservationsHtml}
+      <section class="visual-detail-card visual-sailing-card">
+        <div class="visual-section-icon sailing"></div>
+        <div class="visual-detail-copy"><h4>Sailing Details</h4><p>Use a real NCL sailing when the scenario requires one.</p></div>
+        <div class="visual-detail-controls visual-sailing-controls"><div class="visual-sailing-summary">${currentSelectedSailingSummaryHtml()}</div><button type="button" class="secondary visual-change-sailing-btn">Find / Change Sailing</button></div>
+      </section>
+      <section class="visual-detail-card visual-pricing-card">
+        <div class="visual-section-icon pricing"></div>
+        <div class="visual-detail-copy"><h4>Pricing & Booking Action</h4><p>Set the payment action and confirmation email for this scenario.</p></div>
+        <div class="visual-detail-controls visual-pricing-controls">${paymentActionSelectMarkup()}<label class="visual-standalone-field"><span>Training Confirmation Email</span><input id="visualConfirmationEmail" value="${escapeAttr($('confirmationEmail')?.value||'')}" /></label></div>
+      </section>
+    </div>
+    <aside class="reservation-details-sidebar">
+      <div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Select a real sailing when needed')}</span></div></div>
+      <div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div>
+    </aside>
+  </div>`;
+
+  const visualPayment=$('visualPaymentAction');
+  if(visualPayment){visualPayment.value=$('paymentAction')?.value||visualPayment.value; visualPayment.addEventListener('change',()=>{$('paymentAction').value=visualPayment.value;renderWizardReviewSummary();});}
+  $('visualAgencyField')?.addEventListener('input',e=>{$('agency').value=e.target.value;syncAgencyCallerLogic();renderWizardReviewSummary();});
+  $('visualConfirmationEmail')?.addEventListener('input',e=>{$('confirmationEmail').value=e.target.value;renderWizardReviewSummary();});
+  host.querySelectorAll('[data-source-id]').forEach(input=>input.addEventListener('input',e=>{const src=$(e.target.dataset.sourceId); if(src){src.value=e.target.value; if(src.id==='guest1'||src.id==='guest2'||src.id.startsWith('reservation')) refreshGuestDependentConfigs(); renderWizardReviewSummary();}}));
+  host.querySelectorAll('.visual-choice-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=$(btn.dataset.target); if(!target)return;
+    target.value=btn.dataset.value;
+    if(target.id==='newCallerType')syncAgencyCallerLogic();
+    if(target.id==='guestCount' || /reservation\d+GuestCount/.test(target.id) || target.id==='reservationCount'){
+      updateMultipleReservationUI();
+      refreshCouponGuestOptions();
+      refreshFocusConfigurationPanels();
+      renderReservationDetailsVisual();
+      renderWizardReviewSummary();
+      return;
+    }
+    renderReservationDetailsVisual();
+    renderWizardReviewSummary();
+  }));
+  host.querySelectorAll('.visual-status-radio').forEach(radio=>radio.addEventListener('change',()=>{
+    const card=radio.closest('.visual-guest-card');
+    const isPast=card.querySelector('.visual-past-radio')?.checked;
+    card.querySelectorAll('.visual-status-toggle label').forEach(label=>label.classList.remove('active'));
+    if(isPast){card.querySelector('.visual-past-radio')?.closest('label')?.classList.add('active');} else {card.querySelector('.visual-new-radio')?.closest('label')?.classList.add('active');}
+    card.querySelector('.visual-latitudes-wrap')?.classList.toggle('is-hidden',!isPast);
+    const tip=card.querySelector('.visual-card-tip'); if(tip) tip.textContent=isPast?'Past Guest — this Latitudes number will carry into the scenario.':'New Guest — no Latitudes number is required.';
+    if(!isPast && card.querySelector('.visual-latitudes-input')) card.querySelector('.visual-latitudes-input').value='';
+    renderWizardReviewSummary();
+  }));
+  host.querySelectorAll('.visual-latitudes-input').forEach(input=>input.addEventListener('input',()=>{input.value=input.value.replace(/[^0-9]/g,''); renderWizardReviewSummary();}));
+  host.querySelector('.visual-generate-names-btn')?.addEventListener('click',()=>{$('generateNamesBtn')?.click(); setTimeout(renderReservationDetailsVisual,25);});
+  host.querySelector('.visual-change-sailing-btn')?.addEventListener('click',()=>go('search'));
+}
+
+
+function visualToggleTile(id,label,icon,sub=''){
+  const input=$(id);
+  const active=!!input?.checked;
+  return `<button type="button" class="step3-option-tile ${active?'active':''}" data-step3-toggle="${escapeAttr(id)}"><span class="step3-option-icon">${icon}</span><strong>${escapeHtml(label)}</strong>${sub?`<small>${escapeHtml(sub)}</small>`:''}<span class="step3-selected-mark">${active?'✓':''}</span></button>`;
+}
+
+function priceProgramVisualTile(id,label,icon,sub=''){
+  const active=!!$(id)?.checked;
+  return `<button type="button" class="step3-option-tile ${active?'active':''}" data-price-program="${escapeAttr(id)}"><span class="step3-option-icon">${icon}</span><strong>${escapeHtml(label)}</strong>${sub?`<small>${escapeHtml(sub)}</small>`:''}<span class="step3-selected-mark">${active?'✓':''}</span></button>`;
+}
+
+function guestChipsMarkup(selected,index,kind){
+  return `<div class="step3-guest-chips">${guestOptionRecords().map((g,i)=>`<button type="button" class="step3-guest-chip ${g.value===selected?'active':''}" data-${kind}-index="${index}" data-guest-value="${escapeAttr(g.value)}">${escapeHtml(g.label)}</button>`).join('')}</div>`;
+}
+
+function renderVisualSpecialEntries(){
+  const host=$('visualSpecialEntries');if(!host)return;
+  const rows=[...document.querySelectorAll('#specialRequestRows .focus-config-row')];
+  const adaRows=[...document.querySelectorAll('#adaNeedRows .focus-config-row')];
+  const requestCards=rows.map((row,i)=>{
+    const type=row.querySelector('.special-request-type')?.value||'';
+    const guest=row.querySelector('.focus-config-guest')?.value||'';
+    const detail=row.querySelector('.special-request-detail')?.value||'';
+    return `<div class="step3-assignment-card"><div class="step3-assignment-head"><div><span class="step3-mini-badge">SPECIAL REQUEST</span><strong>${escapeHtml(type||'Choose request type')}</strong></div><button type="button" class="step3-remove" data-special-remove="${i}">Remove</button></div><label class="step3-inline-field"><span>Exact Request</span><select data-special-type="${i}"><option value="">Choose request...</option>${specialRequestTypes.map(v=>`<option ${type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><div class="step3-assignment-label">Assign to Guest</div>${guestChipsMarkup(guest,i,'special-guest')}<label class="step3-inline-field"><span>Details <em>optional</em></span><input data-special-detail="${i}" value="${escapeAttr(detail)}" placeholder="Allergy, celebration, location, or other details" /></label></div>`;
+  });
+  const adaCards=adaRows.map((row,i)=>{
+    const type=row.querySelector('.ada-need-type')?.value||'';
+    const guest=row.querySelector('.focus-config-guest')?.value||'';
+    const detail=row.querySelector('.ada-need-detail')?.value||'';
+    return `<div class="step3-assignment-card accessibility"><div class="step3-assignment-head"><div><span class="step3-mini-badge">ACCESSIBILITY / ADA</span><strong>${escapeHtml(type||'Choose accessibility need')}</strong></div><button type="button" class="step3-remove" data-ada-remove="${i}">Remove</button></div><label class="step3-inline-field"><span>Accessibility Need</span><select data-ada-type="${i}"><option value="">Choose need...</option>${adaNeedTypes.map(v=>`<option ${type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><div class="step3-assignment-label">Assign to Guest</div>${guestChipsMarkup(guest,i,'ada-guest')}<label class="step3-inline-field"><span>Details <em>optional</em></span><input data-ada-detail="${i}" value="${escapeAttr(detail)}" placeholder="Mobility, equipment, assistance, or accommodation details" /></label></div>`;
+  });
+  const all=[...requestCards,...adaCards];
+  host.innerHTML=all.length?all.join(''):'<div class="step3-empty-state">No special or accessibility requests added yet.</div>';
+}
+
+function renderVisualCouponEntries(){
+  const host=$('visualCouponEntries');if(!host)return;
+  const rows=[...document.querySelectorAll('#couponRows .coupon-row')];
+  host.innerHTML=rows.length?rows.map((row,i)=>{
+    const type=row.querySelector('.coupon-type')?.value||'';
+    const guest=row.querySelector('.coupon-guest')?.value||'';
+    const lat=row.querySelector('.coupon-latitudes')?.value||latitudeForGuestName(guest)||'';
+    const detail=row.querySelector('.coupon-detail')?.value||'';
+    return `<div class="step3-assignment-card coupon"><div class="step3-assignment-head"><div><span class="step3-mini-badge">CREDIT / COUPON</span><strong>${escapeHtml(type||'Choose credit / coupon')}</strong></div><button type="button" class="step3-remove" data-coupon-remove="${i}">Remove</button></div><div class="step3-assignment-label">Guest Using Credit / Coupon</div>${guestChipsMarkup(guest,i,'coupon-guest')}<div class="step3-coupon-source">${lat?`Latitudes # <strong>${escapeHtml(lat)}</strong>`:'Select a Past Guest to use their Latitudes number when applicable.'}</div><label class="step3-inline-field"><span>Details / Value <em>optional</em></span><input data-coupon-detail="${i}" value="${escapeAttr(detail)}" placeholder="Example: 10% off, $250, certificate #..." /></label></div>`;
+  }).join(''):'<div class="step3-empty-state">Choose a credit or coupon above to add it to the scenario.</div>';
+}
+
+function renderVisualAirGuests(){
+  const host=$('visualAirGuests');if(!host)return;
+  if(!$('airGuestRows')?.children.length)renderAirGuestRows();
+  const items=collectAirGuestSelections();
+  const guests=guestOptionRecords();
+  host.innerHTML=guests.map((g,i)=>{
+    const item=items[i]||{guest:g.value,airProgram:'none',tripType:'round_trip',gateway:'',transfers:'No NCL Transfers'};
+    return `<div class="step3-air-guest-card"><div class="step3-air-guest-head"><span>Guest ${i+1}</span><strong>${escapeHtml(g.label)}</strong></div><div class="step3-air-choice-label">Air Type</div><div class="step3-air-choice-grid">${airGuestTypes.map(a=>`<button type="button" class="step3-air-choice ${item.airProgram===a.value?'active':''}" data-air-index="${i}" data-air-program="${a.value}">${escapeHtml(a.label)}</button>`).join('')}</div><div class="step3-air-choice-label">Ground Transfers</div><div class="step3-air-choice-grid transfers">${transferTypes.map(t=>`<button type="button" class="step3-air-choice ${item.transfers===t?'active':''}" data-transfer-index="${i}" data-transfer-value="${escapeAttr(t)}">${escapeHtml(t)}</button>`).join('')}</div><div class="step3-air-meta ${item.airProgram==='none'?'is-muted':''}"><label class="step3-inline-field"><span>Itinerary</span><select data-air-trip="${i}" ${item.airProgram==='none'?'disabled':''}><option value="round_trip" ${item.tripType!=='one_way'?'selected':''}>Round Trip</option><option value="one_way" ${item.tripType==='one_way'?'selected':''}>One Way</option></select></label><label class="step3-inline-field"><span>Gateway / Airport</span><input data-air-gateway="${i}" value="${escapeAttr(item.gateway||'')}" placeholder="MIA, JFK, FLL..." ${item.airProgram==='none'?'disabled':''}/></label></div></div>`;
+  }).join('');
+}
+
+function reservationForGuestIndex(index){
+  if(!multipleReservationFormActive())return 1;
+  let cursor=0;
+  for(let n=1;n<=multipleReservationTotal();n++){
+    const count=reservationFormData(n).guestCount;
+    if(index>=cursor && index<cursor+count)return n;
+    cursor+=count;
+  }
+  return 1;
+}
+
+function renderStep3AssignmentSummary(activeReservation){
+  const host=$('visualAssignmentSummary');if(!host)return;
+  const total=multipleReservationFormActive()?multipleReservationTotal():1;
+  const active=Math.max(1,Math.min(total,+activeReservation||+host.dataset.activeReservation||1));
+  host.dataset.activeReservation=String(active);
+  const names=formGuestNames();
+  const flags=collectPastGuestFlags();
+  const numbers=collectLatitudesNumbers();
+  const specials=collectSpecialRequests();
+  const ada=collectAdaNeeds();
+  const coupons=collectCoupons();
+  const air=collectAirGuestSelections();
+  const programs=priceProgramLabels(collectPricePrograms());
+  const tabs=total>1?`<div class="step3-reservation-tabs">${Array.from({length:total},(_,i)=>{const n=i+1;const guests=names.filter((_,idx)=>reservationForGuestIndex(idx)===n);return `<button type="button" class="${n===active?'active':''}" data-summary-reservation="${n}"><strong>Reservation ${n}</strong><small>${guests.length} Guest${guests.length===1?'':'s'}</small></button>`;}).join('')}</div>`:'';
+  const guestRows=names.map((name,i)=>({name,index:i,reservation:reservationForGuestIndex(i)})).filter(x=>x.reservation===active).map(x=>{
+    const s=specials.filter(v=>v.guest===x.name).map(v=>v.type);
+    const a=ada.filter(v=>v.guest===x.name).map(v=>v.type);
+    const c=coupons.filter(v=>v.guest===x.name).map(v=>v.type);
+    const airItem=air[x.index];
+    const tags=[];
+    if(airItem&&(airItem.airProgram!=='none'||airItem.transfers!=='No NCL Transfers'))tags.push(airGuestTypes.find(v=>v.value===airItem.airProgram)?.label||'Air / Transfers');
+    tags.push(...s,...a,...c);
+    return `<div class="step3-summary-guest"><div class="step3-summary-person"><strong>${escapeHtml(x.name||`Guest ${x.index+1}`)}</strong><span>${flags[x.index]?`Past Guest${numbers[x.index]?` • Latitudes # ${escapeHtml(numbers[x.index])}`:''}`:'New Guest'}</span></div><div class="step3-summary-tags">${tags.length?tags.map(t=>`<span>${escapeHtml(t)}</span>`).join(''):'<span class="empty">No guest-specific options assigned</span>'}</div></div>`;
+  }).join('');
+  host.innerHTML=`${tabs}<div class="step3-reservation-level"><strong>Reservation ${active} Programs</strong><span>${programs.length?escapeHtml(programs.join(' • ')):'No price programs selected'}</span></div>${guestRows||'<div class="step3-empty-state">No guests found for this reservation.</div>'}`;
+}
+
+function renderAdditionalOptionsVisual(){
+  const host=$('additionalOptionsVisual');if(!host)return;
+  const programs=collectPricePrograms();
+  const coupons=collectCoupons();
+  host.innerHTML=`<div class="step3-visual-shell"><div class="step3-main">
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">%</div><div><h4>Price Programs</h4><p>Select the program(s) to include. ALL4CHO includes Unlimited Open Bar, Specialty Dining, Internet, and Shore Excursions.</p></div></div><div class="step3-option-grid price-program-options">${priceProgramVisualTile('programAll4cho','ALL4CHO','ALL4CHO','All four Free at Sea components')}${priceProgramVisualTile('programOpenBar','Unlimited Open Bar','≈')}${priceProgramVisualTile('programDining','Specialty Dining','🍽')}${priceProgramVisualTile('programInternet','Internet','⌁')}${priceProgramVisualTile('programShoreEx','Shore Excursions','⚓')}${priceProgramVisualTile('programPsc','PPSRVCHG','▣','Prepaid Service Charges')}${priceProgramVisualTile('programKosher','Kosher Meals','✡')}${priceProgramVisualTile('programFlexnet','FlexNet','▤','Travel Agent promotion')}${priceProgramVisualTile('programAmexcpp','AMEXCPP','▥','Travel Agent promotion')}</div><label class="step3-other-field"><span>Other Price Program / TA Promotion <em>optional</em></span><input id="visualProgramOther" value="${escapeAttr(programs.other||'')}" placeholder="Enter another program or promotion" /></label></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✈</div><div><h4>Air &amp; Transfers</h4><p>Configure air and transfer choices independently for each guest. Guests can have different air products or no air at all.</p></div></div><div id="visualAirGuests" class="step3-air-guests"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">★</div><div><h4>Special Requests &amp; Accessibility</h4><p>Add exact requests and assign them to the correct guest.</p></div></div><div class="step3-add-buttons"><button type="button" class="step3-add-tile" data-add-special="Food Allergy"><span>⊘</span><strong>Allergy</strong></button><button type="button" class="step3-add-tile" data-add-special="Kosher Meals"><span>🍽</span><strong>Dining</strong></button><button type="button" class="step3-add-tile" data-add-special="Celebration / Cake"><span>★</span><strong>Celebration</strong></button><button type="button" class="step3-add-tile" data-add-ada="Wheelchair User / Limited Mobility"><span>♿</span><strong>Accessibility</strong></button><button type="button" class="step3-add-tile" data-add-special="Other Special Request"><span>•••</span><strong>Other</strong></button></div><div id="visualSpecialEntries" class="step3-entry-list"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">◇</div><div><h4>Coupons / Future Cruise Credits</h4><p>Mix and match credits and coupons by guest. Each selected item can come from a different guest profile.</p></div></div><div class="step3-coupon-type-grid">${couponTypes.map(type=>`<button type="button" class="step3-add-tile coupon-type" data-add-coupon="${escapeAttr(type)}"><span>${type.includes('FCC')?'FCC':type.includes('CruiseNext')?'CN':type.includes('CruiseFirst')?'CF':'%'}</span><strong>${escapeHtml(type)}</strong></button>`).join('')}</div><div id="visualCouponEntries" class="step3-entry-list"></div></section>
+    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✓</div><div><h4>Other Call Requirements</h4><p>Turn on the remaining scenario tasks you want trainees to complete.</p></div></div><div class="step3-option-grid task-options">${visualToggleTile('commentToggle','Commenting Tool','💬','Reservation comments')}${visualToggleTile('confirmToggle','Guest Confirmation','✉','Send confirmation')}${visualToggleTile('travelToggle','Travel Protection','◈','Norwegian Care discussion')}</div></section>
+    <section class="step3-visual-section assignment-section"><div class="step3-section-copy"><div class="step3-section-icon">👥</div><div><h4>Assign to Guests / Reservations</h4><p>Review where each guest-specific option is assigned before continuing.</p></div></div><div id="visualAssignmentSummary" class="step3-assignment-summary"></div></section>
+  </div><aside class="reservation-details-sidebar step3-sidebar"><div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Additional options for this scenario')}</span></div></div><div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div></aside></div>`;
+
+  renderVisualAirGuests();renderVisualSpecialEntries();renderVisualCouponEntries();renderStep3AssignmentSummary();
+
+  host.querySelectorAll('[data-price-program]').forEach(btn=>btn.addEventListener('click',()=>{
+    const id=btn.dataset.priceProgram;const input=$(id);if(!input)return;
+    const newValue=!input.checked;
+    input.checked=newValue;
+    if(id==='programAll4cho'&&newValue)['programOpenBar','programDining','programInternet','programShoreEx'].forEach(x=>{if($(x))$(x).checked=false;});
+    if(['programOpenBar','programDining','programInternet','programShoreEx'].includes(id)&&newValue&&$('programAll4cho'))$('programAll4cho').checked=false;
+    syncLegacyPriceProgramToggles();renderAdditionalOptionsVisual();renderWizardReviewSummary();
+  }));
+  $('visualProgramOther')?.addEventListener('input',e=>{$('programOther').value=e.target.value;renderStep3AssignmentSummary();renderWizardReviewSummary();});
+  host.querySelectorAll('[data-step3-toggle]').forEach(btn=>btn.addEventListener('click',()=>{const input=$(btn.dataset.step3Toggle);if(input){input.checked=!input.checked;input.dispatchEvent(new Event('change',{bubbles:true}));}renderAdditionalOptionsVisual();renderWizardReviewSummary();}));
+  host.querySelectorAll('[data-air-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+btn.dataset.airIndex];if(row){row.querySelector('.air-guest-program').value=btn.dataset.airProgram;syncLegacyAirFromGuestRows();}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-transfer-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+btn.dataset.transferIndex];if(row){row.querySelector('.air-guest-transfer').value=btn.dataset.transferValue;syncLegacyAirFromGuestRows();}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-air-trip]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+sel.dataset.airTrip];if(row)row.querySelector('.air-guest-trip').value=sel.value;syncLegacyAirFromGuestRows();renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-air-gateway]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#airGuestRows .air-guest-row')][+input.dataset.airGateway];if(row)row.querySelector('.air-guest-gateway').value=input.value;syncLegacyAirFromGuestRows();renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-add-special]').forEach(btn=>btn.addEventListener('click',()=>{addSpecialRequestRow({type:btn.dataset.addSpecial,guest:guestOptionRecords()[0]?.value||''});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-add-ada]').forEach(btn=>btn.addEventListener('click',()=>{addAdaNeedRow({type:btn.dataset.addAda,guest:guestOptionRecords()[0]?.value||''});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-type]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+sel.dataset.specialType];if(row)row.querySelector('.special-request-type').value=sel.value;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+input.dataset.specialDetail];if(row)row.querySelector('.special-request-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-special-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+btn.dataset.specialGuestIndex];if(row)row.querySelector('.focus-config-guest').value=btn.dataset.guestValue;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-special-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#specialRequestRows .focus-config-row')][+btn.dataset.specialRemove];row?.remove();renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-type]').forEach(sel=>sel.addEventListener('change',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+sel.dataset.adaType];if(row)row.querySelector('.ada-need-type').value=sel.value;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+input.dataset.adaDetail];if(row)row.querySelector('.ada-need-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-ada-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+btn.dataset.adaGuestIndex];if(row)row.querySelector('.focus-config-guest').value=btn.dataset.guestValue;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-ada-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#adaNeedRows .focus-config-row')][+btn.dataset.adaRemove];row?.remove();renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-add-coupon]').forEach(btn=>btn.addEventListener('click',()=>{const guest=guestOptionRecords()[0]?.value||'';if($('couponToggle'))$('couponToggle').checked=true;addCouponRow({type:btn.dataset.addCoupon,guest,latitudes:latitudeForGuestName(guest)});renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-coupon-guest-index]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+btn.dataset.couponGuestIndex];if(row){const guest=row.querySelector('.coupon-guest');const lat=row.querySelector('.coupon-latitudes');guest.value=btn.dataset.guestValue;lat.value=latitudeForGuestName(guest.value)||'';}renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-coupon-detail]').forEach(input=>input.addEventListener('input',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+input.dataset.couponDetail];if(row)row.querySelector('.coupon-detail').value=input.value;renderStep3AssignmentSummary();}));
+  host.querySelectorAll('[data-coupon-remove]').forEach(btn=>btn.addEventListener('click',()=>{const row=[...document.querySelectorAll('#couponRows .coupon-row')][+btn.dataset.couponRemove];row?.remove();if(!$('couponRows')?.children.length&&$('couponToggle'))$('couponToggle').checked=false;renderAdditionalOptionsVisual();}));
+  host.querySelectorAll('[data-summary-reservation]').forEach(btn=>btn.addEventListener('click',()=>renderStep3AssignmentSummary(btn.dataset.summaryReservation)));
+}
+
 function setupGeneratorWizard(){
   const wizard=$("generatorWizard");
   if(!wizard || generatorWizardState.ready)return;
@@ -6205,26 +6546,27 @@ function setupGeneratorWizard(){
   if(focusField)step1.appendChild(focusField);
   if($('trainingDay'))step1.appendChild($('trainingDay'));
 
-  const sailingTools=document.createElement('div');
-  sailingTools.className='wizard-sailing-tools';
-  const findSailing=document.createElement('button');
-  findSailing.type='button';findSailing.className='secondary tiny';findSailing.textContent='Find / Change Sailing';findSailing.onclick=()=>go('search');
-  sailingTools.appendChild(findSailing);
-  wizardSection(step2,{icon:'☎',title:'Caller & Booking Source',subtitle:'Who is calling and which booking source should be used?'},[$("marketAgencyField"),$("agencyField")]);
-  const guestSection=wizardSection(step2,{icon:'♟',title:'Guests & Stateroom',subtitle:'Enter guest names, count, category and location preferences.'},[$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField")]);
-  if(guestSection){
-    const tools=document.createElement('div');tools.className='wizard-inline-tools';tools.appendChild($("generateNamesBtn"));guestSection.querySelector('.wizard-detail-card-body').appendChild(tools);
-  }
-  wizardSection(step2,{icon:'⚓',title:'Sailing Details',subtitle:'Use a real NCL sailing when the scenario requires one.'},[$("selectedSailingSummary"),sailingTools]);
-  wizardSection(step2,{icon:'$',title:'Pricing & Booking Action',subtitle:'Set the payment action, advertised quote, and confirmation email.'},[wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail"))]);
-  if($("multipleReservationPanel"))step2.appendChild($("multipleReservationPanel"));
-  if($("modificationPanel"))step2.appendChild($("modificationPanel"));
+  const reservationVisual=document.createElement('div');
+  reservationVisual.id='reservationDetailsVisual';
+  step2.appendChild(reservationVisual);
+  const hiddenBindings=document.createElement('div');
+  hiddenBindings.className='wizard-hidden-bindings';
+  [$("marketAgencyField"),$("agencyField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
+  step2.appendChild(hiddenBindings);
+  renderReservationDetailsVisual();
 
-  if($("curriculumNote"))step3.appendChild($("curriculumNote"));
+  const additionalVisual=document.createElement('div');
+  additionalVisual.id='additionalOptionsVisual';
+  step3.appendChild(additionalVisual);
+  const step3Hidden=document.createElement('div');
+  step3Hidden.className='wizard-hidden-bindings step3-hidden-bindings';
+  if($("curriculumNote"))step3Hidden.appendChild($("curriculumNote"));
   const scenarioTasks=document.querySelector('#generator fieldset');
-  if(scenarioTasks)step3.appendChild(scenarioTasks);
-  if($("focusConfigurationHub"))step3.appendChild($("focusConfigurationHub"));
-  ["airProgramPanel","latitudesNumberPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
+  if(scenarioTasks)step3Hidden.appendChild(scenarioTasks);
+  if($("focusConfigurationHub"))step3Hidden.appendChild($("focusConfigurationHub"));
+  ["airProgramPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3Hidden.appendChild($(id));});
+  step3.appendChild(step3Hidden);
+  renderAdditionalOptionsVisual();
 
   const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
   const reviewAction=document.createElement('div');
@@ -6289,4 +6631,6 @@ function flash(msg){const n=document.createElement("div");n.className="notice su
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderWizardReviewSummary();
+
+["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
