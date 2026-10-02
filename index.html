@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.20" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.41" />
 </head>
 <body>
   <header class="topbar">
@@ -43,7 +43,7 @@
       <section id="dashboard" class="page active">
         <div class="hero">
           <div>
-            <span class="pill">V1.9.14 • Multi-Focus + Visual Scenario Format</span>
+            <span class="pill">V1.9.41 • Focus Categories & Detailed Setup</span>
             <h2>Build realistic Seaweb practice scenarios faster.</h2>
             <p>Search real NCL public sailings, generate structured exercises, catch contradictions before class, and save reusable scenarios.</p>
             <div class="actions">
@@ -71,7 +71,7 @@
               <div class="instruction-step"><span>3</span><div><strong>Build the scenario</strong><p>Select the department, workflow, scenario focus, guests, booking action, and any required servicing details. Guest Services modifications automatically include the GDPR workflow.</p></div></div>
               <div class="instruction-step"><span>4</span><div><strong>Generate and review</strong><p>Generate the scenario, switch between Trainer and Trainee views, and make adjustments until the exercise matches the skill you want to practice.</p></div></div>
               <div class="instruction-step"><span>5</span><div><strong>Validate before assigning</strong><p>Run Scenario Validator to catch missing guest information, GDPR requirements, payment conflicts, or other setup issues.</p></div></div>
-              <div class="instruction-step"><span>6</span><div><strong>Share, print, or save</strong><p>Use Share Card to download, copy, or print Trainer/Trainee versions. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
+              <div class="instruction-step"><span>6</span><div><strong>Share, print, or save</strong><p>Use Share Scenario to download an interactive Trainee or Trainer scenario, or use the other export options for PDF, PNG, copy, and print. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
             </div>
             <div class="instruction-tip"><strong>Tip:</strong> Use <em>Start New Scenario</em> whenever you want to clear the current exercise and begin again without carrying over guest names, reservation numbers, notes, payment details, or the previously generated card.</div>
           </div>
@@ -174,7 +174,7 @@
             <div>
               <span class="eyebrow">SELECT YOUR SAILING</span>
               <h3>Choose Itinerary & Specific Sailing Date</h3>
-              <p>After searching, choose the itinerary first, then choose the exact departure date for that itinerary.</p>
+              <p>Choose the NCL.com U.S. itinerary first, then choose a specific sailing date from the public schedule.</p>
             </div>
           </div>
 
@@ -193,7 +193,7 @@
 
             <label id="manualDateField" class="hidden-field">Verified Sailing Date
               <input id="manualSailingDate" type="date" />
-              <span class="field-hint">Use this only when the public NCL result does not expose exact dates. Verify the date on NCL.com U.S. or in Seaweb.</span>
+              <span class="field-hint">This appears only if neither NCL.com U.S. nor the public sailing schedule returns usable dates. Verify the date in NCL.com U.S. or Seaweb.</span>
             </label>
           </div>
 
@@ -219,7 +219,7 @@
 
       <section id="generator" class="page">
         <div class="section-head">
-          <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with progressive trainee support, an at-a-glance brief, task checklist and trainer-only coaching guide.</p></div>
+          <div><h2>Scenario Generator</h2><p>Create a structured Seaweb exercise with a guided step-by-step setup, clearer scenario focus selection, and a cleaner trainer workflow.</p></div>
           <button id="previewTraineeBtn" class="secondary trainer-only">Preview as Trainee</button>
         </div>
 
@@ -234,14 +234,88 @@
               <li>When applying FCC, CruiseNext, CruiseFirst, discount coupons, or other training credits, use <strong>Credits & Coupons</strong> to identify each item and the Latitudes profile it comes from.</li>
               <li>When a payment is required, choose a training-card profile and edit the card information if the exercise needs different training data.</li>
               <li>Select <strong>Generate Scenario</strong>, then review the card on the right. Trainer View includes coaching information; Trainee View hides trainer-only content.</li>
+              <li>After a scenario is created, select <strong>Make Roleplay</strong> to instantly convert it into a two-person Cruise Specialist / Caller roleplay. Select <strong>Standard Scenario</strong> to change it back.</li>
+              <li>Select <strong>Create Follow-Up Roleplay</strong> to turn the completed reservation into a new servicing call. Choose the changes the caller wants to make, add your own custom instructions, and the generator creates a separate GDPR-based servicing roleplay.</li>
               <li>Use <strong>Start New Scenario</strong> to clear the current setup and generated scenario before building a completely different exercise.</li>
             </ul>
           </div>
         </details>
 
-        <div class="two-col">
-          <div class="panel">
+        <div class="two-col generator-workspace">
+          <div class="panel generator-setup-panel">
             <div id="selectedSailingSummary" class="selected-sailing empty new-reservation-only">No real sailing selected yet.</div>
+
+            <div id="generatorWizard" class="generator-wizard">
+              <div class="wizard-topline">
+                <div class="wizard-brand-copy">
+                  <span>SEAweb Scenario Generator</span>
+                  <small>Guided trainer setup</small>
+                </div>
+                <button id="wizardStartOverBtn" type="button" class="secondary tiny">Start New Scenario</button>
+              </div>
+
+              <div class="wizard-progress" aria-label="Scenario Generator Steps">
+                <button type="button" class="wizard-step-button active" data-wizard-step="1"><span class="wizard-step-number">1</span><span class="wizard-step-copy"><strong>Scenario Type</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="2"><span class="wizard-step-number">2</span><span class="wizard-step-copy"><strong>Reservation Details</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="3"><span class="wizard-step-number">3</span><span class="wizard-step-copy"><strong>Additional Options</strong></span></button>
+                <span class="wizard-connector" aria-hidden="true"></span>
+                <button type="button" class="wizard-step-button" data-wizard-step="4"><span class="wizard-step-number">4</span><span class="wizard-step-copy"><strong>Review &amp; Generate</strong></span></button>
+              </div>
+
+              <section class="wizard-step-panel active" data-step-panel="1">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 1 of 4</span>
+                  <h3>Select the Scenario Type</h3>
+                  <p>Choose the main scenario focus. You can combine multiple skills into one exercise.</p>
+                </div>
+                <div id="wizardStep1Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button id="wizardCancelBtn" type="button" class="secondary">Cancel</button>
+                  <button type="button" class="primary" data-wizard-next="2">Next: Reservation Details →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="2">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 2 of 4</span>
+                  <h3>Enter Reservation Details</h3>
+                  <p>Provide the key details for this scenario. Fields adapt automatically based on the scenario type.</p>
+                </div>
+                <div id="wizardStep2Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="secondary" data-wizard-prev="1">← Back</button>
+                  <button type="button" class="primary" data-wizard-next="3">Next: Additional Options →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="3">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 3 of 4</span>
+                  <h3>Add Additional Options</h3>
+                  <p>Select the tasks and training elements to include. You can choose one or multiple options.</p>
+                </div>
+                <div id="wizardStep3Content" class="wizard-step-content"></div>
+                <div class="wizard-nav">
+                  <button type="button" class="secondary" data-wizard-prev="2">← Back</button>
+                  <button type="button" class="primary" data-wizard-next="4">Next: Review &amp; Generate →</button>
+                </div>
+              </section>
+
+              <section class="wizard-step-panel" data-step-panel="4">
+                <div class="wizard-step-intro">
+                  <span class="wizard-step-kicker">Step 4 of 4</span>
+                  <h3>Review Your Selections</h3>
+                  <p>Confirm the scenario details below, then generate the exercise.</p>
+                </div>
+                <div id="wizardReviewSummary" class="wizard-review-summary"></div>
+                <div id="wizardStep4Content" class="wizard-step-content"></div>
+                <div class="wizard-nav review-nav">
+                  <button type="button" class="secondary" data-wizard-prev="3">← Back</button>
+                </div>
+              </section>
+            </div>
 
             <div class="form-grid curriculum-grid">
               <label>Department
@@ -274,7 +348,7 @@
                   <div id="focusPickerMenu" class="focus-picker-menu" role="dialog" aria-label="Scenario Focus">
                     <div class="focus-picker-head"><strong>Select Scenario Focus</strong><small>Combine multiple skills into one scenario.</small></div>
                     <div id="focusPickerOptions" class="focus-picker-options"></div>
-                    <div class="focus-picker-actions"><button id="clearFocusBtn" type="button" class="secondary tiny">Clear</button><button id="doneFocusBtn" type="button" class="primary tiny">Done</button></div>
+                    <div class="focus-picker-actions"><button id="clearFocusBtn" type="button" class="secondary tiny">Clear Selected</button><button id="doneFocusBtn" type="button" class="primary tiny">Done</button></div>
                   </div>
                 </div>
                 <select id="scenarioType" class="focus-compat-select" aria-hidden="true" tabindex="-1"></select>
@@ -293,7 +367,7 @@
                   <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Challenge</option>
                 </select>
               </label>
-              <label id="guestCountField" class="new-reservation-detail">Guests
+              <label id="guestCountField" class="new-reservation-detail"><span id="guestCountLabelText">Guests</span>
                 <select id="guestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
               </label>
               <label id="marketAgencyField" class="hidden-field">Outbound Market / Currency
@@ -303,22 +377,23 @@
                 <input id="agency" value="5" autocomplete="off" />
                 <span id="agencyHint" class="field-hint">Agency 5 = Direct Guest (US) • Agency 7 = Direct Guest (Canada) • Travel Agent booking = enter the Travel Agent's Agency ID or phone number.</span>
               </label>
-              <label id="guest1Field">Primary Guest
+              <label id="guest1Field"><span id="guest1LabelText">Primary Guest</span>
                 <input id="guest1" value="Maxim De Winter" />
               </label>
-              <label id="guest2Field" class="new-reservation-detail">Guest 2
+              <label id="guest2Field" class="new-reservation-detail"><span id="guest2LabelText">Guest 2</span>
                 <input id="guest2" value="Rebecca De Winter" />
               </label>
-              <label id="categoryField" class="new-reservation-detail">Stateroom Category
+              <div id="reservation1ExtraGuests" class="form-grid-contents"></div>
+              <label id="categoryField" class="new-reservation-detail"><span id="categoryLabelText">Stateroom Category</span>
                 <select id="category">
                   <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
                   <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
                 </select>
               </label>
-              <label id="locationField" class="new-reservation-detail">Location Preference
+              <label id="locationField" class="new-reservation-detail"><span id="locationLabelText">Location Preference</span>
                 <select id="locationPref"><option>Any</option><option>Forward</option><option selected>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
               </label>
-              <label id="sideField" class="new-reservation-detail">Side Preference
+              <label id="sideField" class="new-reservation-detail"><span id="sideLabelText">Side Preference</span>
                 <select id="sidePref"><option>Any</option><option selected>Port</option><option>Starboard</option></select>
               </label>
               <label>Payment / Booking Action
@@ -327,12 +402,61 @@
                   <option>FCC / CruiseNext</option><option>Amenity Payment</option><option>Auto Final Payment discussion</option><option>Refund / Reinstate</option>
                 </select>
               </label>
-              <label id="pricingField" class="new-reservation-detail">Advertised Pricing (optional)
+              <label id="pricingField" class="new-reservation-detail"><span id="pricingLabelText">Advertised Pricing (optional)</span>
                 <input id="pricing" placeholder="$1,559 pp / $3,118 total" />
               </label>
               <label>Training Confirmation Email
                 <input id="confirmationEmail" value="training123@ncl.com" />
               </label>
+            </div>
+
+            <div id="multipleReservationPanel" class="multiple-reservation-panel hidden-field">
+              <div class="multiple-reservation-panel-head">
+                <div>
+                  <strong>Multiple Reservation Setup</strong>
+                  <span>Choose the total number of reservations, then enter the guest and stateroom details for each booking. Sailing, caller type, booking source, promotions, payment action, and confirmation email are shared unless the scenario says otherwise.</span>
+                </div>
+                <label class="reservation-count-control">Total Reservations
+                  <select id="reservationCount"><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+                </label>
+              </div>
+              <div class="form-grid multiple-reservation-form-grid">
+                <label>Guests
+                  <select id="reservation2GuestCount"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+                </label>
+                <label>Reservation Relationship
+                  <select id="reservationRelationship">
+                    <option>Connecting</option>
+                    <option>Adjacent / Next Door</option>
+                    <option>Near Each Other</option>
+                    <option selected>Same Sailing / Linked</option>
+                    <option>No Preference</option>
+                  </select>
+                </label>
+                <label>Primary Guest
+                  <input id="reservation2Guest1" placeholder="Reservation 2 primary guest" />
+                </label>
+                <label id="reservation2Guest2Field">Guest 2
+                  <input id="reservation2Guest2" placeholder="Reservation 2 guest 2" />
+                </label>
+                <div id="reservation2ExtraGuests" class="form-grid-contents"></div>
+                <label>Stateroom Category
+                  <select id="reservation2Category">
+                    <option>Inside</option><option>Oceanview</option><option selected>Balcony</option>
+                    <option>Club Balcony Suite</option><option>Suite / The Haven</option><option>Studio / Solo</option><option>ADA / Accessible</option><option>Random</option>
+                  </select>
+                </label>
+                <label>Location Preference
+                  <select id="reservation2LocationPref"><option selected>Any</option><option>Forward</option><option>Midship</option><option>Aft</option><option>Near stairs/elevators</option><option>Highest deck available</option></select>
+                </label>
+                <label>Side Preference
+                  <select id="reservation2SidePref"><option selected>Any</option><option>Port</option><option>Starboard</option></select>
+                </label>
+                <label>Advertised Pricing (optional)
+                  <input id="reservation2Pricing" placeholder="$1,559 pp / $3,118 total" />
+                </label>
+              </div>
+              <div id="additionalReservationsContainer" class="additional-reservations-container"></div>
             </div>
 
             <div id="modificationPanel" class="modification-panel hidden-field">
@@ -464,15 +588,62 @@
 
             <fieldset>
               <legend>Scenario Tasks</legend>
-              <label id="guestStatusTaskControl" class="check"><input id="latitudesToggle" type="checkbox" checked /> Guest Status / Latitudes</label>
-              <label class="check"><input id="commentToggle" type="checkbox" /> Use Commenting Tool</label>
-              <label class="check"><input id="confirmToggle" type="checkbox" checked /> Send Guest Confirmation</label>
-              <label class="check"><input id="fasToggle" type="checkbox" /> Include Free at Sea discussion</label>
-              <label class="check"><input id="travelToggle" type="checkbox" /> Travel Protection discussion</label>
-              <label class="check"><input id="pscToggle" type="checkbox" /> Prepaid Service Charges discussion</label>
-              <label class="check"><input id="airToggle" type="checkbox" /> Include Air / Transfers</label>
-              <label class="check"><input id="couponToggle" type="checkbox" /> Include Credits / Coupons</label>
+              <label id="guestStatusTaskControl" class="check"><input id="latitudesToggle" type="checkbox" checked /><span class="task-card-copy"><strong>Guest Status / Latitudes</strong><small>Choose Past Guest or New Guest and add training Latitudes numbers when needed.</small></span></label>
+              <label class="check"><input id="commentToggle" type="checkbox" /><span class="task-card-copy"><strong>Commenting Tool</strong><small>Include reservation comments and internal documentation in the scenario.</small></span></label>
+              <label class="check"><input id="confirmToggle" type="checkbox" checked /><span class="task-card-copy"><strong>Guest Confirmation</strong><small>Include sending the appropriate confirmation email to the guest.</small></span></label>
+              <label class="check"><input id="fasToggle" type="checkbox" /><span class="task-card-copy"><strong>Free at Sea (FAS)</strong><small>Include applicable Free at Sea selections, eligibility, and discussion points.</small></span></label>
+              <label class="check"><input id="travelToggle" type="checkbox" /><span class="task-card-copy"><strong>Travel Protection</strong><small>Include Norwegian Care / travel protection offer and guest questions.</small></span></label>
+              <label class="check"><input id="pscToggle" type="checkbox" /><span class="task-card-copy"><strong>Prepaid Service Charges</strong><small>Include prepaid service charges and applicable payment discussion.</small></span></label>
+              <label class="check"><input id="airToggle" type="checkbox" /><span class="task-card-copy"><strong>Air / Transfers</strong><small>Include NCL Air and/or ground transfer details and required terms.</small></span></label>
+              <label class="check"><input id="couponToggle" type="checkbox" /><span class="task-card-copy"><strong>Credits / Coupons</strong><small>Include FCC, CruiseNext, CruiseFirst, discount coupons, or other training credits.</small></span></label>
             </fieldset>
+
+            <div id="focusConfigurationHub" class="focus-configuration-hub">
+              <div id="specialRequestConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Special Requests by Guest</strong><span>Choose the exact request and the guest it applies to. Add as many requests as needed.</span></div>
+                  <button id="addSpecialRequestBtn" type="button" class="secondary tiny">+ Add Special Request</button>
+                </div>
+                <div id="specialRequestRows" class="focus-config-rows"></div>
+              </div>
+
+              <div id="adaConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>ADA / Accessibility Needs by Guest</strong><span>Identify which guest has the accessibility need and the type of support or accommodation required.</span></div>
+                  <button id="addAdaNeedBtn" type="button" class="secondary tiny">+ Add Accessibility Need</button>
+                </div>
+                <div id="adaNeedRows" class="focus-config-rows"></div>
+              </div>
+
+              <div id="priceProgramConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Price Programs &amp; Promotions</strong><span>Select the exact programs to include. ALL4CHO includes Unlimited Open Bar, Specialty Dining, Internet, and Shore Excursions.</span></div>
+                  <span class="status-badge">PRICE PROGRAMS</span>
+                </div>
+                <div class="price-program-grid">
+                  <label class="program-choice master-program"><input id="programAll4cho" type="checkbox" /><span><strong>ALL4CHO</strong><small>Include all 4 Free at Sea choices</small></span></label>
+                  <label class="program-choice"><input id="programOpenBar" type="checkbox" /><span><strong>Unlimited Open Bar</strong><small>Free at Sea beverage choice</small></span></label>
+                  <label class="program-choice"><input id="programDining" type="checkbox" /><span><strong>Specialty Dining</strong><small>Free at Sea dining choice</small></span></label>
+                  <label class="program-choice"><input id="programInternet" type="checkbox" /><span><strong>Internet</strong><small>Free at Sea internet choice</small></span></label>
+                  <label class="program-choice"><input id="programShoreEx" type="checkbox" /><span><strong>Shore Excursions</strong><small>Free at Sea shore excursion choice</small></span></label>
+                  <label class="program-choice"><input id="programPsc" type="checkbox" /><span><strong>Prepaid Service Charges</strong><small>Add PPSRVCHG</small></span></label>
+                  <label class="program-choice"><input id="programKosher" type="checkbox" /><span><strong>Kosher Meals</strong><small>Add meal request when applicable</small></span></label>
+                  <label class="program-choice ta-program"><input id="programFlexnet" type="checkbox" /><span><strong>FlexNet</strong><small>Travel Agent promotion</small></span></label>
+                  <label class="program-choice ta-program"><input id="programAmexcpp" type="checkbox" /><span><strong>AMEXCPP</strong><small>Travel Agent promotion</small></span></label>
+                </div>
+                <label class="price-program-other">Other Price Program / TA Promotion <span class="optional-label">optional</span>
+                  <input id="programOther" placeholder="Enter another program or promotion" />
+                </label>
+              </div>
+
+              <div id="airGuestConfigPanel" class="focus-config-panel hidden-field">
+                <div class="focus-config-head">
+                  <div><strong>Air &amp; Transfers by Guest</strong><span>Configure each traveler independently. A guest may decline air, choose a different air product, or have different transfer needs.</span></div>
+                  <span class="status-badge">PER GUEST</span>
+                </div>
+                <div id="airGuestRows" class="air-guest-rows"></div>
+              </div>
+            </div>
 
             <div id="airProgramPanel" class="air-program-panel hidden-field">
               <div class="air-panel-head">
@@ -546,39 +717,61 @@
             </div>
           </div>
 
-          <div class="panel output-panel">
+          <div class="panel output-panel generated-scenario-panel">
+            <div class="generated-success-banner">
+              <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Review, share, print, or save it below.</small></div></div>
+              <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
+            </div>
+            <div class="generated-tabs" role="tablist" aria-label="Generated scenario view">
+              <button type="button" class="generated-tab active" data-generated-tab="scenario">Scenario Output</button>
+              <button type="button" class="generated-tab trainer-only" data-generated-tab="trainer">Trainer Guide</button>
+            </div>
             <div class="output-toolbar">
               <span id="scenarioStatus" class="status-badge neutral">Draft</span>
               <div class="output-actions">
                 <div class="share-control" id="shareControl">
                   <button id="shareScenarioBtn" class="tiny share-trigger" type="button" aria-haspopup="menu" aria-expanded="false">
-                    Share Card <span aria-hidden="true">⌄</span>
+                    Share Scenario <span aria-hidden="true">⌄</span>
                   </button>
-                  <div id="shareScenarioMenu" class="share-menu" role="menu">
-                    <button id="downloadAdaptivePdfBtn" type="button" role="menuitem" class="recommended-share-option">
+                  <div id="shareScenarioMenu" class="share-menu interactive-share-menu" role="menu">
+                    <div class="share-menu-group-label">INTERACTIVE SCENARIO</div>
+                    <button id="downloadInteractiveTraineeBtn" type="button" role="menuitem" class="recommended-share-option interactive-share-primary">
+                      <span class="share-menu-icon">HTML</span>
+                      <span><strong>Download Interactive Trainee Scenario</strong><small>Recommended — guided worksheet with progress, checkboxes, notes, autosave and printing</small></span>
+                    </button>
+                    <button id="downloadInteractiveTrainerBtn" type="button" role="menuitem">
+                      <span class="share-menu-icon">TR</span>
+                      <span><strong>Download Interactive Trainer Scenario</strong><small>Same interactive document plus Trainer Guide and coaching content</small></span>
+                    </button>
+
+                    <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">OTHER EXPORT OPTIONS</div>
+                    <button id="downloadAdaptivePdfBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">PDF</span>
-                      <span><strong>Download Current View PDF</strong><small>Recommended — matches the current Generator scenario layout and styling</small></span>
+                      <span><strong>Download Current View PDF</strong><small>Static copy of the current Generator view</small></span>
                     </button>
                     <button id="downloadAdaptivePngBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▣</span>
-                      <span><strong>Download Current View PNG</strong><small>Matches the Generator scenario layout; respects Trainer or Trainee View</small></span>
+                      <span><strong>Download Current View PNG</strong><small>Static image of the current Trainer or Trainee view</small></span>
                     </button>
                     <button id="printTraineeViewBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">T</span>
-                      <span><strong>Print Trainee View</strong><small>Print the scenario without trainer-only coaching content</small></span>
+                      <span><strong>Print Trainee View</strong><small>Print directly from the Generator without trainer-only coaching content</small></span>
                     </button>
                     <button id="printTrainerViewBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">TR</span>
-                      <span><strong>Print Trainer View</strong><small>Print the scenario with the Trainer Guide and coaching notes</small></span>
+                      <span><strong>Print Trainer View</strong><small>Print directly from the Generator with Trainer Guide content</small></span>
                     </button>
+
                     <div class="share-menu-divider" aria-hidden="true"></div>
+                    <div class="share-menu-group-label">COPY</div>
                     <button id="copyCardImageBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">▣</span>
-                      <span><strong>Copy Current View as Image</strong><small>Copies exactly what the current Trainer/Trainee export contains</small></span>
+                      <span><strong>Copy Current View as Image</strong><small>Copies the current static Generator view</small></span>
                     </button>
                     <button id="copyCardFormattedBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">A</span>
-                      <span><strong>Copy Current View Editable</strong><small>Formatted text recipients can select and copy</small></span>
+                      <span><strong>Copy Current View Editable</strong><small>Formatted text for Teams or Outlook</small></span>
                     </button>
                     <button id="copyScenarioBtn" type="button" role="menuitem">
                       <span class="share-menu-icon">¶</span>
@@ -586,6 +779,8 @@
                     </button>
                   </div>
                 </div>
+                <button id="roleplayScenarioBtn" class="tiny roleplay-toggle-btn" type="button" disabled>Make Roleplay</button>
+                <button id="followUpRoleplayBtn" class="tiny followup-roleplay-btn" type="button" disabled>Create Follow-Up Roleplay</button>
                 <button id="printScenarioBtn" class="tiny">Print</button>
                 <button id="saveScenarioBtn" class="tiny primary">Save</button>
               </div>
@@ -650,7 +845,71 @@
     </main>
   </div>
 
+  <dialog id="followUpRoleplayDialog" class="followup-dialog">
+    <form method="dialog" class="followup-dialog-card" id="followUpRoleplayForm">
+      <div class="followup-dialog-head">
+        <div>
+          <div class="eyebrow">FOLLOW-UP SERVICING ROLEPLAY</div>
+          <h2>Create a Call-Back Scenario</h2>
+          <p>Use the reservation from the scenario you just created, then choose what the Guest or Travel Agent is calling back to change.</p>
+        </div>
+        <button id="closeFollowUpRoleplayBtn" class="dialog-close" value="cancel" type="submit" aria-label="Close">×</button>
+      </div>
+      <div class="followup-source-card" id="followUpSourceSummary"></div>
+      <div class="followup-form-grid">
+        <label>Caller for the follow-up
+          <select id="followUpCallerType">
+            <option value="same">Same caller / booking source as original scenario</option>
+            <option value="direct_guest">Direct Guest</option>
+            <option value="travel_agent">Travel Agent</option>
+          </select>
+          <span class="field-hint">The generated servicing roleplay automatically uses the correct GDPR path. Reservation Number is always required.</span>
+        </label>
+        <label id="followUpAgencyField">Travel Agency ID or Phone Number
+          <input id="followUpAgency" type="text" placeholder="Use original agency or enter a training Agency ID / phone number" />
+          <span class="field-hint">Used when the follow-up caller is a Travel Agent.</span>
+        </label>
+      </div>
+      <div class="followup-change-section">
+        <div class="followup-change-head">
+          <div><strong>What does the caller want to change?</strong><small>Select as many servicing requests as you want in the same roleplay.</small></div>
+          <button id="clearFollowUpChangesBtn" class="secondary tiny" type="button">Clear</button>
+        </div>
+        <div class="followup-change-grid" id="followUpChangeOptions">
+          <label><input type="checkbox" value="add_guest" /> <span><strong>Add a Guest</strong><small>Add another guest to the reservation.</small></span></label>
+          <label><input type="checkbox" value="remove_guest" /> <span><strong>Remove a Guest</strong><small>Remove an existing guest and review pricing.</small></span></label>
+          <label><input type="checkbox" value="stateroom" /> <span><strong>Change / Upgrade Stateroom</strong><small>Category, stateroom number, location or capacity change.</small></span></label>
+          <label><input type="checkbox" value="guest_info" /> <span><strong>Update Guest Information</strong><small>Name, contact or other permitted guest-information change.</small></span></label>
+          <label><input type="checkbox" value="special_request" /> <span><strong>Special Request / Allergy</strong><small>Add or update a special request, meal need or allergy.</small></span></label>
+          <label><input type="checkbox" value="bed_config" /> <span><strong>Bed Configuration</strong><small>Change bed setup when supported by the stateroom.</small></span></label>
+          <label><input type="checkbox" value="fas" /> <span><strong>Free at Sea</strong><small>Add, remove or verify applicable Free at Sea selections.</small></span></label>
+          <label><input type="checkbox" value="ppsrvc" /> <span><strong>Pre-Paid Service Charges</strong><small>Add, remove or update PPSRVCHG.</small></span></label>
+          <label><input type="checkbox" value="care" /> <span><strong>Norwegian Care</strong><small>Add, remove or review Travel Protection.</small></span></label>
+          <label><input type="checkbox" value="air_transfer" /> <span><strong>Air / Transfers</strong><small>Add or modify air, deviations, ground transfers or related details.</small></span></label>
+          <label><input type="checkbox" value="dining_amenity" /> <span><strong>Dining / Entertainment / Amenity</strong><small>Add or change a reservation-level amenity or onboard item.</small></span></label>
+          <label><input type="checkbox" value="coupon_credit" /> <span><strong>Coupon / Credit</strong><small>Apply or review an eligible coupon, FCC, CruiseNext or other credit.</small></span></label>
+          <label><input type="checkbox" value="price_drop" /> <span><strong>Price Drop</strong><small>Research the current pricing and follow the applicable price-drop workflow.</small></span></label>
+          <label><input type="checkbox" value="payment" /> <span><strong>Payment / Additional Deposit</strong><small>Review or collect an amount due after servicing changes.</small></span></label>
+          <label><input type="checkbox" value="cancel_reinstate" /> <span><strong>Cancel / Reinstate</strong><small>Practice the applicable cancellation or reinstatement workflow.</small></span></label>
+        </div>
+      </div>
+      <label class="followup-custom-field">Specific changes / caller details
+        <textarea id="followUpCustomChanges" rows="5" placeholder="Example: Add Taylor using Latitudes #272279126, upgrade from Studio to a Balcony near the elevators, set Twin Beds, and add a mushroom allergy."></textarea>
+        <span class="field-hint">Use this for names, Latitudes numbers, preferred category/location, special requests, amounts, or any other details the trainee should discover during the call.</span>
+      </label>
+      <div class="followup-options-row">
+        <label class="check-line"><input id="followUpIncludeCard" type="checkbox" checked /> Include the training credit card in case an additional payment is due</label>
+        <label class="check-line"><input id="followUpKeepBenefits" type="checkbox" checked /> Tell trainee to verify existing promotions / add-ons after the changes</label>
+      </div>
+      <div id="followUpBuilderNotice" class="notice warning hidden-field"></div>
+      <div class="followup-dialog-actions">
+        <button class="secondary" value="cancel" type="submit">Cancel</button>
+        <button id="buildFollowUpRoleplayBtn" class="primary" type="button">Create Follow-Up Roleplay</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.20"></script>
+  <script src="/app.js?v=1.9.41"></script>
 </body>
 </html>

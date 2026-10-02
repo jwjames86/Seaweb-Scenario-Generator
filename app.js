@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const makeUuid = () => (globalThis.crypto?.randomUUID ? globalThis.makeUuid() : `seaweb-${Date.now()}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`);
 const state = {
   mode: "trainer",
   selectedSailing: null,
@@ -35,6 +36,7 @@ const trainingCards = {
   standardSesame:{label:"Standard Training Card – Sesame St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"123 Sesame Street, Miami, FL 33126"},
   standardMain:{label:"Standard Training Card – Main St.",number:"4444 3333 2222 1111",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
   alternateMain:{label:"Alternate Training Card – Main St.",number:"4917 6100 0000 0000",expiration:"04/2027",ccv:"123",address:"100 Main St., Miami, FL 33126"},
+  alternateSesame:{label:"4917 Training Card – Sesame St.",number:"4917 6100 0000 0000",expiration:"04/2027",ccv:"123",address:"123 Sesame Street, Miami, FL 33126"},
   obSpecial:{label:"OB Special Requests Training Card",number:"4444 3333 2222 1111",expiration:"05/2028",ccv:"456",address:"123 Sesame Street, Miami, FL 33126"}
 };
 
@@ -249,13 +251,18 @@ const scenarioCatalog = {
     ],
     10: [
       {name:"Agencies: TA Booking",payment:"FCC / CruiseNext",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"ta",objective:"Create a travel-agent booking, apply agency/FlexNet requirements, secure the reservation with CruiseNext, apply guest coupons in the correct order, and recap/notate the booking."},
+      {name:"Solo Guest / Studio Booking",payment:"Minimum Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Intermediate",kind:"solo_studio",objective:"Travel Agent Kyle James with Norwegian Training Travel books Tom Holland as a solo guest on the June 27, 2027 Norwegian Aqua sailing. Search the guest by last name and date of birth, select a Studio, quote advertised pricing, include applicable Free at Sea, Pre-Paid Service Charges, Kosher Meals, Norwegian Care, collect the minimum deposit, send guest and agent confirmations, and add Compass comments."},
       {name:"Multiple Reservations",payment:"Initial Deposit",cardRequired:true,cardProfile:"standardMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create two related family reservations, handle authorized-person guidance, deposits, adjacent/connecting rooms, special requests, FAS/PPSRVCHG/travel protection, and link bookings with TWITH."},
+      {name:"Multiple Reservations & Authorized Person",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"multi_authorized",objective:"Direct Guest Maria Lopez books two connecting Balcony reservations from Galveston in March 2027 for herself, Sofia, Ana and Luis. Verify all guest details, Free at Sea, Pre-Paid Service Charges, Norwegian Care, special requests, separate deposits, Authorized Person guidance/commenting, confirmations, recap, and TWITH."},
       {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an NCL Air reservation with ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
       {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
+      {name:"Reinstate Cancelled Reservation – Roleplay",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"roleplay",objective:"Two-person servicing roleplay using a reservation cancelled yesterday. Complete GDPR with Reservation Number required, verify cancellation occurred within the last 24 hours, confirm the previous stateroom and pricing are still available, reinstate when eligible, Store Changes, add comments, send confirmation, recap, then switch roles."},
+      {name:"Add Guest & Upgrade Stateroom – Roleplay",payment:"No Payment / Service Only",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"add_guest_upgrade_roleplay",objective:"Two-person servicing roleplay using today's Solo Guest / Studio Booking reservation. Travel Agent Kyle James calls to add Taylor using Latitudes #272279126. Complete GDPR with Reservation Number required, upgrade the Studio to a category for two guests near elevators/stairs when possible, quote new pricing, preserve Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, set Twin Beds, add Taylor's mushroom allergy while retaining Tom's Kosher Meals, check for additional deposit, Store Changes, add Compass comments, send guest and agent confirmations, recap, then switch roles."},
       {name:"Price Drops - TRAINER DEMO",payment:"No Payment / Service Only",cardRequired:false,commenting:false,difficulty:"Advanced",kind:"demo",objective:"Trainer-led demonstration of the price-drop workflow and the required Seaweb/NCLHelp checks."},
-      {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."}
+      {name:"Land Pkgs / Cruisetour",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service an existing travel-agent reservation and add the best available land package/cruisetour after GDPR verification, then recap and document the change."},
+      {name:"Multiple Reservations & Authorized Person – Cruisetour",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"multi_authorized_cruisetour",objective:"Direct Guest Maria Lopez books two connecting Balcony reservations on Pride of America from Honolulu in March 2027 using the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour with a 4-day pre-cruise land portion. Include Authorized Person handling, separate deposits, Free at Sea, Pre-Paid Service Charges, Norwegian Care, special requests, confirmations, recap, and TWITH."}
     ]
   },
   "Outbound Sales": {
@@ -314,6 +321,10 @@ function go(page){
   document.querySelector(`.nav[data-page="${page}"]`)?.classList.add("active");
   if(page==="library") renderLibrary();
   if(page==="dashboard") updateStats();
+  if(page==="generator" && generatorWizardState?.ready){
+    if(state.currentScenario) showGeneratedScenarioScreen();
+    else showWizardScenarioSetup(generatorWizardState.currentStep||1);
+  }
 }
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>go(n.dataset.page));
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
@@ -323,6 +334,10 @@ function setMode(mode){
   document.body.classList.toggle("trainee-mode",mode==="trainee");
   $("trainerModeBtn").classList.toggle("active",mode==="trainer");
   $("traineeModeBtn").classList.toggle("active",mode==="trainee");
+  if(mode==="trainee"){
+    $("scenarioOutput")?.classList.remove("trainer-guide-only");
+    document.querySelectorAll('#generator .generated-tab').forEach(b=>b.classList.toggle('active',b.dataset.generatedTab==='scenario'));
+  }
   if(mode==="trainee" && $("validator").classList.contains("active")) go("generator");
 }
 $("trainerModeBtn").onclick=()=>setMode("trainer");
@@ -365,6 +380,266 @@ function focusNamesForData(d){
 
 function focusSearchText(d){
   return `${focusNamesForData(d).join(' ')} ${(d.curriculumObjectives||[]).join(' ')} ${d.curriculumObjective||''}`.toLowerCase();
+}
+
+function isReinstateRoleplay(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>{
+    const n=String(name||"").toLowerCase();
+    return n.includes("reinstate cancelled reservation") && n.includes("roleplay");
+  });
+}
+
+function isSoloStudioScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("solo guest / studio booking"));
+}
+
+function isAddGuestUpgradeRoleplay(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("add guest & upgrade stateroom"));
+}
+
+function isMultipleAuthorizedScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>{
+    const n=String(name||"").toLowerCase();
+    return n.includes("multiple reservations & authorized person") && !n.includes("cruisetour");
+  });
+}
+
+function isMultipleAuthorizedCruisetourScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("multiple reservations & authorized person – cruisetour"));
+}
+
+function isMultipleAuthorizedAny(dOrNames){
+  return isMultipleAuthorizedScenario(dOrNames)||isMultipleAuthorizedCruisetourScenario(dOrNames);
+}
+
+function isMultipleReservationScenario(dOrNames){
+  const names=Array.isArray(dOrNames)?dOrNames:focusNamesForData(dOrNames||{});
+  return names.some(name=>String(name||"").toLowerCase().includes("multiple reservations"));
+}
+
+function multipleReservationFormActive(){
+  return $("reservationWorkflow")?.value==="new" && isMultipleReservationScenario(selectedFocusNames());
+}
+
+function renderExtraGuestFields(hostId,prefix,count){
+  const host=$(hostId);
+  if(!host)return;
+  const previous={};
+  host.querySelectorAll('input[data-extra-guest-index]').forEach(input=>{previous[input.dataset.extraGuestIndex]=input.value});
+  const rows=[];
+  for(let i=3;i<=count;i++){
+    const id=`${prefix}Guest${i}`;
+    rows.push(`<label><span>Guest ${i}</span><input id="${id}" data-extra-guest-index="${i}" placeholder="Guest ${i} name" value="${escapeAttr(previous[String(i)]||'')}" /></label>`);
+  }
+  host.innerHTML=rows.join('');
+  host.querySelectorAll('input[data-extra-guest-index]').forEach(input=>input.addEventListener('input',()=>{
+    if($("latitudesToggle")?.checked)renderLatitudesFields();
+    refreshCouponGuestOptions();
+  }));
+}
+
+function reservation1GuestNamesFromForm(){
+  const count=+$("guestCount")?.value||1;
+  return Array.from({length:count},(_,i)=>{
+    if(i===0)return $("guest1")?.value.trim()||"";
+    if(i===1)return $("guest2")?.value.trim()||"";
+    return $(`reservation1Guest${i+1}`)?.value.trim()||"";
+  });
+}
+
+function reservation2GuestNamesFromForm(){
+  const count=+$('reservation2GuestCount')?.value||1;
+  return Array.from({length:count},(_,i)=>{
+    if(i===0)return $('reservation2Guest1')?.value.trim()||'';
+    if(i===1)return $('reservation2Guest2')?.value.trim()||'';
+    return $(`reservation2Guest${i+1}`)?.value.trim()||'';
+  });
+}
+
+function multipleReservationTotal(){
+  return multipleReservationFormActive() ? Math.max(2,Math.min(8,+$('reservationCount')?.value||2)) : 1;
+}
+
+function reservationGuestNamesFromForm(number){
+  if(number===1)return reservation1GuestNamesFromForm();
+  if(number===2)return reservation2GuestNamesFromForm();
+  const count=+$(`reservation${number}GuestCount`)?.value||1;
+  return Array.from({length:count},(_,i)=>$(`reservation${number}Guest${i+1}`)?.value.trim()||'');
+}
+
+function reservationFormData(number){
+  if(number===1)return {number,guestCount:+$('guestCount')?.value||1,guests:reservation1GuestNamesFromForm(),category:$('category')?.value||'',location:$('locationPref')?.value||'Any',side:$('sidePref')?.value||'Any',pricing:$('pricing')?.value.trim()||''};
+  if(number===2)return {number,guestCount:+$('reservation2GuestCount')?.value||1,guests:reservation2GuestNamesFromForm(),category:$('reservation2Category')?.value||$('category')?.value||'',location:$('reservation2LocationPref')?.value||'Any',side:$('reservation2SidePref')?.value||'Any',pricing:$('reservation2Pricing')?.value.trim()||''};
+  return {number,guestCount:+$(`reservation${number}GuestCount`)?.value||1,guests:reservationGuestNamesFromForm(number),category:$(`reservation${number}Category`)?.value||$('category')?.value||'',location:$(`reservation${number}LocationPref`)?.value||'Any',side:$(`reservation${number}SidePref`)?.value||'Any',pricing:$(`reservation${number}Pricing`)?.value.trim()||''};
+}
+
+function formGuestNames(){
+  if(!multipleReservationFormActive())return reservation1GuestNamesFromForm();
+  return Array.from({length:multipleReservationTotal()},(_,i)=>reservationGuestNamesFromForm(i+1)).flat();
+}
+
+function effectiveFormGuestCount(){
+  return formGuestNames().length||1;
+}
+
+function scenarioGuestNames(d){
+  if(Array.isArray(d?.reservations)&&d.reservations.length){
+    return d.reservations.flatMap(r=>Array.isArray(r.guests)?r.guests.slice(0,+r.guestCount||r.guests.length):[]);
+  }
+  const names=[];
+  const count=+d?.guestCount||1;
+  for(let i=0;i<count;i++){
+    if(i===0)names.push(d?.guest1||'');
+    else if(i===1)names.push(d?.guest2||'');
+    else names.push(Array.isArray(d?.guestNames)?(d.guestNames[i]||''):'');
+  }
+  return names;
+}
+
+function dynamicReservationSnapshot(){
+  const data={};
+  for(let n=3;n<=8;n++){
+    const count=$(`reservation${n}GuestCount`);
+    if(!count)continue;
+    data[n]=reservationFormData(n);
+  }
+  return data;
+}
+
+function reservationCategoryOptions(selected='Balcony'){
+  return ['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible','Random'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function reservationLocationOptions(selected='Any'){
+  return ['Any','Forward','Midship','Aft','Near stairs/elevators','Highest deck available'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+function reservationSideOptions(selected='Any'){
+  return ['Any','Port','Starboard'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+}
+
+function renderDynamicReservationGuestFields(number,values=[]){
+  const host=$(`reservation${number}GuestFields`);if(!host)return;
+  const count=+$(`reservation${number}GuestCount`)?.value||1;
+  const current=Array.from({length:Math.max(count,values.length)},(_,i)=>$(`reservation${number}Guest${i+1}`)?.value||values[i]||'');
+  host.innerHTML=Array.from({length:count},(_,i)=>`<label>${i===0?'Primary Guest':`Guest ${i+1}`}<input id="reservation${number}Guest${i+1}" value="${escapeAttr(current[i]||'')}" placeholder="Reservation ${number} ${i===0?'primary guest':`guest ${i+1}`}" /></label>`).join('');
+  host.querySelectorAll('input').forEach(input=>input.addEventListener('input',refreshGuestDependentConfigs));
+}
+
+function renderAdditionalReservationPanels(initialData={}){
+  const host=$('additionalReservationsContainer');if(!host)return;
+  const previous={...dynamicReservationSnapshot(),...initialData};
+  const total=multipleReservationTotal();
+  if(total<=2){host.innerHTML='';return;}
+  host.innerHTML=Array.from({length:total-2},(_,idx)=>{
+    const n=idx+3,d=previous[n]||{};
+    return `<section class="additional-reservation-card" data-reservation-number="${n}">
+      <div class="additional-reservation-head"><div><strong>Reservation ${n} Details</strong><span>Enter the guests and stateroom requirements for this booking.</span></div><span class="status-badge">RESERVATION ${n}</span></div>
+      <div class="form-grid multiple-reservation-form-grid">
+        <label>Guests<select id="reservation${n}GuestCount">${Array.from({length:8},(_,i)=>`<option ${(+d.guestCount||2)===i+1?'selected':''}>${i+1}</option>`).join('')}</select></label>
+        <label>Stateroom Category<select id="reservation${n}Category">${reservationCategoryOptions(d.category||'Balcony')}</select></label>
+        <div id="reservation${n}GuestFields" class="form-grid-contents"></div>
+        <label>Location Preference<select id="reservation${n}LocationPref">${reservationLocationOptions(d.location||'Any')}</select></label>
+        <label>Side Preference<select id="reservation${n}SidePref">${reservationSideOptions(d.side||'Any')}</select></label>
+        <label>Advertised Pricing (optional)<input id="reservation${n}Pricing" value="${escapeAttr(d.pricing||'')}" placeholder="$1,559 pp / $3,118 total" /></label>
+      </div>
+    </section>`;
+  }).join('');
+  for(let n=3;n<=total;n++){
+    const d=previous[n]||{};
+    renderDynamicReservationGuestFields(n,d.guests||[]);
+    $(`reservation${n}GuestCount`)?.addEventListener('change',()=>{renderDynamicReservationGuestFields(n);refreshGuestDependentConfigs();});
+    [$(`reservation${n}Category`),$(`reservation${n}LocationPref`),$(`reservation${n}SidePref`),$(`reservation${n}Pricing`)].filter(Boolean).forEach(el=>el.addEventListener('change',renderWizardReviewSummary));
+  }
+}
+
+function updateMultipleReservationUI(initialExtraData={}){
+  const active=multipleReservationFormActive();
+  $('multipleReservationPanel')?.classList.toggle('hidden-field',!active);
+  const labels={guestCount:active?'Reservation 1 Guests':'Guests',guest1:active?'Reservation 1 Primary Guest':'Primary Guest',guest2:active?'Reservation 1 Guest 2':'Guest 2',category:active?'Reservation 1 Stateroom Category':'Stateroom Category',location:active?'Reservation 1 Location Preference':'Location Preference',side:active?'Reservation 1 Side Preference':'Side Preference',pricing:active?'Reservation 1 Advertised Pricing (optional)':'Advertised Pricing (optional)'};
+  if($('guestCountLabelText'))$('guestCountLabelText').textContent=labels.guestCount;
+  if($('guest1LabelText'))$('guest1LabelText').textContent=labels.guest1;
+  if($('guest2LabelText'))$('guest2LabelText').textContent=labels.guest2;
+  if($('categoryLabelText'))$('categoryLabelText').textContent=labels.category;
+  if($('locationLabelText'))$('locationLabelText').textContent=labels.location;
+  if($('sideLabelText'))$('sideLabelText').textContent=labels.side;
+  if($('pricingLabelText'))$('pricingLabelText').textContent=labels.pricing;
+
+  const count1=+$('guestCount')?.value||1;
+  $('guest2Field')?.classList.toggle('guest-count-hidden',count1<2);
+  renderExtraGuestFields('reservation1ExtraGuests','reservation1',count1);
+  const count2=+$('reservation2GuestCount')?.value||1;
+  $('reservation2Guest2Field')?.classList.toggle('guest-count-hidden',count2<2);
+  renderExtraGuestFields('reservation2ExtraGuests','reservation2',count2);
+  if(active)renderAdditionalReservationPanels(initialExtraData); else if($('additionalReservationsContainer'))$('additionalReservationsContainer').innerHTML='';
+  refreshGuestDependentConfigs();
+}
+
+function setSailingSearchPreset(anchor,value,from,to,duration=""){
+  const radio=document.querySelector(`input[name="searchAnchor"][value="${anchor}"]`);
+  if(radio){
+    radio.checked=true;
+    updateAnchorUI();
+    chooseAnchorValue(value);
+  }
+  if($("searchFrom"))$("searchFrom").value=from;
+  if($("searchTo")){
+    $("searchTo").min=from;
+    $("searchTo").max=addDays(from,30);
+    $("searchTo").value=to;
+  }
+  if($("searchDuration"))$("searchDuration").value=duration;
+  updateDateHint();
+}
+
+function applyMultipleAuthorizedGuests(){
+  if($("reservationCount"))$("reservationCount").value="2";
+  $("guestCount").value="2";
+  $("guest1").value="Maria Lopez";
+  $("guest2").value="Sofia";
+  if($("reservationCount"))$("reservationCount").value="2";
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value="2";
+  if($("reservation2Guest1"))$("reservation2Guest1").value="Ana Martinez";
+  if($("reservation2Guest2"))$("reservation2Guest2").value="Luis Martinez";
+  if($("reservation2Category"))$("reservation2Category").value="Balcony";
+  if($("reservation2LocationPref"))$("reservation2LocationPref").value="Any";
+  if($("reservation2SidePref"))$("reservation2SidePref").value="Any";
+  if($("reservationRelationship"))$("reservationRelationship").value="Connecting";
+  $("latitudesToggle").checked=true;
+  updateMultipleReservationUI();
+  renderLatitudesFields(
+    ["279019549","279019550","279019849","279019848"],
+    [true,true,true,true]
+  );
+}
+
+function isDedicatedRoleplay(d){
+  if(!d)return false;
+  if(isReinstateRoleplay(d)||isAddGuestUpgradeRoleplay(d))return true;
+  return Array.isArray(d.curriculumKinds)&&d.curriculumKinds.some(k=>String(k).includes("roleplay"));
+}
+
+function isRoleplayScenario(d){
+  return !!d && (Boolean(d.roleplayMode)||isDedicatedRoleplay(d));
+}
+
+function roleplayCallerLabel(d){
+  if(isAddGuestUpgradeRoleplay(d)||isSoloStudioScenario(d))return "Travel Agent — Kyle James";
+  if(d.gdprCallerType==="travel_agent"||d.gdprCallerType==="ta_group")return "Travel Agent";
+  if(d.gdprCallerType==="direct_guest")return "Direct Guest";
+  if(d.gdprCallerType){
+    const profile=gdprProfile(d.gdprCallerType);
+    if(profile?.label)return profile.label;
+  }
+  if(d.department==="Guest Services"&&d.reservationWorkflow==="new"){
+    const caller=newReservationCallerInfo(d.newCallerType);
+    return caller.type==="travel_agent"?"Travel Agent":caller.label.replace(" — US","").replace(" — Canada","");
+  }
+  if(d.department==="Outbound Sales")return "Guest";
+  return "Caller";
 }
 
 function focusTitle(d){return focusNamesForData(d).join(' + ')||'SEAweb Practice'}
@@ -514,6 +789,204 @@ function updateDepartmentUI(){
   updateGdprPreview();
 }
 
+function scenarioFocusIconSvg(name){
+  const n=String(name||"").toLowerCase();
+  const wrap=paths=>`<span class="focus-card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">${paths}</svg></span>`;
+  if(n.includes("air")||n.includes("transfer"))return wrap('<path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>');
+  if(n.includes("special")||n.includes("ada"))return wrap('<path d="M12 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm-1 7v4H7.5a1.5 1.5 0 0 0 0 3H11v6h2v-6h3.5a1.5 1.5 0 0 0 0-3H13V9z"/>');
+  if(n.includes("multiple")&&n.includes("authorized"))return wrap('<path d="M7 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 21v-2a6 6 0 0 1 12 0v2Zm13.5 0v-2a5 5 0 0 1 8-4v6Z"/><path d="M17 15.5 19 17l3-3" fill="none" stroke="currentColor" stroke-width="1.8"/>');
+  if(n.includes("multiple"))return wrap('<path d="M7 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm10 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1 21v-2a6 6 0 0 1 12 0v2Zm13.5 0v-2a5 5 0 0 1 8-4v6Z"/>');
+  if(n.includes("cancel")||n.includes("reinstate")||n.includes("existing")||n.includes("change")||n.includes("upgrade"))return wrap('<path d="M4 4h10v2H6v12h12v-8h2v10H4z"/><path d="M13 3h8v8h-2V6.4l-8.3 8.3-1.4-1.4L17.6 5H13z"/>');
+  if(n.includes("payment")||n.includes("fcc")||n.includes("coupon")||n.includes("price"))return wrap('<path d="M3 5h18v14H3zM5 8h14V7H5zm0 3v6h14v-6z"/><circle cx="8" cy="14" r="1.4"/>');
+  if(n.includes("dining")||n.includes("spa")||n.includes("amenit"))return wrap('<path d="M7 2v8a3 3 0 0 0 2 2.83V22h2v-9.17A3 3 0 0 0 13 10V2h-2v5H9V2Zm9 0c-1.7 0-3 2.24-3 5s1.3 5 3 5v10h2V2Z"/>');
+  if(n.includes("basic")||n.includes("solo")||n.includes("infant")||n.includes("agency")||n.includes("ta booking"))return wrap('<path d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm8 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 21v-2a6 6 0 0 1 12 0v2Zm12 0v-2a5 5 0 0 1 8-4v6Z"/>');
+  return wrap('<path d="M12 2 9.2 8.2 3 11l6.2 2.8L12 20l2.8-6.2L21 11l-6.2-2.8Z"/>');
+}
+
+
+const focusCategoryDefs=[
+  {id:'common',label:'Most Common',icon:'★'},
+  {id:'new',label:'New Reservation',icon:'👤'},
+  {id:'servicing',label:'Servicing / Changes',icon:'↻'},
+  {id:'special',label:'Special Requests',icon:'◆'},
+  {id:'air',label:'Air & Transfers',icon:'✈'},
+  {id:'advanced',label:'Advanced',icon:'⚙'}
+];
+let activeFocusCategory='common';
+
+function focusActualCategory(meta){
+  const n=String(meta?.name||'').toLowerCase();
+  const kind=String(meta?.kind||'').toLowerCase();
+  if(/air|transfer/.test(n))return 'air';
+  if(/special request|ada|infant|guests 3-8|dietary/.test(n))return 'special';
+  if(kind==='followup'||/cancel|reinstate|price drop|hotel|amenit|dining|entertainment|spa|servic|change|upgrade/.test(n))return 'servicing';
+  if(/multiple reservations & authorized|cruisetour|land pkg|gty|guarantee|roleplay|ta booking|agency|flexnet/.test(n))return 'advanced';
+  return 'new';
+}
+
+function focusIsCommon(meta){
+  return /basic reservation|payments|applying fcc|norwegian.?care|price programs|special requests$|ada & special|multiple reservations$|ncl air & ground transfers/i.test(meta?.name||'');
+}
+
+function renderFocusCategoryTabs(){
+  const picker=$('focusPickerMenu'),options=$('focusPickerOptions');if(!picker||!options)return;
+  let tabs=picker.querySelector('.focus-category-tabs');
+  if(!tabs){tabs=document.createElement('div');tabs.className='focus-category-tabs';options.before(tabs);}
+  const selected=selectedFocusRecords();
+  tabs.innerHTML=focusCategoryDefs.map(cat=>{
+    const count=selected.filter(r=>cat.id==='common'?focusIsCommon(r.meta):focusActualCategory(r.meta)===cat.id).length;
+    return `<button type="button" class="focus-category-tab ${activeFocusCategory===cat.id?'active':''}" data-focus-category="${cat.id}"><span class="focus-category-icon">${cat.icon}</span><span>${cat.label}</span>${count?`<b>${count}</b>`:''}</button>`;
+  }).join('');
+  tabs.querySelectorAll('.focus-category-tab').forEach(btn=>btn.addEventListener('click',()=>{activeFocusCategory=btn.dataset.focusCategory;renderFocusCategoryTabs();filterFocusCards();}));
+  filterFocusCards();
+}
+
+function filterFocusCards(){
+  $('focusPickerOptions')?.querySelectorAll('.focus-choice').forEach(card=>{
+    const show=activeFocusCategory==='common'?card.dataset.common==='true':card.dataset.category===activeFocusCategory;
+    card.classList.toggle('focus-category-hidden',!show);
+  });
+}
+
+function selectedFocusHas(pattern){return selectedFocusNames().some(name=>pattern.test(String(name||'')));}
+function specialRequestFocusActive(){return selectedFocusHas(/special request/i);}
+function adaFocusActive(){return selectedFocusHas(/\bada\b|accessible/i);}
+function priceProgramFocusActive(){return selectedFocusHas(/price programs|\bfas\b|free at sea/i);}
+function airFocusActive(){return selectedFocusHas(/air|transfer/i);}
+
+const specialRequestTypes=['Extra Pillows','Beds Together','Egg Crate Mattress','Food Allergy','Kosher Meals','Gluten-Free Diet','Salt-Free Diet','Lactose Intolerant','Celebration / Cake','Wheelchair Assistance – Embarkation','Wheelchair Assistance – Debarkation','Other Special Request'];
+const adaNeedTypes=['Wheelchair User / Limited Mobility','Wheelchair-Accessible Stateroom','Mobility Scooter','Embarkation Assistance','Debarkation Assistance','Hearing Impairment','Visual Impairment','Service Animal','Medical Equipment / Device','Dietary / Food Allergy Accommodation','Other Accessibility Need'];
+const airGuestTypes=[
+  {value:'none',label:'No NCL Air'},
+  {value:'bundled',label:'Bundled Air / AIRPROM3'},
+  {value:'air_choice',label:'Air Choice'},
+  {value:'air_choice_plus',label:'Air Choice Plus'},
+  {value:'independent_no_flights',label:'Independent Air – No Flights / Transfer Setup'}
+];
+const transferTypes=['No NCL Transfers','Embarkation Transfer Only','Debarkation Transfer Only','Round-Trip Transfers'];
+let specialRequestRowSeq=0,adaNeedRowSeq=0;
+
+function guestOptionRecords(){
+  return formGuestNames().map((name,i)=>({value:name||`Guest ${i+1}`,label:name||`Guest ${i+1}`}));
+}
+function guestSelectOptions(selected=''){
+  const guests=guestOptionRecords();
+  return guests.map(g=>`<option value="${escapeAttr(g.value)}" ${g.value===selected?'selected':''}>${escapeHtml(g.label)}</option>`).join('');
+}
+
+function addSpecialRequestRow(data={}){
+  const host=$('specialRequestRows');if(!host)return;
+  const row=document.createElement('div');row.className='focus-config-row';row.dataset.specialRequestRow=String(++specialRequestRowSeq);
+  row.innerHTML=`<label>Guest<select class="focus-config-guest">${guestSelectOptions(data.guest||'')}</select></label><label>Special Request<select class="special-request-type"><option value="">Choose request...</option>${specialRequestTypes.map(v=>`<option ${data.type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><label class="focus-config-detail">Details <span class="optional-label">optional</span><input class="special-request-detail" value="${escapeAttr(data.detail||'')}" placeholder="Allergy item, celebration, location, or other detail" /></label><button type="button" class="secondary tiny focus-config-remove">Remove</button>`;
+  row.querySelector('.focus-config-remove').onclick=()=>{row.remove();if(!host.children.length)addSpecialRequestRow();renderWizardReviewSummary();};
+  host.appendChild(row);
+}
+function collectSpecialRequests(){return [...document.querySelectorAll('#specialRequestRows .focus-config-row')].map(row=>({guest:row.querySelector('.focus-config-guest')?.value||'',type:row.querySelector('.special-request-type')?.value||'',detail:row.querySelector('.special-request-detail')?.value.trim()||''})).filter(x=>x.type||x.detail);}
+function setSpecialRequestRows(items=[]){const host=$('specialRequestRows');if(!host)return;host.innerHTML='';(items||[]).forEach(addSpecialRequestRow);if(!host.children.length)addSpecialRequestRow();}
+
+function addAdaNeedRow(data={}){
+  const host=$('adaNeedRows');if(!host)return;
+  const row=document.createElement('div');row.className='focus-config-row';row.dataset.adaNeedRow=String(++adaNeedRowSeq);
+  row.innerHTML=`<label>Guest<select class="focus-config-guest">${guestSelectOptions(data.guest||'')}</select></label><label>Accessibility Need<select class="ada-need-type"><option value="">Choose need...</option>${adaNeedTypes.map(v=>`<option ${data.type===v?'selected':''}>${escapeHtml(v)}</option>`).join('')}</select></label><label class="focus-config-detail">Details <span class="optional-label">optional</span><input class="ada-need-detail" value="${escapeAttr(data.detail||'')}" placeholder="Mobility details, equipment, assistance, etc." /></label><button type="button" class="secondary tiny focus-config-remove">Remove</button>`;
+  row.querySelector('.focus-config-remove').onclick=()=>{row.remove();if(!host.children.length)addAdaNeedRow();renderWizardReviewSummary();};
+  host.appendChild(row);
+}
+function collectAdaNeeds(){return [...document.querySelectorAll('#adaNeedRows .focus-config-row')].map(row=>({guest:row.querySelector('.focus-config-guest')?.value||'',type:row.querySelector('.ada-need-type')?.value||'',detail:row.querySelector('.ada-need-detail')?.value.trim()||''})).filter(x=>x.type||x.detail);}
+function setAdaNeedRows(items=[]){const host=$('adaNeedRows');if(!host)return;host.innerHTML='';(items||[]).forEach(addAdaNeedRow);if(!host.children.length)addAdaNeedRow();}
+
+function collectPricePrograms(){
+  return {all4cho:!!$('programAll4cho')?.checked,openBar:!!$('programOpenBar')?.checked,dining:!!$('programDining')?.checked,internet:!!$('programInternet')?.checked,shoreExcursions:!!$('programShoreEx')?.checked,prepaidServiceCharges:!!$('programPsc')?.checked,kosherMeals:!!$('programKosher')?.checked,flexnet:!!$('programFlexnet')?.checked,amexcpp:!!$('programAmexcpp')?.checked,other:$('programOther')?.value.trim()||''};
+}
+function setPricePrograms(data={}){
+  const ids={all4cho:'programAll4cho',openBar:'programOpenBar',dining:'programDining',internet:'programInternet',shoreExcursions:'programShoreEx',prepaidServiceCharges:'programPsc',kosherMeals:'programKosher',flexnet:'programFlexnet',amexcpp:'programAmexcpp'};
+  Object.entries(ids).forEach(([k,id])=>{if($(id))$(id).checked=!!data[k];});
+  if($('programOther'))$('programOther').value=data.other||'';
+  syncLegacyPriceProgramToggles();
+}
+function syncLegacyPriceProgramToggles(){
+  const p=collectPricePrograms();
+  const anyFas=p.all4cho||p.openBar||p.dining||p.internet||p.shoreExcursions;
+  if($('fasToggle'))$('fasToggle').checked=anyFas;
+  if($('pscToggle'))$('pscToggle').checked=p.prepaidServiceCharges;
+}
+function priceProgramLabels(p){
+  if(!p)return[];
+  const labels=[];
+  if(p.all4cho)labels.push('ALL4CHO (Unlimited Open Bar + Specialty Dining + Internet + Shore Excursions)');
+  else{
+    if(p.openBar)labels.push('Unlimited Open Bar');if(p.dining)labels.push('Specialty Dining');if(p.internet)labels.push('Internet');if(p.shoreExcursions)labels.push('Shore Excursions');
+  }
+  if(p.prepaidServiceCharges)labels.push('Prepaid Service Charges');if(p.kosherMeals)labels.push('Kosher Meals');if(p.flexnet)labels.push('FlexNet');if(p.amexcpp)labels.push('AMEXCPP');if(p.other)labels.push(p.other);
+  return labels;
+}
+
+function airGuestKey(index){return `guest-${index}`;}
+function collectAirGuestSelections(){
+  return [...document.querySelectorAll('#airGuestRows .air-guest-row')].map(row=>({guest:row.dataset.guestName||'',airProgram:row.querySelector('.air-guest-program')?.value||'none',tripType:row.querySelector('.air-guest-trip')?.value||'round_trip',gateway:row.querySelector('.air-guest-gateway')?.value.trim()||'',transfers:row.querySelector('.air-guest-transfer')?.value||'No NCL Transfers'}));
+}
+function renderAirGuestRows(saved=[]){
+  const host=$('airGuestRows');if(!host)return;
+  const old=collectAirGuestSelections();
+  const source=Array.isArray(saved)&&saved.length?saved:old;
+  const guests=guestOptionRecords();
+  host.innerHTML=guests.map((g,i)=>{
+    const prior=source.find(x=>x.guest===g.value)||source[i]||{};
+    return `<div class="air-guest-row" data-guest-name="${escapeAttr(g.value)}"><div class="air-guest-name"><span>Guest ${i+1}</span><strong>${escapeHtml(g.label)}</strong></div><label>Air Type<select class="air-guest-program">${airGuestTypes.map(a=>`<option value="${a.value}" ${prior.airProgram===a.value?'selected':''}>${escapeHtml(a.label)}</option>`).join('')}</select></label><label>Itinerary<select class="air-guest-trip"><option value="round_trip" ${prior.tripType!=='one_way'?'selected':''}>Round Trip</option><option value="one_way" ${prior.tripType==='one_way'?'selected':''}>One Way</option></select></label><label>Gateway / Airport<input class="air-guest-gateway" value="${escapeAttr(prior.gateway||'')}" placeholder="MIA, JFK, FLL..." /></label><label>Ground Transfers<select class="air-guest-transfer">${transferTypes.map(t=>`<option ${prior.transfers===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></label></div>`;
+  }).join('');
+  host.querySelectorAll('select,input').forEach(el=>el.addEventListener('change',syncLegacyAirFromGuestRows));
+  host.querySelectorAll('input').forEach(el=>el.addEventListener('input',syncLegacyAirFromGuestRows));
+  syncLegacyAirFromGuestRows();
+}
+function setAirGuestSelections(items=[]){renderAirGuestRows(items);}
+function syncLegacyAirFromGuestRows(){
+  const items=collectAirGuestSelections();
+  const first=items.find(x=>x.airProgram&&x.airProgram!=='none');
+  const hasTransfers=items.some(x=>x.transfers&&x.transfers!=='No NCL Transfers');
+  if($('airToggle'))$('airToggle').checked=airFocusActive()||!!first||hasTransfers;
+  if(first){if($('airProgram'))$('airProgram').value=first.airProgram;if($('airTripType'))$('airTripType').value=first.tripType||'round_trip';if($('airGateway'))$('airGateway').value=first.gateway||'';}
+  else if($('airProgram'))$('airProgram').value='';
+  renderWizardReviewSummary();
+}
+
+function refreshGuestSelectorsInRows(selector,selectedGetter){
+  document.querySelectorAll(selector).forEach((select,i)=>{const selected=selectedGetter?selectedGetter(select,i):select.value;select.innerHTML=guestSelectOptions(selected);if(selected&&[...select.options].some(o=>o.value===selected))select.value=selected;});
+}
+
+function refreshGuestDependentConfigs(){
+  refreshCouponGuestOptions();
+  refreshGuestSelectorsInRows('#specialRequestRows .focus-config-guest');
+  refreshGuestSelectorsInRows('#adaNeedRows .focus-config-guest');
+  if(!$('airGuestConfigPanel')?.classList.contains('hidden-field'))renderAirGuestRows();
+  if($('latitudesToggle')?.checked)renderLatitudesFields();
+  renderWizardReviewSummary();
+}
+
+function refreshFocusConfigurationPanels(){
+  const special=specialRequestFocusActive();
+  const ada=adaFocusActive();
+  const price=priceProgramFocusActive();
+  const air=airFocusActive()||!!$('airToggle')?.checked;
+  $('specialRequestConfigPanel')?.classList.toggle('hidden-field',!special);
+  $('adaConfigPanel')?.classList.toggle('hidden-field',!ada);
+  $('priceProgramConfigPanel')?.classList.toggle('hidden-field',!price);
+  $('airGuestConfigPanel')?.classList.toggle('hidden-field',!air);
+  if(special && !$('specialRequestRows')?.children.length)addSpecialRequestRow();
+  if(ada && !$('adaNeedRows')?.children.length)addAdaNeedRow();
+  if(price)syncLegacyPriceProgramToggles();
+  if(air)renderAirGuestRows();
+  const legacyAir=$('airProgramPanel');if(legacyAir)legacyAir.classList.add('focus-config-legacy-hidden');
+  renderWizardReviewSummary();
+}
+
+function detailedFocusConfigHtml(d){
+  const chunks=[];
+  if(Array.isArray(d.specialRequests)&&d.specialRequests.length){chunks.push(`<div class="focus-config-output"><h4>Special Requests</h4><ul>${d.specialRequests.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Special Request')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
+  if(Array.isArray(d.adaNeeds)&&d.adaNeeds.length){chunks.push(`<div class="focus-config-output"><h4>ADA / Accessibility Needs</h4><ul>${d.adaNeeds.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Accessibility Need')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
+  const priceLabels=priceProgramLabels(d.pricePrograms);if(priceLabels.length){chunks.push(`<div class="focus-config-output"><h4>Price Programs & Promotions</h4><ul>${priceLabels.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`);}
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.some(x=>x.airProgram!=='none'||x.transfers!=='No NCL Transfers')){chunks.push(`<div class="focus-config-output"><h4>Air & Transfers by Guest</h4><ul>${d.airGuestSelections.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(airGuestTypes.find(a=>a.value===x.airProgram)?.label||'No NCL Air')}${x.airProgram!=='none'?` • ${x.tripType==='one_way'?'One Way':'Round Trip'}`:''}${x.gateway?` • ${escapeHtml(x.gateway)}`:''} • ${escapeHtml(x.transfers||'No NCL Transfers')}</li>`).join('')}</ul></div>`);}
+  return chunks.length?`<section class="scenario-section visual-section detailed-focus-config-section"><div class="section-label">TRAINER-SELECTED DETAILS</div>${scenarioIconHeading('⚙️','Scenario-Specific Setup')}<div class="focus-config-output-grid">${chunks.join('')}</div></section>`:'';
+}
+
 function updateScenarioFocus(preferred,preferredDay,preferredList){
   const dept=$("department").value;
   const all=allFocusRecords(dept);
@@ -522,10 +995,12 @@ function updateScenarioFocus(preferred,preferredDay,preferredList){
   const requested=Array.isArray(preferredList)&&preferredList.length?preferredList:(preferred?[preferred]:[]);
   $("focusPickerOptions").innerHTML=all.map(({day,meta})=>{
     const checked=requested.some(name=>name===meta.name) || (!requested.length && all[0]?.meta.name===meta.name && all[0]?.day===day);
-    return `<label class="focus-choice"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span><strong>${escapeHtml(meta.name)}</strong><small>${escapeHtml(meta.objective)}</small></span></label>`;
+    const category=focusActualCategory(meta),common=focusIsCommon(meta);
+    return `<label class="focus-choice" data-category="${category}" data-common="${common?'true':'false'}" title="${escapeAttr(meta.objective||meta.name)}"><input class="focus-choice-input" type="checkbox" value="${escapeAttr(meta.name)}" data-day="${day}" ${checked?'checked':''}/><span class="focus-card-body">${scenarioFocusIconSvg(meta.name)}<strong>${escapeHtml(meta.name)}</strong></span></label>`;
   }).join("");
 
   $("focusPickerOptions").querySelectorAll('.focus-choice-input').forEach(input=>input.addEventListener('change',syncScenarioFocusSelection));
+  renderFocusCategoryTabs();
   if(preferred && preferredDay){
     const exact=[...$("focusPickerOptions").querySelectorAll('.focus-choice-input')].find(i=>i.value===preferred&&i.dataset.day===String(preferredDay));
     if(exact && requested.length<=1){
@@ -551,6 +1026,8 @@ function syncScenarioFocusSelection(){
   if(records.length)$("trainingDay").value=String(Math.max(...records.map(r=>r.day)));
   updateFocusPickerDisplay();
   applyFocusDefaults();
+  renderFocusCategoryTabs();
+  refreshFocusConfigurationPanels();
 }
 
 function openFocusPicker(){$("focusPickerMenu").classList.add('open');$("focusPickerBtn").setAttribute('aria-expanded','true')}
@@ -878,6 +1355,7 @@ function updateWorkflowUI(applyDefaults=false){
   }
   updateModificationTypeUI(applyDefaults);
   syncAgencyCallerLogic();
+  updateMultipleReservationUI();
   updateGdprPreview();
 }
 function paymentActionNeedsCard(){
@@ -898,19 +1376,18 @@ function refreshTrainingCardPanel(preferredProfile){
 }
 
 function collectLatitudesNumbers(){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>($(`latitudeNumber${i+1}`)?.value||'').trim());
 }
 
 function collectPastGuestFlags(){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>!!$(`pastGuest${i+1}`)?.checked);
 }
 
 function guestDisplayName(index){
-  if(index===0)return $('guest1').value.trim()||'Guest 1';
-  if(index===1)return $('guest2').value.trim()||'Guest 2';
-  return `Guest ${index+1}`;
+  const names=formGuestNames();
+  return names[index]||`Guest ${index+1}`;
 }
 
 function normalizeGuestStatusFlags(count,flags,values,hasExistingControls){
@@ -938,7 +1415,7 @@ function syncGuestStatusCard(card){
 }
 
 function renderLatitudesFields(values,flags){
-  const count=+$('guestCount').value||1;
+  const count=effectiveFormGuestCount();
   const host=$('latitudesGuestFields');
   if(!host)return;
   const hasExistingControls=!!host.querySelector('.guest-status-radio');
@@ -990,9 +1467,11 @@ function getGuestProfileMix(d){
 const couponTypes=[
   "CruiseNext Credit",
   "Future Cruise Credit (FCC)",
-  "10% Discount Coupon",
   "CruiseFirst Credit",
+  "10% Discount Coupon",
+  "Percentage Discount Coupon",
   "Latitudes / Guest Coupon",
+  "Promotional / Partner Coupon",
   "Other Credit / Coupon"
 ];
 let couponRowSequence=0;
@@ -1003,14 +1482,19 @@ function couponWorkflowRequested(){
 }
 
 function couponGuestNames(){
-  const count=+$("guestCount")?.value||1;
+  const count=effectiveFormGuestCount();
   return Array.from({length:count},(_,i)=>guestDisplayName(i)).filter(Boolean);
 }
 
 function refreshCouponGuestOptions(){
+  const names=couponGuestNames();
   const list=$("couponGuestOptions");
-  if(!list)return;
-  list.innerHTML=couponGuestNames().map(name=>`<option value="${escapeAttr(name)}"></option>`).join("");
+  if(list)list.innerHTML=names.map(name=>`<option value="${escapeAttr(name)}"></option>`).join("");
+  document.querySelectorAll('#couponRows select.coupon-guest').forEach(select=>{
+    const current=select.value;
+    select.innerHTML=`<option value="">Choose source guest...</option>${names.map(name=>`<option value="${escapeAttr(name)}" ${name===current?'selected':''}>${escapeHtml(name)}</option>`).join('')}`;
+    if(current&&[...select.options].some(o=>o.value===current))select.value=current;
+  });
 }
 
 function latitudeForGuestName(name){
@@ -1038,7 +1522,7 @@ function addCouponRow(data={}){
       </select>
     </label>
     <label>Source Guest
-      <input class="coupon-guest" list="couponGuestOptions" value="${escapeAttr(data.guest||'')}" placeholder="Guest whose profile owns the coupon" />
+      <select class="coupon-guest"><option value="">Choose source guest...</option>${couponGuestNames().map(name=>`<option value="${escapeAttr(name)}" ${data.guest===name?'selected':''}>${escapeHtml(name)}</option>`).join('')}</select>
     </label>
     <label>Source Latitudes #
       <input class="coupon-latitudes" inputmode="numeric" maxlength="12" value="${escapeAttr(data.latitudes||'')}" placeholder="Latitudes number" />
@@ -1111,18 +1595,124 @@ function applyFocusDefaults(){
 
   $("difficulty").value=difficulty||"Intermediate";
   $("paymentAction").value=payment;
+
+  const reinstateRoleplay=metas.some(m=>m.kind==="roleplay" || m.name==="Reinstate Cancelled Reservation – Roleplay");
+  const soloStudio=metas.some(m=>m.kind==="solo_studio" || m.name==="Solo Guest / Studio Booking");
+  const addGuestUpgrade=metas.some(m=>m.kind==="add_guest_upgrade_roleplay" || m.name==="Add Guest & Upgrade Stateroom – Roleplay");
+  const multiAuthorized=metas.some(m=>m.kind==="multi_authorized" || m.name==="Multiple Reservations & Authorized Person");
+  const multiAuthorizedCruisetour=metas.some(m=>m.kind==="multi_authorized_cruisetour" || m.name==="Multiple Reservations & Authorized Person – Cruisetour");
+
+  if(reinstateRoleplay && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="modify";
+    updateWorkflowUI(false);
+    $("modificationType").value="cancel_reinstate";
+    if(!$("modificationRequest").value.trim()){
+      $("modificationRequest").value="Reinstate a training reservation that was cancelled yesterday. Verify it was cancelled within the last 24 hours, confirm the previous stateroom is still available, verify pricing is the same as before, then Store Changes.";
+    }
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("paymentAction").value="Refund / Reinstate";
+    updateModificationTypeUI(false);
+    syncAgencyCallerLogic();
+  }
+
+  if(soloStudio && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="new";
+    updateWorkflowUI(false);
+    $("newCallerType").value="travel_agent";
+    syncAgencyCallerLogic();
+    $("agency").value="305-436-1000";
+    $("guestCount").value="1";
+    $("guest1").value="Tom Holland";
+    $("guest2").value="";
+    $("category").value="Studio / Solo";
+    $("locationPref").value="Any";
+    $("sidePref").value="Any";
+    $("paymentAction").value="Minimum Deposit";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("latitudesToggle").checked=false;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+  }
+
+  if(addGuestUpgrade && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="modify";
+    updateWorkflowUI(false);
+    $("agency").value="305-436-1000";
+    $("gdprCallerType").value="travel_agent";
+    $("modificationType").value="add_guest";
+    $("modificationTarget").value="Taylor";
+    $("modificationGuestStatus").value="past";
+    $("modificationLatitudes").value="272279126";
+    $("modificationRequest").value="Use today's Solo Guest / Studio Booking reservation. Add Taylor, upgrade the Studio to a category that accommodates two guests, find a stateroom as close as possible to elevators/stairs, set Twin Beds, retain Tom's Kosher Meal request, add Taylor's mushroom allergy, verify Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, quote the new pricing/reservation total, check for any additional deposit due, then Store Changes.";
+    $("category").value="Balcony";
+    $("locationPref").value="Near stairs/elevators";
+    $("sidePref").value="Any";
+    $("paymentAction").value="No Payment / Service Only";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+    updateModificationTypeUI(false);
+    syncAgencyCallerLogic();
+  }
+
+  if((multiAuthorized||multiAuthorizedCruisetour) && $("department").value==="Guest Services"){
+    $("reservationWorkflow").value="new";
+    updateWorkflowUI(false);
+    $("newCallerType").value="direct_us";
+    syncAgencyCallerLogic();
+    $("agency").value="5";
+    applyMultipleAuthorizedGuests();
+    $("category").value="Balcony";
+    $("locationPref").value="Any";
+    $("sidePref").value="Any";
+    $("paymentAction").value="Initial Deposit";
+    $("commentToggle").checked=true;
+    $("confirmToggle").checked=true;
+    $("fasToggle").checked=true;
+    $("pscToggle").checked=true;
+    $("travelToggle").checked=true;
+    $("confirmationEmail").value="training123@ncl.com";
+    $("trainingCardProfile").value="alternateSesame";
+    renderTrainingCard();
+
+    // Prevent a sailing from a previous practice from silently carrying over.
+    state.selectedSailing=null;
+    renderSelectedSailing();
+
+    if(multiAuthorizedCruisetour){
+      setSailingSearchPreset("ship","Pride of America","2027-03-01","2027-03-31","");
+    }else{
+      setSailingSearchPreset("departure","Galveston","2027-03-01","2027-03-31","");
+    }
+  }
+
   if($("department").value==="Guest Services" && $("reservationWorkflow").value==="new" && metas.some(m=>m.name==="Agencies: TA Booking")){
     $("newCallerType").value="travel_agent";
     syncAgencyCallerLogic();
   }
   $("commentToggle").checked=metas.some(m=>m.commenting);
   $("confirmToggle").checked=true;
-  $("fasToggle").checked=/\bfas\b|free at sea/.test(focusText);
-  $("travelToggle").checked=/norwegian care|travel protection/.test(focusText);
-  $("pscToggle").checked=/ppsrvchg|prepaid service charge/.test(focusText);
+  $("fasToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/\bfas\b|free at sea/.test(focusText);
+  $("travelToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/norwegian care|travel protection/.test(focusText);
+  $("pscToggle").checked=soloStudio||addGuestUpgrade||multiAuthorized||multiAuthorizedCruisetour||/ppsrvchg|prepaid service charge/.test(focusText);
   $("couponToggle").checked=/fcc|cruisenext|cruise first|coupon|credit/.test(focusText);
-  $("latitudesToggle").checked=!/\bnew guest\b/.test(focusText);
-  refreshLatitudesPanel();
+  $("latitudesToggle").checked=soloStudio?false:(multiAuthorized||multiAuthorizedCruisetour?true:(!/\bnew guest\b/.test(focusText)));
+  if(multiAuthorized||multiAuthorizedCruisetour){
+    renderLatitudesFields(["279019549","279019550","279019849","279019848"],[true,true,true,true]);
+  }else{
+    refreshLatitudesPanel();
+  }
 
   if(/\bada\b|accessible/.test(focusText)){
     $("category").value="ADA / Accessible";
@@ -1131,11 +1721,20 @@ function applyFocusDefaults(){
   }
 
   if($("reservationWorkflow")?.value==="modify" && $("modificationType")){
-    const modMeta=metas.find(m=>m.kind==='followup')||meta;
-    $("modificationType").value=inferModificationType(modMeta);
-    updateModificationTypeUI(true);
+    if(addGuestUpgrade){
+      $("modificationType").value="add_guest";
+      updateModificationTypeUI(false);
+    }else if(reinstateRoleplay){
+      $("modificationType").value="cancel_reinstate";
+      updateModificationTypeUI(false);
+    }else{
+      const modMeta=metas.find(m=>m.kind==='followup')||meta;
+      $("modificationType").value=inferModificationType(modMeta);
+      updateModificationTypeUI(true);
+    }
   }else updateWorkflowUI(false);
 
+  updateMultipleReservationUI();
   refreshTrainingCardPanel(cardMeta.cardProfile);
   refreshCouponPanel();
   syncAirPanelFromScenario(true);
@@ -1185,16 +1784,32 @@ $("trainingCardNumber").addEventListener("input",()=>{$("trainingCardNumber").va
 $("trainingCardCcv").addEventListener("input",()=>{$("trainingCardCcv").value=$("trainingCardCcv").value.replace(/[^0-9]/g,"")});
 $("paymentAction").addEventListener("change",()=>{refreshTrainingCardPanel();refreshCouponPanel()});
 $("addCouponBtn").addEventListener("click",()=>addCouponRow());
-$("couponToggle").addEventListener("change",refreshCouponPanel);
+$("couponToggle").addEventListener("change",()=>{refreshCouponPanel();refreshFocusConfigurationPanels();});
 $("latitudesToggle").addEventListener("change",()=>refreshLatitudesPanel());
-$("guestCount").addEventListener("change",()=>{refreshLatitudesPanel();refreshCouponGuestOptions()});
-$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
-$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshCouponGuestOptions()});
+$("addSpecialRequestBtn")?.addEventListener("click",()=>addSpecialRequestRow());
+$("addAdaNeedBtn")?.addEventListener("click",()=>addAdaNeedRow());
+$("reservationCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels();});
+$("programAll4cho")?.addEventListener("change",()=>{const checked=$("programAll4cho").checked;["programOpenBar","programDining","programInternet","programShoreEx"].forEach(id=>{if($(id))$(id).checked=checked;});syncLegacyPriceProgramToggles();renderWizardReviewSummary();});
+["programOpenBar","programDining","programInternet","programShoreEx"].forEach(id=>$(id)?.addEventListener("change",()=>{if($("programAll4cho"))$("programAll4cho").checked=["programOpenBar","programDining","programInternet","programShoreEx"].every(k=>$(k)?.checked);syncLegacyPriceProgramToggles();renderWizardReviewSummary();}));
+["programPsc","programKosher","programFlexnet","programAmexcpp","programOther"].forEach(id=>{const el=$(id);if(el){el.addEventListener("change",()=>{syncLegacyPriceProgramToggles();renderWizardReviewSummary();});el.addEventListener("input",renderWizardReviewSummary);}});
+$("guestCount").addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels()});
+$("guest1").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("guest2").addEventListener("input",()=>{if($("latitudesToggle").checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("reservation2GuestCount")?.addEventListener("change",()=>{updateMultipleReservationUI();refreshLatitudesPanel();refreshCouponGuestOptions();refreshFocusConfigurationPanels()});
+$("reservation2Guest1")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshGuestDependentConfigs()});
+$("reservation2Guest2")?.addEventListener("input",()=>{if($("latitudesToggle")?.checked)renderLatitudesFields();refreshGuestDependentConfigs()});
 
 $("generateNamesBtn").onclick=()=>{
   const pair=namePairs[Math.floor(Math.random()*namePairs.length)];
   $("guest1").value=pair[0]; $("guest2").value=pair[1];
+  if(multipleReservationFormActive()){
+    let pair2=namePairs[Math.floor(Math.random()*namePairs.length)];
+    if(namePairs.length>1 && pair2[0]===pair[0])pair2=namePairs[(namePairs.indexOf(pair2)+1)%namePairs.length];
+    $("reservation2Guest1").value=pair2[0];
+    $("reservation2Guest2").value=pair2[1];
+  }
   if($("latitudesToggle").checked)renderLatitudesFields();
+  refreshGuestDependentConfigs();
 };
 
 const anchorSuggestions = {
@@ -1222,6 +1837,7 @@ const anchorSuggestions = {
     {value:"Los Angeles",detail:"Los Angeles, California"},
     {value:"New Orleans",detail:"New Orleans, Louisiana"},
     {value:"Tampa",detail:"Tampa, Florida"},
+    {value:"Galveston",detail:"Galveston, Texas"},
     {value:"San Juan",detail:"San Juan, Puerto Rico"},
     {value:"Honolulu",detail:"Honolulu, Hawaii"},
     {value:"Barcelona",detail:"Barcelona, Spain"},
@@ -1490,7 +2106,7 @@ $("searchSailingsBtn").onclick=async()=>{
   resetItineraryChooser();
   const btn=$("searchSailingsBtn"); btn.disabled=true; btn.textContent="Searching…";
   $("searchNotice").className="notice info";
-  $("searchNotice").textContent=`Searching NCL.com U.S. from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
+  $("searchNotice").textContent=`Loading NCL.com U.S. itinerary data from ${from} through ${to} by ${currentAnchor()==="departure"?"embarkation port":currentAnchor()} only…`;
   $("searchResults").innerHTML="";
   try{
     const r=await fetch(`/api/sailings?${queryParams()}`);
@@ -1526,7 +2142,7 @@ function renderSearchResults(){
   }
   $("searchResults").innerHTML=state.sailings.map((s,i)=>`
     <div class="result-card" data-sailing-index="${i}">
-      <div class="verified">● Verified from NCL.com U.S.</div>
+      <div class="verified">● NCL.com U.S. itinerary</div>
       <h3>${escapeHtml(s.duration ? `${s.duration}-day Cruise on ${s.ship}` : s.ship||"NCL Sailing")}</h3>
       <strong>${escapeHtml(s.title||"")}</strong>
       <div class="meta">
@@ -1569,6 +2185,13 @@ function resetItineraryChooser(){
     exact.disabled=true;
   }
   if(manual)manual.value="";
+  if(state.pendingSailingIndex!==null && state.sailings[state.pendingSailingIndex]){
+    const s=state.sailings[state.pendingSailingIndex];
+    delete s.scheduleDateSource;
+    delete s.scheduleDateSourceType;
+    delete s.scheduleSourceUrl;
+    delete s.scheduleVerificationRequired;
+  }
   $("manualDateField")?.classList.add("hidden-field");
   $("exactDateSelectField")?.classList.remove("hidden-field");
   $("useItineraryDateBtn").disabled=true;
@@ -1597,7 +2220,7 @@ function populateItineraryChooser(){
   resetItineraryChooser();
 }
 
-function updateDateChooserForItinerary(){
+async function updateDateChooserForItinerary(){
   const itinerary=$("itinerarySelect");
   const value=itinerary?.value??"";
   const index=value===""?null:Number(value);
@@ -1619,13 +2242,73 @@ function updateDateChooserForItinerary(){
     return;
   }
 
-  const s=state.sailings[state.pendingSailingIndex];
-  document.querySelector(`.result-card[data-sailing-index="${state.pendingSailingIndex}"]`)?.classList.add("itinerary-selected");
+  const selectedIndex=state.pendingSailingIndex;
+  const s=state.sailings[selectedIndex];
+  document.querySelector(`.result-card[data-sailing-index="${selectedIndex}"]`)?.classList.add("itinerary-selected");
 
-  const exact=(s.sailingDates||[]).filter(Boolean);
   manual.min=$("searchFrom")?.value||"";
   manual.max=$("searchTo")?.value||"";
   manual.value="";
+
+  let exact=(s.sailingDates||[]).filter(Boolean);
+
+  if(!exact.length){
+    $("exactDateSelectField").classList.remove("hidden-field");
+    $("manualDateField").classList.add("hidden-field");
+    exactSelect.disabled=true;
+    exactSelect.innerHTML='<option value="">Loading specific sailing dates from the public schedule…</option>';
+    $("useItineraryDateBtn").disabled=true;
+    $("itineraryChooserNotice").className="notice info";
+    $("itineraryChooserNotice").textContent="Loading the matching departure dates for this itinerary…";
+
+    try{
+      const params=new URLSearchParams({
+        source:s.sourceUrl||"https://www.ncl.com/vacations",
+        ship:s.ship||"",
+        title:s.title||"",
+        departure:s.departure||"",
+        duration:String(s.duration||""),
+        ports:(s.ports||[]).join("|"),
+        from:$("searchFrom")?.value||"",
+        to:$("searchTo")?.value||""
+      });
+      const controller=new AbortController();
+      const timeoutId=setTimeout(()=>controller.abort(),18000);
+      let res;
+      let data={};
+      try{
+        res=await fetch(`/api/sailing-dates?${params.toString()}&_v=1.9.30`,{
+          cache:"no-store",
+          signal:controller.signal
+        });
+        data=await res.json().catch(()=>({}));
+      }finally{
+        clearTimeout(timeoutId);
+      }
+
+      // Ignore a response if the trainer selected a different itinerary while
+      // this lookup was running.
+      if(state.pendingSailingIndex!==selectedIndex)return;
+
+      if(res.ok && Array.isArray(data.dates) && data.dates.length){
+        s.sailingDates=[...new Set(data.dates)].sort();
+        if(data.detailUrl)s.detailSourceUrl=data.detailUrl;
+        s.scheduleDateSource=data.sourceLabel||"Public sailing schedule";
+        s.scheduleDateSourceType=data.sourceType||"public-schedule";
+        s.scheduleSourceUrl=data.scheduleSourceUrl||"";
+        s.scheduleVerificationRequired=data.verificationRequired!==false;
+        exact=s.sailingDates;
+      }
+    }catch(err){
+      if(state.pendingSailingIndex!==selectedIndex)return;
+      $("itineraryChooserNotice").className="notice warning";
+      $("itineraryChooserNotice").textContent=err?.name==="AbortError"
+        ?"The sailing-date lookup took too long. Use the verified date field or choose the itinerary again to retry."
+        :"The sailing-date lookup could not be completed. Use the verified date field or choose the itinerary again to retry.";
+    }
+  }
+
+  if(state.pendingSailingIndex!==selectedIndex)return;
 
   if(exact.length){
     $("exactDateSelectField").classList.remove("hidden-field");
@@ -1633,15 +2316,19 @@ function updateDateChooserForItinerary(){
     exactSelect.disabled=false;
     exactSelect.innerHTML='<option value="">Choose a specific sailing date…</option>'+
       exact.map(d=>`<option value="${escapeAttr(d)}">${escapeHtml(formatSailingDate(d))}</option>`).join("");
-    $("itineraryChooserNotice").className="notice success";
-    $("itineraryChooserNotice").textContent=`${exact.length} exact sailing date${exact.length===1?"":"s"} found for this itinerary on NCL.com U.S.`;
+    const sourceLabel=s.scheduleDateSource||"NCL.com U.S.";
+    const verify=s.scheduleVerificationRequired
+      ?" Verify the final selection in NCL.com U.S. or Seaweb before class."
+      :"";
+    $("itineraryChooserNotice").className=s.scheduleVerificationRequired?"notice info":"notice success";
+    $("itineraryChooserNotice").textContent=`${exact.length} sailing date${exact.length===1?"":"s"} loaded from ${sourceLabel}.${verify}`;
   }else{
     $("exactDateSelectField").classList.add("hidden-field");
     $("manualDateField").classList.remove("hidden-field");
     exactSelect.innerHTML='<option value="">No exact public dates returned</option>';
     exactSelect.disabled=true;
     $("itineraryChooserNotice").className="notice warning";
-    $("itineraryChooserNotice").textContent="NCL's public itinerary result did not expose exact dates. Enter the exact sailing date after verifying it on NCL.com U.S. or in Seaweb.";
+    $("itineraryChooserNotice").textContent="No matching public schedule dates were returned within this search window. You can use the verified date field, or adjust the search dates and try again.";
   }
 
   updateUseSailingButton();
@@ -1672,8 +2359,13 @@ $("exactSailingDateSelect").addEventListener("change",()=>{
   updateUseSailingButton();
   const value=$("exactSailingDateSelect").value;
   if(value){
-    $("itineraryChooserNotice").className="notice success";
-    $("itineraryChooserNotice").textContent=`Selected ${formatSailingDate(value)} from NCL.com U.S.`;
+    const s=Number.isInteger(state.pendingSailingIndex)?state.sailings[state.pendingSailingIndex]:null;
+    const sourceLabel=s?.scheduleDateSource||"NCL.com U.S.";
+    const verify=s?.scheduleVerificationRequired
+      ?" • Verify this date in NCL.com U.S. or Seaweb before class."
+      :"";
+    $("itineraryChooserNotice").className=s?.scheduleVerificationRequired?"notice info":"notice success";
+    $("itineraryChooserNotice").textContent=`Selected ${formatSailingDate(value)} from ${sourceLabel}${verify}`;
   }
 });
 $("manualSailingDate").addEventListener("change",()=>{
@@ -1709,11 +2401,21 @@ $("useItineraryDateBtn").addEventListener("click",()=>{
   }
 
   const exactDates=source.sailingDates||[];
+  const cameFromLoadedSchedule=exactDates.includes(sailingDate);
   state.selectedSailing={
     ...source,
+    sourceUrl:source.detailSourceUrl||source.sourceUrl,
     sailingDate,
-    sailingDateVerified:exactDates.includes(sailingDate),
-    sailingDateSource:exactDates.includes(sailingDate)?"NCL.com U.S.":"Trainer verified"
+    sailingDateVerified:cameFromLoadedSchedule,
+    sailingDateSource:cameFromLoadedSchedule
+      ? (source.scheduleDateSource||"NCL.com U.S.")
+      : "Trainer verified",
+    sailingDateSourceType:cameFromLoadedSchedule
+      ? (source.scheduleDateSourceType||"ncl")
+      : "manual",
+    sailingDateVerificationRequired:cameFromLoadedSchedule
+      ? Boolean(source.scheduleVerificationRequired)
+      : true
   };
 
   renderSelectedSailing();
@@ -1725,7 +2427,13 @@ function renderSelectedSailing(){
   const s=state.selectedSailing;
   if(!s){$("selectedSailingSummary").className="selected-sailing empty";$("selectedSailingSummary").textContent="No real sailing selected yet.";return}
   $("selectedSailingSummary").className="selected-sailing";
-  $("selectedSailingSummary").innerHTML=`<div class="verified">● Itinerary verified from NCL.com U.S.${s.sailingDateVerified?" • Exact date from NCL":""}</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${s.sailingDate?`<strong>${escapeHtml(formatSailingDate(s.sailingDate))}</strong> • `:""}${s.departure?"From "+escapeHtml(s.departure)+" • ":""}${s.duration?s.duration+" days":""}</span>${s.sailingDate&&!s.sailingDateVerified?`<div class="selected-date-note">Exact date entered by trainer — verify in NCL.com U.S. / Seaweb before class.</div>`:""}`;
+  const dateSource=s.sailingDateSource||"";
+  const dateNote=s.sailingDate
+    ? (s.sailingDateSourceType==="ncl"
+        ? `<div class="selected-date-source ncl-date-source">Sailing date: ${escapeHtml(dateSource)}</div>`
+        : `<div class="selected-date-note">Sailing date source: ${escapeHtml(dateSource||"Trainer verified")} — verify in NCL.com U.S. / Seaweb before class.</div>`)
+    : "";
+  $("selectedSailingSummary").innerHTML=`<div class="verified">● Itinerary verified from NCL.com U.S.</div><strong>${escapeHtml(s.ship||"")} • ${escapeHtml(s.title||"")}</strong><br><span class="muted">${s.sailingDate?`<strong>${escapeHtml(formatSailingDate(s.sailingDate))}</strong> • `:""}${s.departure?"From "+escapeHtml(s.departure)+" • ":""}${s.duration?s.duration+" days":""}</span>${dateNote}`;
 }
 
 function selectedMarketLabel(){
@@ -1741,8 +2449,16 @@ function scenarioData(){
   const focusDays=records.map(r=>r.day);
   const cardKey=$("trainingCardProfile")?.value||metas.find(m=>m.cardProfile)?.cardProfile||"standardSesame";
   const cardRequired=metas.some(m=>m.cardRequired)||paymentActionNeedsCard();
+  const multipleReservations=$("reservationWorkflow")?.value==="new" && isMultipleReservationScenario(focusNames);
+  const reservation1GuestCount=+$("guestCount")?.value||1;
+  const reservation1Guests=reservation1GuestNamesFromForm();
+  const reservationTotal=multipleReservations?multipleReservationTotal():1;
+  const reservations=multipleReservations?Array.from({length:reservationTotal},(_,i)=>reservationFormData(i+1)):[];
+  const reservation2GuestCount=multipleReservations?(reservations[1]?.guestCount||0):0;
+  const totalGuestCount=multipleReservations?reservations.reduce((sum,r)=>sum+(+r.guestCount||0),0):reservation1GuestCount;
+  const flattenedGuestNames=multipleReservations?reservations.flatMap(r=>r.guests||[]):reservation1Guests;
   return {
-    id: state.currentScenario?.id || crypto.randomUUID(),
+    id: state.currentScenario?.id || makeUuid(),
     department:$("department").value,
     trainingDay:focusDays.length?Math.max(...focusDays):+$("trainingDay").value,
     approach:$("scenarioApproach").value,
@@ -1761,7 +2477,14 @@ function scenarioData(){
     gdprCallerType:$("gdprCallerType")?.value||"",
     directGroupMarket:$("directGroupMarket")?.value||"direct_groups_sot",
     difficulty:$("difficulty").value,
-    guestCount:+$("guestCount").value,
+    guestCount:totalGuestCount,
+    reservation1GuestCount,
+    reservation2GuestCount,
+    reservationCount:multipleReservations?reservationTotal:1,
+    multipleReservations,
+    reservations,
+    reservationRelationship:multipleReservations?($("reservationRelationship")?.value||"Same Sailing / Linked"):"",
+    guestNames:flattenedGuestNames,
     agency:$("agency").value.trim(),
     bookingSource:$("department").value==="Guest Services"
       ? ($("reservationWorkflow").value==="new"?newReservationCallerInfo($("newCallerType").value).type:guestServicesAgencyInfo($("agency").value).type)
@@ -1778,12 +2501,17 @@ function scenarioData(){
     airEnabled:$("airToggle")?.checked||false,airProgram:$("airProgram")?.value||"",airTripType:$("airTripType")?.value||"round_trip",airOneWayDirection:$("airOneWayDirection")?.value||"to_cruise",airGateway:$("airGateway")?.value.trim()||"",
     couponEnabled:couponWorkflowRequested(),
     coupons:couponWorkflowRequested()?collectCoupons():[],
+    specialRequests:specialRequestFocusActive()?collectSpecialRequests():[],
+    adaNeeds:adaFocusActive()?collectAdaNeeds():[],
+    pricePrograms:priceProgramFocusActive()?collectPricePrograms():{},
+    airGuestSelections:(airFocusActive()||$("airToggle")?.checked)?collectAirGuestSelections():[],
     trainerNotes:$("trainerNotes").value.trim(),sailing:state.selectedSailing,
     cardRequired,cardProfile:cardKey,card:cardRequired?currentTrainingCard():null,
     curriculumObjective:metas.map(m=>m.objective).join(" | "),
     curriculumObjectives:metas.map(m=>m.objective),
     curriculumKind:meta.kind||"",
     curriculumKinds:metas.map(m=>m.kind),
+    roleplayMode:Boolean(state.currentScenario?.roleplayMode),
     createdAt:state.currentScenario?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString(),favorite:state.currentScenario?.favorite||false,archived:false
   };
 }
@@ -1809,18 +2537,86 @@ function focusConsiderations(d){
   if(name.includes("infant")||name.includes("guests 3-8")||name.includes("singles")) items.push("Does the selected stateroom capacity support the full occupancy?","How do deposit, promotion, and service-charge rules differ for infants, children, solos, or Guests 3–8?");
   if(name.includes("multiple")) items.push("Should the reservations be linked with TWITH?","If one caller pays for another reservation, what Authorized Person guidance and notation are required?");
   if(name.includes("ta booking")||d.curriculumKind==="ta") items.push("What information must the travel agent provide before pricing or creating a reservation?","Where is commission displayed and what servicing restrictions apply to a travel-agent booking?");
-  if(d.airEnabled){
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length){
+    const configured=d.airGuestSelections.filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");
+    configured.forEach(item=>{const label=airGuestTypes.find(a=>a.value===item.airProgram)?.label||"No NCL Air";items.push(`Confirm ${item.guest||"the assigned guest"}: ${label}${item.airProgram!=="none"?` • ${item.tripType==="one_way"?"One Way":"Round Trip"}`:""}${item.gateway?` • ${item.gateway}`:""} • ${item.transfers}.`);});
+  }else if(d.airEnabled){
     const airMeta=airProgramMeta(d.airProgram);
     if(!airMeta)items.push("Select the applicable NCL Air Program before releasing the scenario.");
     else items.push(`Confirm the selected ${airMeta.label} terms, ${airTripLabel(d)} itinerary, payment/deposit timing, and transfer handling.`);
     if(d.airProgram==="bundled")items.push("Verify that the selected sailing is one of the select Pride of America sailings eligible for Bundled Air / AIRPROM3.");
     if(airMeta?.nclAir)items.push("Verify the trainee removes the pre-cruise transfer because the NCL Air arrival is at least one day prior.");
   }else if(name.includes("hotel")||name.includes("cruisetour")||name.includes("land pkg")) items.push("Review the applicable land terms, deposit requirements, confirmation timing, and transfer details.");
-  if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
+  if(isSoloStudioScenario(d)){
+    items.push(
+      "Did the Cruise Specialist confirm Kyle's information without making him repeat himself?",
+      "Was Tom searched by Last Name and Date of Birth?",
+      "Does the Studio selection support the solo occupancy?",
+      "Was the advertised price quoted using the required wording?",
+      "Were Free at Sea, Pre-Paid Service Charges and Norwegian Care handled correctly?",
+      "Was Tom's Kosher Meals request added and the capacity-controlled reminder provided when applicable?",
+      "Was the minimum deposit collected?",
+      "Were both Guest and Travel Agent confirmations sent and Compass comments added?"
+    );
+  }
+  if(isAddGuestUpgradeRoleplay(d)){
+    items.push(
+      "Was Travel Agent GDPR completed before discussing the reservation, with Reservation Number required?",
+      "Did the Cruise Specialist explain why the Studio must be changed for two guests?",
+      "Does the selected category and stateroom accommodate two guests and address the elevators/stairs request?",
+      "Was Taylor located using Latitudes #272279126?",
+      "Were Twin Beds selected?",
+      "Did Tom retain Kosher Meals while Taylor received only the mushroom allergy request?",
+      "Were Free at Sea, Pre-Paid Service Charges and Norwegian Care verified for both guests?",
+      "Was any additional deposit due checked and collected when applicable?",
+      "Were changes stored, comments added, both confirmations sent, and the reservation fully recapped?"
+    );
+  }
+
+  if(isReinstateRoleplay(d)){
+    items.push(
+      "Was the Reservation Number obtained before servicing the reservation?",
+      "Was the correct GDPR path completed for the Direct Guest or Travel Agent?",
+      "Was the reservation cancelled within the last 24 hours?",
+      "Is the previous stateroom still available?",
+      "Is the pricing the same as it was before cancellation?",
+      "If the stateroom or pricing changed, what must be explained to the caller before proceeding?",
+      "Were all completed changes stored in Seaweb?",
+      "Were reservation comments added and the updated confirmation sent?",
+      "Did the Cruise Specialist complete a full recap before closing the call?"
+    );
+  }else if(name.includes("cancel")||name.includes("reinstate")) items.push("Is the reservation inside or outside final payment?","What refund timeline should be quoted, and what may change when a canceled reservation is reinstated?");
   if(name.includes("amenities")||name.includes("dining")) items.push("Is payment due immediately for the selected add-on?","Which confirmation or amenity invoice must be sent after the transaction?");
   if(name.includes("cruise first")) items.push("What are the CruiseFirst terms and where is the credit purchased/applied?");
   if(name.includes("gty")) items.push("What expectations must be set for a Guarantee category, including stateroom assignment and location?");
   if(d.sailing?.ports?.length) items.push(`Confirm any requested port of call against the selected itinerary: ${d.sailing.ports.join(", ")}.`);
+  if(isMultipleAuthorizedAny(d)){
+    const isTour=isMultipleAuthorizedCruisetourScenario(d);
+    return [
+      "Anticipate the steps based on the reason for the call to control the call flow and guide the interaction effectively.",
+      "How many days prior to sailing is the booking being made?",
+      "Is each reservation inside or outside the final payment date?",
+      "What is the gross amount due and final payment date for each reservation?",
+      "What are the current promo codes?",
+      "Which Free at Sea selections have a package fee?",
+      "Is the applicable package fee different for Sofia as a child?",
+      "What is the deadline for guests to change their selection or remove the Free at Sea promotion?",
+      "What is the square footage of the selected Balcony staterooms?",
+      "What are the bed arrangements for each room? Is there a sofa bed?",
+      "Are you POSITIVE the selected staterooms connect?",
+      "Were the Authorized Person guidelines explained and the exact Authorized Person comment added to the parents' reservation?",
+      "Were the two $250 deposits processed separately?",
+      "Were both reservations recapped, notated and confirmed?",
+      "Were the reservations linked using TWITH before ending the call?",
+      ...(isTour?[
+        "Did both reservations use the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour?",
+        "What are the dates of the 4-day pre-cruise portion?",
+        "When does the Pride of America sailing begin?",
+        "What is included in the selected Cruisetour and are there any Cruisetour-specific requirements the guests should know?"
+      ]:[])
+    ];
+  }
+
   return [...new Set(items)];
 }
 
@@ -1913,6 +2709,32 @@ function focusStoryDetail(d,meta){
 function customerStoryHtml(d,meta,sailText,guestNames){
   const modifying=d.reservationWorkflow==="modify";
 
+  if(isMultipleAuthorizedCruisetourScenario(d)){
+    return `<p>You receive a call from <strong>Maria Lopez</strong>, who is excited about planning a Hawaiian vacation for herself, her daughter Sofia, and her parents Ana and Luis. Maria wants two reservations on <strong>Pride of America</strong> sailing from <strong>Honolulu in March 2027</strong> and specifically wants the <strong>11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour</strong>, including the <strong>4-day pre-cruise Cruisetour</strong>. Maria will make both reservations and pay both deposits. Confirm the Recipe for Success naturally without making her repeat information she has already provided.</p>`;
+  }
+
+  if(isMultipleAuthorizedScenario(d)){
+    return `<p>You receive a call from <strong>Maria Lopez</strong>, who sounds excited but slightly overwhelmed with the website. She is planning a vacation for herself, her daughter Sofia, and her parents Ana and Luis. They live near Galveston and want a <strong>Caribbean cruise in March 2027 departing from Galveston</strong>. Maria will make both reservations and pay both deposits. Confirm all applicable Recipe for Success questions without making her repeat information she has already provided.</p>`;
+  }
+
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    const count=d.reservations.length;
+    const reservationSummary=d.reservations.map((r,i)=>`Reservation ${i+1}: <strong>${escapeHtml(reservationGuestLabel(r,i))}</strong>`).join(' • ');
+    const relationship=d.reservationRelationship||"Same Sailing / Linked";
+    if(d.department==="Guest Services" && d.newCallerType==="travel_agent"){
+      return `<p>A travel advisor is calling Norwegian Cruise Line to create <strong>${count} related reservations</strong> for ${escapeHtml(sailText)}. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+    }
+    return `<p>The caller is planning ${escapeHtml(sailText)} and needs <strong>${count} related reservations</strong>. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+  }
+
+  if(isSoloStudioScenario(d)){
+    return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls to book a new cruise for his client <strong>Tom Holland</strong>, who will be traveling alone. Kyle already knows exactly what he is looking for because he called earlier in the day for pricing and options. Express your willingness to assist, confirm the information Kyle provides without making him repeat himself, quote the booking as you would for any new reservation, and complete a full recap.</p>`;
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return `<p><strong>Kyle James</strong>, a travel agent with <strong>Norwegian Training Travel</strong>, calls regarding the reservation created during today's <strong>Solo Guest / Studio Booking</strong> practice. He wants to add a second guest. Complete Travel Agent GDPR verification first — <strong>Reservation Number is REQUIRED.</strong> Kyle advises the reservation is currently in a Studio, so explain that the category must be upgraded to one that can accommodate two guests before the second guest can be added.</p>`;
+  }
+
   if(meta.kind==="demo"){
     return `<p>This is a <strong>trainer-led demonstration</strong>. Use the selected or trainer-provided reservation/sailing to demonstrate the ${escapeHtml(d.type)} workflow.</p>`;
   }
@@ -1945,6 +2767,10 @@ function customerStoryHtml(d,meta,sailText,guestNames){
       callerLead="A Direct Group caller contacts Norwegian Cruise Line";
     }else if(d.gdprCallerType==="charter_sixthman"){
       callerLead="A Charter / Sixthman guest contacts Norwegian Cruise Line";
+    }
+
+    if(isReinstateRoleplay(d)){
+      return `<p>Use one of the training reservations from <strong>yesterday that was cancelled</strong>. One trainee will act as the <strong>Cruise Specialist</strong> and the other will act as the <strong>${escapeHtml(roleplayCallerLabel(d))}</strong>. The caller contacts Norwegian Cruise Line because they want the reservation <strong>reinstated</strong>. Before discussing or servicing the reservation, complete the correct GDPR verification. <strong>Reservation Number is REQUIRED.</strong> Use the guest name(s) and booking details already on the selected training reservation.</p>`;
     }
 
     return `<p>${callerLead} about an existing training reservation${reservation}. They want to <strong>${escapeHtml(modificationLabel(d.modificationType).toLowerCase())}</strong>.${target}${request}${gdpr} Use the guest name(s) already on the existing training reservation.</p>`;
@@ -2009,7 +2835,10 @@ function atAGlanceHtml(d,meta){
 
   const s=d.sailing;
   const sailing=s?`${s.ship||"NCL ship"}${s.title?` • ${s.title}`:""}`:"Trainer to provide/verify sailing";
-  const stateroom=`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
+  const multiReservations=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
+  const stateroom=multiReservations
+    ? d.reservations.slice(0,2).map((r,i)=>`R${i+1}: ${reservationStateroomLabel(r)}`).join(" • ")
+    : `${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`;
   const mix=getGuestProfileMix(d);
   const guestStatus=d.latitudes
     ? `${mix.pastCount} Past Guest${mix.pastCount===1?'':'s'}${mix.newCount?` • ${mix.newCount} New Guest${mix.newCount===1?'':'s'}`:''}`
@@ -2018,7 +2847,7 @@ function atAGlanceHtml(d,meta){
     <div class="glance-card"><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?"guest":"guests"}</strong><small>${escapeHtml(guestStatus)}</small></div>
     ${d.department==="Guest Services"?`<div class="glance-card"><span>Caller Type</span><strong>${escapeHtml(newReservationCallerLabel(d))}</strong><small>${escapeHtml(d.market||guestServicesAgencyDisplay(d.agency))}</small></div>`:""}
     <div class="glance-card"><span>Sailing</span><strong>${escapeHtml(sailing)}</strong><small>${s?.departure?`From ${escapeHtml(s.departure)}`:"Verify exact date/port in Seaweb"}</small></div>
-    <div class="glance-card"><span>Stateroom</span><strong>${escapeHtml(stateroom)}</strong><small>Use actual available inventory</small></div>
+    <div class="glance-card"><span>${multiReservations?"Reservations / Staterooms":"Stateroom"}</span><strong>${escapeHtml(stateroom)}</strong><small>${multiReservations?escapeHtml(d.reservationRelationship||"Same Sailing / Linked"):"Use actual available inventory"}</small></div>
     <div class="glance-card"><span>Promotions</span><strong>${escapeHtml(promotionSummary(d))}</strong><small>Verify current eligibility and deadlines</small></div>
     <div class="glance-card"><span>Protection</span><strong>${escapeHtml(protectionSummary(d))}</strong><small>Use current approved guidance</small></div>
     <div class="glance-card"><span>Payment / Credit</span><strong>${escapeHtml(d.payment)}</strong><small>${d.cardRequired?"Training card details provided below":"Follow scenario workflow"}</small></div>
@@ -2028,8 +2857,9 @@ function atAGlanceHtml(d,meta){
 function latitudesScenarioHtml(d){
   if(!d.latitudes)return '';
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   const rows=Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||'Guest 1'):i===1?(d.guest2||'Guest 2'):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const isPast=!!mix.flags[i];
     const number=mix.numbers[i]||'';
     return `<div class="latitudes-output-card ${isPast?'past':'new'}"><span>Guest ${i+1} • ${isPast?'PAST GUEST':'NEW GUEST'}</span><strong>${escapeHtml(name)}</strong><small>${isPast?(number?`Latitudes #: ${escapeHtml(number)}`:'Latitudes number not entered — verify in Seaweb'):'Create a new training guest profile in Seaweb.'}</small></div>`;
@@ -2040,6 +2870,116 @@ function latitudesScenarioHtml(d){
 function fullTaskList(d,meta){
   const name=focusSearchText(d);
   const tasks=[];
+
+  if(isMultipleAuthorizedAny(d)){
+    const isTour=isMultipleAuthorizedCruisetourScenario(d);
+    return [
+      "Express willingness to assist and control the call using the Recipe for Success without making Maria repeat information she already provided.",
+      isTour
+        ? "Search Pride of America from Honolulu in March 2027 and select an appropriate sailing for the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour."
+        : "Search for a Caribbean sailing departing from Galveston in March 2027 and select an appropriate qualifying sailing.",
+      isTour
+        ? "Add the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour to BOTH reservations and verify the 4-day pre-cruise land component."
+        : "Create two separate reservations on the same selected sailing.",
+      "Create Reservation 1 for Maria Lopez (Latitudes #279019549) and Sofia, age 4 (Latitudes #279019550).",
+      "Create Reservation 2 for Ana Martinez (Latitudes #279019849) and Luis Martinez (Latitudes #279019848).",
+      "Confirm every guest's legal name exactly as shown on travel documents and verify all required dates of birth / guest information.",
+      "Book two Balcony staterooms that actually connect. Any location is acceptable, but adjacent rooms are not enough — verify the connecting door.",
+      "Include all applicable Free at Sea offers, Pre-Paid Service Charges and Norwegian Care / Travel Protection on both reservations.",
+      "Add Sofia's peanut allergy to Reservation 1.",
+      "For Ana and Luis, request beds pushed together and extra pillows.",
+      "Quote the advertised pricing. If both reservations have identical components, one quote may represent the price per reservation; if anything differs, quote each booking separately.",
+      "Explain the Authorized Person guidelines because Maria is booking and paying for her parents' reservation.",
+      "Add the exact parents' reservation comment: Authorized Person: Maria Lopez, CC 0000.",
+      "Process the $250 deposit on each reservation separately using the training credit card.",
+      "Recap and notate each reservation separately.",
+      "Send a confirmation for each reservation.",
+      "Link both reservations with TWITH (Travel With) before ending the call.",
+      "Save both reservation numbers and post both reservation numbers in the class chat."
+    ];
+  }
+
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    d.reservations.forEach((r,i)=>{
+      tasks.push(`Create Reservation ${i+1} for ${reservationGuestLabel(r,i)}.`);
+      tasks.push(`Reservation ${i+1} stateroom: ${reservationStateroomLabel(r)}.`);
+      if(r.pricing)tasks.push(`Quote Reservation ${i+1} advertised pricing: ${r.pricing}. Reconfirm the current amount in Seaweb.`);
+    });
+    tasks.push(`Use the same selected sailing for all ${d.reservations.length} reservations and coordinate the rooms as: ${d.reservationRelationship||"Same Sailing / Linked"}.`);
+    tasks.push("Keep each reservation separate for pricing, payment, recap, comments and confirmations unless the specific workflow says otherwise.");
+  }
+
+  if(Array.isArray(d.specialRequests))d.specialRequests.forEach(x=>tasks.push(`Add ${x.type||"the special request"} for ${x.guest||"the assigned guest"}${x.detail?` (${x.detail})`:""}.`));
+  if(Array.isArray(d.adaNeeds))d.adaNeeds.forEach(x=>tasks.push(`Document ${x.type||"the accessibility need"} for ${x.guest||"the assigned guest"}${x.detail?` (${x.detail})`:""} in the correct Seaweb location and complete any required accessibility workflow.`));
+  const configuredPrograms=priceProgramLabels(d.pricePrograms);
+  if(configuredPrograms.length)tasks.push(`Add / verify the selected price programs and promotions: ${configuredPrograms.join(", ")}.`);
+  if(Array.isArray(d.airGuestSelections))d.airGuestSelections.forEach(x=>{if(x.airProgram!=="none"||x.transfers!=="No NCL Transfers")tasks.push(`For ${x.guest||"the assigned guest"}, configure ${airGuestTypes.find(a=>a.value===x.airProgram)?.label||"No NCL Air"}${x.airProgram!=="none"?` (${x.tripType==="one_way"?"One Way":"Round Trip"})`:""}${x.gateway?` from/to ${x.gateway}`:""} and ${x.transfers||"No NCL Transfers"}.`);});
+
+  if(isSoloStudioScenario(d)){
+    return [
+      "Express willingness to assist and follow the Recipe for Success without making Kyle repeat information he already provided.",
+      "Identify Kyle James as the Travel Agent with Norwegian Training Travel (305-436-1000).",
+      "Book Tom Holland as one solo guest and search for him using Last Name + Date of Birth (06/01/1996).",
+      "Use the June 27, 2027 Norwegian Aqua 7-Day Caribbean sailing.",
+      "Book a Studio category and assign any available Studio stateroom.",
+      "Quote the advertised Studio pricing using the required cruise fare, taxes, fees, and port expenses wording.",
+      "Include all applicable Free at Sea offers and Pre-Paid Service Charges.",
+      "Add Tom's Kosher Meals request and, when applicable, advise that the option is capacity controlled.",
+      "Include Norwegian Care.",
+      "Collect the minimum required deposit using the training credit card.",
+      "Send both the Guest and Travel Agent confirmations to training123@ncl.com.",
+      "Leave the appropriate reservation comments using Compass.",
+      "Complete a full reservation recap and proper closing.",
+      "Save and post the reservation number in the class chat."
+    ];
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return [
+      "Use the reservation created during today's Solo Guest / Studio Booking practice.",
+      "Assign roles: one trainee is the Cruise Specialist and the other is Travel Agent Kyle James.",
+      "Express willingness to assist.",
+      "Complete Travel Agent GDPR verification before discussing the reservation. Reservation Number is REQUIRED.",
+      "Explain that the existing Studio must be upgraded because the reservation will now have two guests.",
+      "Go into Edit and upgrade to a category that can accommodate two guests.",
+      "Select an available stateroom as close as possible to elevators / stairs.",
+      "Quote the updated advertised pricing and new reservation total using the required pricing wording.",
+      "Verify the applicable Free at Sea promotions remain correct.",
+      "Include Pre-Paid Service Charges for both guests.",
+      "Keep Norwegian Care for both guests.",
+      "Add Taylor using Latitudes #272279126.",
+      "Set the bed configuration to Twin Beds.",
+      "Retain Tom's Kosher Meal request.",
+      "Add Taylor's mushroom allergy; Taylor does not need Kosher Meals.",
+      "Check whether an additional deposit is due. If so, advise Kyle and collect the additional deposit using the training card.",
+      "Store Changes after all updates are complete.",
+      "Send both the Guest and Travel Agent confirmations to training123@ncl.com.",
+      "Leave the appropriate reservation comments using Compass.",
+      "Complete a full recap and proper closing.",
+      "Switch roles and repeat so both trainees practice the Cruise Specialist role."
+    ];
+  }
+
+  if(isReinstateRoleplay(d)){
+    const profile=gdprProfile(d.gdprCallerType);
+    tasks.push("Use one of the training reservations from yesterday that was cancelled.");
+    tasks.push(`Assign roles: one trainee is the Cruise Specialist and the other is the ${roleplayCallerLabel(d)}.`);
+    tasks.push(profile
+      ? `Complete GDPR verification for the ${profile.label}. Reservation Number is REQUIRED.${["travel_agent","ta_group"].includes(d.gdprCallerType)?" The Agency ID / ABTA # / Travel Agency phone number is also mandatory for the Travel Agent path.":""}`
+      : "Complete the correct Guest Services GDPR verification before discussing the reservation. Reservation Number is REQUIRED.");
+    tasks.push("Verify the reservation was cancelled within the last 24 hours and qualifies for reinstatement.");
+    tasks.push("Verify whether the previous stateroom is still available.");
+    tasks.push("Verify whether the pricing is the same as it was before cancellation.");
+    tasks.push("If the reservation qualifies, reinstate it using the appropriate Seaweb workflow.");
+    tasks.push("Store Changes after the reinstatement and any required updates are complete.");
+    tasks.push("Recap the reinstated reservation and any differences with the caller.");
+    tasks.push("Add the appropriate reservation comments.");
+    tasks.push(`Send the appropriate updated confirmation${d.email?` to ${d.email}`:""}.`);
+    tasks.push("Complete the appropriate call closing.");
+    tasks.push("Switch roles and repeat the roleplay so both trainees practice the Cruise Specialist role.");
+    return [...new Set(tasks)];
+  }
+
   if(d.reservationWorkflow==="modify"){
     if(d.department==="Guest Services"){
       const profile=gdprProfile(d.gdprCallerType);
@@ -2147,10 +3087,13 @@ function checklistHtml(items){
 }
 
 function beforeEndItems(d){
-  const items=["Recap the reservation or changes in plain language."];
-  if(!["No Payment / Service Only","Refund / Reinstate"].includes(d.payment))items.push("Confirm the amount due now and/or next payment deadline shown in Seaweb.");
-  if(d.confirmation)items.push("Confirm the guest knows where the updated confirmation will be sent.");
-  if(d.commenting)items.push("Make sure required reservation notes/comments have been saved.");
+  const multi=isMultipleReservationScenario(d);
+  const reservationCount=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);
+  const items=[multi?`Recap all ${reservationCount} reservations separately in plain language.`:"Recap the reservation or changes in plain language."];
+  if(!["No Payment / Service Only","Refund / Reinstate"].includes(d.payment))items.push(multi?"Confirm the amount due now and/or next payment deadline for each reservation shown in Seaweb.":"Confirm the amount due now and/or next payment deadline shown in Seaweb.");
+  if(d.confirmation)items.push(multi?"Confirm the guest knows where each reservation confirmation will be sent.":"Confirm the guest knows where the updated confirmation will be sent.");
+  if(d.commenting)items.push(multi?"Make sure required notes/comments have been saved on each reservation.":"Make sure required reservation notes/comments have been saved.");
+  if(multi)items.push(`Verify all ${reservationCount} reservation numbers are saved and the reservations are linked with TWITH when required.`);
   items.push("Ask the customer-satisfaction question and use the Norwegian Cruise Line branded closing.");
   return items;
 }
@@ -2201,11 +3144,24 @@ function commonMistakes(d,meta){
     if(d.airProgram==="bundled")items.unshift("Using Bundled Air / AIRPROM3 on a sailing that has not been verified as an eligible Pride of America sailing.");
     if(airMeta?.nclAir)items.unshift("Leaving a pre-cruise transfer on an NCL Air reservation even though the flight is scheduled to arrive one day before embarkation.");
   }
-  if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
+  if(isReinstateRoleplay(d)){
+    items.unshift(
+      "Beginning to discuss the reservation before GDPR is complete or without obtaining the required Reservation Number.",
+      "Assuming the reservation qualifies without confirming it was cancelled within the last 24 hours.",
+      "Assuming the previous stateroom is still available.",
+      "Assuming the previous pricing will automatically return.",
+      "Forgetting to Store Changes after the reinstatement.",
+      "Missing reservation comments, confirmation, recap, or the role switch."
+    );
+  }else if(n.includes("cancel")||n.includes("reinstate"))items.unshift("Canceling before offering the applicable alternative or checking final-payment status.","Assuming original fare/category/promotions will automatically return on reinstatement.");
   return [...new Set(items)];
 }
 
 function expectedCompletionState(d,meta){
+  if(isMultipleAuthorizedCruisetourScenario(d))return "Two active Pride of America Cruisetour reservations are created for the same March 2027 departure, both contain the 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
+  if(isMultipleAuthorizedScenario(d))return "Two active reservations are created on the same March 2027 Galveston sailing, the Balcony rooms connect, deposits are processed separately, the parents' Authorized Person notation is present, confirmations are sent, and both reservations are linked with TWITH.";
+  if(isMultipleReservationScenario(d)){const count=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);return `${count} separate reservations are created on the selected sailing using the entered guest and stateroom details; each booking is reviewed and saved separately, confirmations/comments are completed as required, and the reservations are linked with TWITH when applicable.`;}
+  if(isReinstateRoleplay(d))return "If eligible, the cancelled training reservation is active/booked again; previous stateroom and pricing are verified, changes are stored, comments are added, confirmation is sent, and the caller receives a full recap.";
   if(d.payment==="Offer / Hold only")return "Offer / Hold — verify the first deposit deadline before ending the call.";
   if(["Minimum Deposit","Initial Deposit","Full Payment","Amenity Payment"].includes(d.payment))return "Booked / active after the required payment processes successfully; verify the actual Seaweb status.";
   if(d.payment==="FCC / CruiseNext")return "Use Offer/status sequencing while applying credits/coupons; verify the final saved status after the exercise.";
@@ -2319,6 +3275,14 @@ function resetScenarioForm(){
   $("agency").value="5";
   $("guest1").value="";
   $("guest2").value="";
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value="2";
+  if($("reservation2Guest1"))$("reservation2Guest1").value="";
+  if($("reservation2Guest2"))$("reservation2Guest2").value="";
+  if($("reservationRelationship"))$("reservationRelationship").value="Same Sailing / Linked";
+  if($("reservation2Category"))$("reservation2Category").value="Balcony";
+  if($("reservation2LocationPref"))$("reservation2LocationPref").value="Any";
+  if($("reservation2SidePref"))$("reservation2SidePref").value="Any";
+  if($("reservation2Pricing"))$("reservation2Pricing").value="";
   $("category").value="Balcony";
   $("locationPref").value="Any";
   $("sidePref").value="Any";
@@ -2349,6 +3313,10 @@ function resetScenarioForm(){
   $("airGateway").value="";
   updateAirProgramPreview();
   $("couponRows").innerHTML="";
+  if($("specialRequestRows"))$("specialRequestRows").innerHTML="";
+  if($("adaNeedRows"))$("adaNeedRows").innerHTML="";
+  setPricePrograms({});
+  if($("airGuestRows"))$("airGuestRows").innerHTML="";
   refreshCouponPanel();
 
   $("trainingCardProfile").value="standardSesame";
@@ -2365,9 +3333,13 @@ function resetScenarioForm(){
   $("scenarioOutput").innerHTML='<p class="empty-copy">Start a new scenario by choosing your options, then click <strong>Generate Scenario</strong>.</p>';
   $("scenarioStatus").className="status-badge neutral";
   $("scenarioStatus").textContent="Draft";
+  updateRoleplayScenarioButton();
+  updateFollowUpRoleplayButton();
   clearValidationDisplay();
   setMode("trainer");
   flash("Scenario cleared. You can start a brand-new exercise.");
+  showWizardScenarioSetup(1);
+  renderWizardReviewSummary();
   $("department").focus();
 }
 
@@ -2377,8 +3349,210 @@ function focusSummaryHtml(d){
   return `<section class="scenario-section visual-section focus-summary-section"><div class="section-label">SCENARIO FOCUS</div>${scenarioIconHeading('🎯','Skills Included')}<div class="scenario-focus-badges">${focusNamesForData(d).map(x=>`<span>${escapeHtml(x)}</span>`).join('')}</div></section>`;
 }
 
-function completionInstructionsHtml(){
+function roleplaySetupHtml(d){
+  if(!isRoleplayScenario(d))return "";
+
+  let specialistText="Lead the call naturally, express willingness to assist, ask the right questions, complete the required Seaweb workflow, recap, document and close.";
+  let callerText="Respond naturally to the Cruise Specialist. Do not volunteer every detail at once; provide information as the Cruise Specialist asks the appropriate questions.";
+  let useText="Use the scenario details below as the caller's information and requests.";
+  if(isReinstateRoleplay(d)){
+    specialistText="Lead the call, complete GDPR, research eligibility, reinstate when appropriate, Store Changes, document, confirm and recap.";
+    callerText="Use the caller type that matches the cancelled reservation. Respond naturally and allow the Cruise Specialist to guide the interaction.";
+    useText="Use one of the training reservations from yesterday that was cancelled. Do not create a new reservation for this exercise.";
+  }else if(isAddGuestUpgradeRoleplay(d)){
+    specialistText="Express willingness to assist, complete Travel Agent GDPR, identify the Studio occupancy issue, service the reservation, quote the new price, check additional deposit, Store Changes, document, confirm and recap.";
+    callerText="You are Kyle James with Norwegian Training Travel. Reveal the requests naturally as the Cruise Specialist asks questions. Do not give every detail at the beginning of the call.";
+    useText="Use the reservation created during today's Solo Guest / Studio Booking practice.";
+  }
+
+  return `<section class="scenario-section visual-section roleplay-setup-section">
+    <div class="section-label">ROLEPLAY SETUP</div>
+    ${scenarioIconHeading('🎭','Partner Roleplay')}
+    <div class="roleplay-role-grid">
+      <div class="roleplay-role-card"><span>🎧 ROLE 1</span><strong>Cruise Specialist</strong><small>${escapeHtml(specialistText)}</small></div>
+      <div class="roleplay-role-card"><span>☎️ ROLE 2</span><strong>${escapeHtml(roleplayCallerLabel(d))}</strong><small>${escapeHtml(callerText)}</small></div>
+    </div>
+    <div class="instruction-strip"><strong>Scenario to use</strong><span>${escapeHtml(useText)}</span></div>
+    <div class="roleplay-switch-banner"><strong>🔄 Switch Roles</strong><span>After the first interaction is complete, switch roles and repeat the exercise so both trainees practice the Cruise Specialist role.</span></div>
+  </section>`;
+}
+
+function completionInstructionsHtml(d){
+  if(isRoleplayScenario(d)){
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Confirm the servicing workflow, comments, confirmation and recap are complete.</span><span>Switch roles with your partner and repeat the exercise.</span></div>`;
+  }
+  if(isMultipleReservationScenario(d)){
+    const count=Array.isArray(d.reservations)&&d.reservations.length?d.reservations.length:(d.reservationCount||2);
+    return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save all ${count} reservation numbers.</span><span>Post all ${count} reservation numbers in the class chat.</span><span>Verify the reservations are linked with TWITH when required.</span></div>`;
+  }
   return `<div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Save your reservation number.</span><span>Post your reservation number in the class chat.</span></div>`;
+}
+
+function curriculumScenarioDetailsHtml(d){
+  if(isMultipleAuthorizedAny(d))return multipleAuthorizedDetailsHtml(d);
+  if(isMultipleReservationScenario(d))return multipleReservationDetailsHtml(d);
+
+  if(isSoloStudioScenario(d)){
+    return `<section class="scenario-section visual-section curriculum-specific-section">
+      <div class="section-label">SCENARIO DETAILS</div>
+      ${scenarioIconHeading('🧾','Solo Guest / Studio Booking')}
+      <div class="scenario-detail-grid">
+        <div><span>Travel Agency</span><strong>Norwegian Training Travel</strong><small>305-436-1000</small></div>
+        <div><span>Travel Agent</span><strong>Kyle James</strong><small>Caller</small></div>
+        <div><span>Guest</span><strong>Tom Holland</strong><small>DOB: 06/01/1996</small></div>
+        <div><span>Guest Search</span><strong>Last Name + Date of Birth</strong><small>Use the training profile found in Seaweb</small></div>
+        <div><span>Category</span><strong>Studio</strong><small>Assign any available Studio stateroom</small></div>
+        <div><span>Special Request</span><strong>Kosher Meals</strong><small>If available, remind the caller this option is capacity controlled</small></div>
+      </div>
+      <div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>“The pricing for your Studio stateroom is $_____ per person, which includes the cruise fare, taxes, fees, and port expenses for a reservation total of $_____. How does that sound?”</span></div>
+      <div class="instruction-strip"><strong>Offers / Protection</strong><span>Include all applicable Free at Sea offers, Pre-Paid Service Charges, and Norwegian Care.</span></div>
+    </section>`;
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    return `<section class="scenario-section visual-section curriculum-specific-section">
+      <div class="section-label">ROLEPLAY DETAILS</div>
+      ${scenarioIconHeading('🛏️','Add Guest & Upgrade Stateroom')}
+      <div class="scenario-detail-grid">
+        <div><span>Reservation</span><strong>Today's Solo Practice</strong><small>Use the reservation created earlier today</small></div>
+        <div><span>Travel Agent</span><strong>Kyle James</strong><small>Norwegian Training Travel • 305-436-1000</small></div>
+        <div><span>Guest Being Added</span><strong>Taylor</strong><small>Latitudes #272279126</small></div>
+        <div><span>Room Change</span><strong>Upgrade from Studio</strong><small>Choose a category that accommodates two guests</small></div>
+        <div><span>Location Request</span><strong>Near elevators / stairs</strong><small>As close as available</small></div>
+        <div><span>Bed Setup</span><strong>Twin Beds</strong><small>Two separate beds</small></div>
+        <div><span>Tom</span><strong>Keep Kosher Meals</strong><small>Retain his existing request</small></div>
+        <div><span>Taylor</span><strong>Mushroom Allergy</strong><small>Taylor does not need Kosher Meals</small></div>
+      </div>
+      <div class="instruction-strip"><strong>💬 Quote Updated Advertised Pricing</strong><span>“The pricing for your _____ stateroom is $_____ per person, which includes the cruise fare, taxes, fees, and port expenses for a reservation total of $_____. How does that sound?”</span></div>
+      <div class="instruction-strip"><strong>Payment Check</strong><span>Check whether the changes create an additional deposit due. If additional deposit is required, advise Kyle and collect it using the training card.</span></div>
+    </section>`;
+  }
+  return "";
+}
+
+function reservationGuestLabel(reservation,index){
+  const names=(reservation?.guests||[]).slice(0,+reservation?.guestCount||reservation?.guests?.length||0).filter(Boolean);
+  return names.length?names.join(" & "):`Reservation ${index+1} guests`;
+}
+
+function reservationStateroomLabel(reservation){
+  if(!reservation)return "Verify in Seaweb";
+  return `${reservation.category||"Stateroom"}${reservation.location&&reservation.location!=="Any"?` • ${reservation.location}`:""}${reservation.side&&reservation.side!=="Any"?` • ${reservation.side} side`:""}`;
+}
+
+function multipleReservationDetailsHtml(d){
+  if(!isMultipleReservationScenario(d)||isMultipleAuthorizedAny(d))return "";
+  const reservations=Array.isArray(d.reservations)?d.reservations:[];
+  if(reservations.length<2)return "";
+  const mix=getGuestProfileMix(d);
+  let guestOffset=0;
+  const cards=reservations.map((r,i)=>{
+    const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
+    const guestItems=names.map((name,j)=>{
+      const globalIndex=guestOffset+j;
+      const isPast=!!(d.latitudes&&mix.flags[globalIndex]);
+      const number=mix.numbers[globalIndex]||"";
+      const status=d.latitudes?(isPast?(number?` • Latitudes #${escapeHtml(number)}`:" • Past Guest — verify Latitudes #"):" • New Guest"):"";
+      return `<li><strong>${escapeHtml(name||`Guest ${j+1}`)}</strong>${status}</li>`;
+    }).join("");
+    guestOffset+=names.length;
+    return `<article class="multi-res-card">
+      <div class="multi-res-card-head"><span>RESERVATION ${i+1}</span><strong>${escapeHtml(reservationGuestLabel(r,i))}</strong></div>
+      <ul>
+        ${guestItems}
+        <li><strong>Stateroom:</strong> ${escapeHtml(reservationStateroomLabel(r))}</li>
+        ${r.pricing?`<li><strong>Advertised Pricing:</strong> ${escapeHtml(r.pricing)}</li>`:"<li><strong>Advertised Pricing:</strong> Quote what Seaweb displays</li>"}
+      </ul>
+    </article>`;
+  }).join("");
+  return `<section class="scenario-section visual-section curriculum-specific-section multi-res-section">
+    <div class="section-label">MULTIPLE RESERVATIONS</div>
+    ${scenarioIconHeading('🧳','Reservation Details')}
+    <div class="scenario-detail-grid">
+      <div><span>Reservation Count</span><strong>${reservations.length} Reservations</strong><small>${d.guestCount} total guest${d.guestCount===1?'':'s'}</small></div>
+      <div><span>Relationship</span><strong>${escapeHtml(d.reservationRelationship||'Same Sailing / Linked')}</strong><small>Coordinate both bookings and use TWITH when required</small></div>
+    </div>
+    <div class="multi-res-grid">${cards}</div>
+  </section>`;
+}
+
+function multipleAuthorizedDetailsHtml(d){
+  if(!isMultipleAuthorizedAny(d))return "";
+
+  const isTour=isMultipleAuthorizedCruisetourScenario(d);
+  const selected=d.sailing;
+  const selectedText=selected
+    ? `${selected.ship||"NCL Ship"}${selected.sailingDate?` • ${formatSailingDate(selected.sailingDate)}`:""}${selected.departure?` • From ${selected.departure}`:""}`
+    : (isTour
+        ? "Search Pride of America • Honolulu • March 2027"
+        : "Search Caribbean • Galveston • March 2027");
+
+  return `<section class="scenario-section visual-section curriculum-specific-section multi-res-section">
+    <div class="section-label">SCENARIO DETAILS</div>
+    ${scenarioIconHeading(isTour?'🌺':'👨‍👩‍👧‍👦',isTour?'Multiple Reservations, Authorized Person & Cruisetour':'Multiple Reservations & Authorized Person')}
+    <div class="scenario-detail-grid">
+      <div><span>Caller</span><strong>Maria Lopez</strong><small>Direct Guest — U.S. Funds • Agency 5</small></div>
+      <div><span>Travel Party</span><strong>4 Guests • 2 Reservations</strong><small>Maria + Sofia / Ana + Luis</small></div>
+      <div><span>Sailing Search</span><strong>${escapeHtml(selectedText)}</strong><small>${isTour?'Use the exact selected Pride of America sailing and add the Cruisetour package in Seaweb.':'Choose a qualifying Caribbean sailing from Galveston in March 2027.'}</small></div>
+      <div><span>Staterooms</span><strong>2 Balcony Staterooms</strong><small>They MUST connect • Any location</small></div>
+      ${isTour?`<div><span>Cruisetour</span><strong>11-DAY OAHU EXPLORER HYATT WAIKIKI OCEAN VIEW CRUISETOUR</strong><small>4-day pre-cruise land portion • Do not substitute another package</small></div>`:""}
+      <div><span>Payment</span><strong>Separate deposit on each reservation</strong><small>Maria is paying both deposits using the training card</small></div>
+    </div>
+
+    <div class="multi-res-grid">
+      <article class="multi-res-card">
+        <div class="multi-res-card-head"><span>RESERVATION 1</span><strong>Maria & Sofia</strong></div>
+        <ul>
+          <li><strong>Maria Lopez</strong> • Latitudes #279019549</li>
+          <li><strong>Sofia</strong> • Age 4 • Latitudes #279019550</li>
+          <li>Balcony stateroom connecting to Ana & Luis</li>
+          <li>All applicable Free at Sea offers</li>
+          <li>Pre-Paid Service Charges</li>
+          <li>Norwegian Care / Travel Protection</li>
+          <li>Sofia: <strong>Peanut Allergy</strong></li>
+        </ul>
+      </article>
+
+      <article class="multi-res-card">
+        <div class="multi-res-card-head"><span>RESERVATION 2</span><strong>Ana & Luis</strong></div>
+        <ul>
+          <li><strong>Ana Martinez</strong> • Latitudes #279019849</li>
+          <li><strong>Luis Martinez</strong> • Latitudes #279019848</li>
+          <li>Balcony stateroom connecting to Maria & Sofia</li>
+          <li>Beds pushed together</li>
+          <li>Extra pillows</li>
+          <li>All applicable Free at Sea offers</li>
+          <li>Pre-Paid Service Charges</li>
+          <li>Norwegian Care / Travel Protection</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="instruction-strip"><strong>💬 Advertised Quote</strong><span>“The _____ stateroom is priced at $_____ per person for guests 1 & 2. This includes the cruise fare, taxes, fees, and port expenses.”</span></div>
+    <div class="instruction-strip"><strong>Quote Rule</strong><span>When both bookings have identical components — same stateroom type, promotions, add-ons, number of guests and guest types — one quote may reflect the price per reservation. If anything differs, quote each reservation separately.</span></div>
+    ${isTour?`<div class="instruction-strip"><strong>🌺 Cruisetour Check</strong><span>Make sure both reservations contain the exact <strong>11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour</strong> and the 4-day pre-cruise component. Do not book only the cruise portion.</span></div>`:""}
+  </section>
+
+  <section class="scenario-section visual-section authorized-person-section">
+    <div class="section-label">AUTHORIZED PERSON</div>
+    ${scenarioIconHeading('👤','Maria Is Booking for Her Parents')}
+    <p>Maria is making Ana and Luis's reservation on their behalf and paying their deposit. Explain the Authorized Person guidelines before completing the parents' reservation.</p>
+    <blockquote class="authorized-script">“Since you’re making a reservation for your parents, there are just a few important things to keep in mind. The payment being placed today is for each reservation and must be paid separately. You’ll be responsible for each $250 deposit made at this time, however your parents' reservation itself will be under their names, and they will have full access to manage it. I have added the authorized user so that you will also have access to manage it.”</blockquote>
+    <div class="authorized-comment-box"><span>Required Parents' Reservation Comment</span><strong>Authorized Person: Maria Lopez, CC 0000</strong></div>
+  </section>
+
+  <section class="scenario-section visual-section">
+    <div class="section-label">CONNECT & LINK</div>
+    ${scenarioIconHeading('🔗','Connecting Staterooms + TWITH')}
+    <div class="critical-callout"><strong>Do not assume adjacent rooms connect.</strong><span>Verify in Seaweb that the selected Balcony staterooms actually have a connecting door.</span></div>
+    ${checklistHtml([
+      "Both Balcony staterooms actually connect.",
+      "Each room accommodates its assigned guests.",
+      "Ana and Luis's beds are pushed together.",
+      "Extra pillows are requested for Ana and Luis.",
+      "Both reservations are linked with TWITH (Travel With) before ending the call."
+    ])}
+  </section>`;
 }
 
 function bookingSourceSectionHtml(d,agencyDisplay){
@@ -2393,19 +3567,21 @@ function bookingSourceSectionHtml(d,agencyDisplay){
 function sailingDetailsVisualHtml(d,pricing){
   if(d.reservationWorkflow==="modify")return '';
   const s=d.sailing;
+  const multi=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🚢','Sailing Details')}<div class="scenario-detail-grid">
     <div><span>Sailing</span><strong>${escapeHtml(s?`${s.ship||'NCL Ship'}${s.title?` • ${s.title}`:''}`:'Trainer-selected NCL sailing')}</strong></div>
     <div><span>Departure</span><strong>${escapeHtml(s?.departure||'Verify in Seaweb')}</strong></div>
     <div><span>Sail Date</span><strong>${escapeHtml(s?.sailingDate?formatSailingDate(s.sailingDate):'Select / verify exact date')}</strong></div>
-    <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}</strong></div>
-  </div><h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}</section>`;
+    <div><span>Guests</span><strong>${d.guestCount} ${d.guestCount===1?'Guest':'Guests'}${multi?' • 2 Reservations':''}</strong></div>
+  </div>${multi?`<div class="instruction-strip"><strong>🛏️ Two Reservations</strong><span>Use the reservation-specific guest, stateroom and pricing details below. Both reservations use this sailing unless the trainer instructs otherwise.</span></div>`:`<h4>🛏️ Category & Stateroom</h4><p>Book a <strong>${escapeHtml(d.category)}</strong>${d.location!=="Any"?` in the ${escapeHtml(d.location)} area`:''}${d.side!=="Any"?` with a ${escapeHtml(d.side)}-side preference`:''}. Review actual available inventory before selecting.</p>${pricing}`}</section>`;
 }
 
 function guestInformationVisualHtml(d){
-  if(d.reservationWorkflow==="modify")return '';
+  if(d.reservationWorkflow==="modify"||isMultipleReservationScenario(d))return '';
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   const cards=Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||`Guest ${i+1}`):i===1?(d.guest2||`Guest ${i+1}`):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const past=d.latitudes&&mix.flags[i];
     const status=d.latitudes?(past?`Past Guest${mix.numbers[i]?` • Guest ID: ${escapeHtml(mix.numbers[i])}`:' • Verify Latitudes number'}`:'New Guest'):'Verify guest profile';
     return `<div class="scenario-guest-card"><span>Guest ${i+1}</span><strong>${escapeHtml(name)}</strong><small>${status}</small></div>`;
@@ -2415,9 +3591,11 @@ function guestInformationVisualHtml(d){
 
 function offersAddonsVisualHtml(d){
   const n=focusSearchText(d); const items=[];
-  if(d.fas||/price programs|free at sea|\bfas\b/.test(n))items.push('All applicable Free at Sea offers');
+  const configuredPrograms=priceProgramLabels(d.pricePrograms);
+  if(configuredPrograms.length)items.push(...configuredPrograms);
+  else if(d.fas||/price programs|free at sea|\bfas\b/.test(n))items.push('Applicable Free at Sea selections');
   if(d.travel||/norwegian care|travel protection/.test(n))items.push('Norwegian Care / Travel Protection');
-  if(d.psc||/prepaid service charge|ppsrvchg/.test(n))items.push('Pre-Paid Service Charges');
+  if(d.psc&&!configuredPrograms.includes('Prepaid Service Charges'))items.push('Pre-Paid Service Charges');
   if(/teacher/.test(n))items.push('Teacher Appreciation Offer, when eligible');
   if((/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext') && !(d.coupons||[]).length)items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
   if(/special request|ada|dietary/.test(n))items.push('Applicable special, accessibility, or dietary requests');
@@ -2437,15 +3615,84 @@ function paymentVisualHtml(d,paymentInstruction){
 
 function requiredActionsVisualHtml(d){
   const items=[];
-  if(d.confirmation)items.push(`Send the appropriate confirmation to ${d.email||'training123@ncl.com'}.`);
-  if(d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'&&d.confirmation)items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
+  if(isMultipleAuthorizedAny(d)){
+    return `<section class="scenario-section visual-section required-actions-section">
+      <div class="section-label">REQUIRED ACTIONS</div>
+      ${scenarioIconHeading('✅','Complete Both Reservations')}
+      ${checklistHtml([
+        "Recap Reservation 1 – Maria & Sofia.",
+        "Recap Reservation 2 – Ana & Luis.",
+        "Add appropriate reservation comments to BOTH reservations.",
+        "Add the exact parents' reservation note: Authorized Person: Maria Lopez, CC 0000.",
+        `Send a confirmation for EACH reservation to ${d.email||"training123@ncl.com"}.`,
+        "Verify both deposits were processed separately.",
+        "Link both reservations using TWITH (Travel With)."
+      ])}
+    </section>`;
+  }
+  if(isMultipleReservationScenario(d) && !isMultipleAuthorizedAny(d)){
+    const reservations=Array.isArray(d.reservations)?d.reservations:[];
+    const createItems=reservations.map((r,i)=>`Create and save Reservation ${i+1} using its entered guest and stateroom details.`);
+    return `<section class="scenario-section visual-section required-actions-section">
+      <div class="section-label">REQUIRED ACTIONS</div>
+      ${scenarioIconHeading('✅',`Complete All ${reservations.length||d.reservationCount||2} Reservations`)}
+      ${checklistHtml([
+        ...createItems,
+        `Coordinate the room relationship as: ${d.reservationRelationship||"Same Sailing / Linked"}.`,
+        d.payment!=="No Payment / Service Only"?"Complete the required payment / booking action separately for each reservation.":null,
+        d.commenting?"Add the appropriate reservation comments to EACH reservation.":null,
+        d.confirmation?`Send a confirmation for EACH reservation to ${d.email||"training123@ncl.com"}.`:null,
+        "Recap each reservation separately with the caller.",
+        "Link the reservations with TWITH when required.",
+        `Save all ${reservations.length||d.reservationCount||2} reservation numbers and post them in the class chat.`
+      ].filter(Boolean))}
+    </section>`;
+  }
+  if(isReinstateRoleplay(d))items.push("Store Changes after the reinstatement and all required updates are complete.");
+  if(isAddGuestUpgradeRoleplay(d))items.push("Store Changes after the guest, stateroom, pricing, bed configuration, special requests and any payment are complete.");
+  if(d.confirmation && (isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))){
+    items.push(`Send the Guest confirmation to ${d.email||'training123@ncl.com'}.`);
+    items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
+  }else if(d.confirmation){
+    items.push(`Send the appropriate confirmation to ${d.email||'training123@ncl.com'}.`);
+  }
+  if(d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'&&d.confirmation&&!isSoloStudioScenario(d))items.push(`Send the Travel Agent confirmation to ${d.email||'training123@ncl.com'}.`);
   if(d.commenting)items.push('Leave the appropriate reservation comments using Compass / the Commenting Tool.');
   items.push('Complete a full reservation recap with the caller.');
   return `<section class="scenario-section visual-section">${scenarioIconHeading('📧','Required Actions')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul></section>`;
 }
 
 function recapVisualHtml(d){
-  const items=d.reservationWorkflow==='modify'?["Modification completed","Updated pricing / amount due","Promotion or deadline changes","Confirmation / comments","Any next steps"]:["Ship and sailing","Itinerary","Stateroom","Guests","Offers and add-ons",d.airEnabled?'Air / transfer arrangements':null,"Payment / deposit information","Any other important reservation details"].filter(Boolean);
+  if(isMultipleAuthorizedAny(d)){
+    const tour=isMultipleAuthorizedCruisetourScenario(d);
+    const items=[
+      "Selected ship, sail date and itinerary",
+      ...(tour?["11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour","4-day pre-cruise Cruisetour details"]:[]),
+      "Reservation 1 – Maria & Sofia: Balcony stateroom, connecting room, pricing, offers, service charges, Norwegian Care, Sofia's peanut allergy and deposit",
+      "Reservation 2 – Ana & Luis: Balcony stateroom, connecting room, pricing, offers, service charges, Norwegian Care, beds together, extra pillows, Authorized Person and deposit",
+      "Both confirmations sent",
+      "Both reservations linked with TWITH"
+    ];
+    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap Both Reservations')}<p>Review each reservation separately with Maria before ending the call.</p>${checklistHtml(items)}</section>`;
+  }
+
+  if(isMultipleReservationScenario(d) && Array.isArray(d.reservations) && d.reservations.length>=2){
+    const recapItems=d.reservations.map((r,i)=>`Reservation ${i+1} – ${reservationGuestLabel(r,i)}: ${reservationStateroomLabel(r)}`);
+    recapItems.push(`Room relationship: ${d.reservationRelationship||"Same Sailing / Linked"}`);
+    if(d.payment!=="No Payment / Service Only")recapItems.push("Payment / booking action completed separately for each reservation");
+    if(d.confirmation)recapItems.push("A confirmation was sent for each reservation");
+    if(d.commenting)recapItems.push("Required comments were saved on each reservation");
+    recapItems.push(`All ${d.reservations.length} reservation numbers saved`);
+    return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️',`Recap All ${d.reservations.length} Reservations`)}<p>Review each reservation separately with the caller before ending the call.</p>${checklistHtml(recapItems)}</section>`;
+  }
+
+  const items=isSoloStudioScenario(d)
+    ? ["Norwegian Aqua and June 27, 2027 sail date","7-Day Caribbean itinerary","Tom Holland traveling solo","Studio category and selected stateroom","Reservation pricing / total","Free at Sea","Pre-Paid Service Charges","Kosher Meals","Norwegian Care","Deposit collected","Confirmations and comments"]
+    : isAddGuestUpgradeRoleplay(d)
+      ? ["Tom and Taylor traveling together","New category and stateroom location","Twin-bed configuration","Updated pricing / reservation total","Free at Sea for the updated reservation","Pre-Paid Service Charges for both guests","Norwegian Care for both guests","Tom's Kosher Meals","Taylor's mushroom allergy","Additional deposit collected, if applicable","Confirmations and comments"]
+      : isReinstateRoleplay(d)
+        ? ["Reservation successfully reinstated, if eligible","Ship and sail date","Guests","Stateroom / any stateroom change","Pricing / any pricing change","Any offers or other reservation details affected by reinstatement","Confirmation sent","Any next steps"]
+        : d.reservationWorkflow==='modify'?["Modification completed","Updated pricing / amount due","Promotion or deadline changes","Confirmation / comments","Any next steps"]:["Ship and sailing","Itinerary","Stateroom","Guests","Offers and add-ons",d.airEnabled?'Air / transfer arrangements':null,"Payment / deposit information","Any other important reservation details"].filter(Boolean);
   return `<section class="scenario-section visual-section">${scenarioIconHeading('🗣️','Recap the Reservation')}<p>Before ending the call, review the completed reservation or servicing outcome with the caller.</p><ul>${items.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></section>`;
 }
 
@@ -2461,9 +3708,167 @@ function considerationsVisualHtml(d){
 
 function finalReservationCheckHtml(d,meta){
   const items=fullTaskList(d,meta);
-  const core=[...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
+  if(isMultipleReservationScenario(d)){
+    const core=[
+      ...items,
+      "Both reservation numbers saved",
+      "Both reservation numbers posted in the class chat",
+      "Both reservations linked with TWITH when required",
+      "Proper closing completed"
+    ];
+    return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
+  }
+  const core=isRoleplayScenario(d)
+    ? [...items,"Full reservation recap completed","Proper closing statements used","Roles switched and exercise repeated"]
+    : [...items,"Reservation recap completed","Proper closing statements used","Reservation number saved","Reservation number posted in the class chat"];
   return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Reservation Check')}${checklistHtml([...new Set(core)])}</section>`;
 }
+const FOLLOW_UP_CHANGE_LIBRARY={
+  add_guest:{label:"Add a Guest",trainee:"Add the requested guest. Confirm required guest information, occupancy, pricing, promotions and deposit implications before saving.",caller:"You want to add another guest. Provide the new guest information only as the Cruise Specialist asks for it."},
+  remove_guest:{label:"Remove a Guest",trainee:"Remove the requested guest only after reviewing the reservation impact, updated pricing, occupancy, promotions and any applicable refund or amount due.",caller:"You want to remove a guest. Allow the Cruise Specialist to review the impact before agreeing to proceed."},
+  stateroom:{label:"Change / Upgrade Stateroom",trainee:"Research an appropriate category and available stateroom, review occupancy and location, quote updated advertised pricing and the reservation total, then receive approval before changing the room.",caller:"You want to change the category or stateroom. Give your room preferences as the Cruise Specialist asks about them."},
+  guest_info:{label:"Update Guest Information",trainee:"Review the requested guest-information change and follow the applicable Seaweb / NCLHelp workflow before saving it.",caller:"You need information on a guest updated. Provide the details only when the Cruise Specialist asks the appropriate questions."},
+  special_request:{label:"Special Request / Allergy",trainee:"Add or update the requested special request, meal need or allergy and make sure it is associated with the correct guest.",caller:"You need a special request, meal need or allergy added or updated."},
+  bed_config:{label:"Bed Configuration",trainee:"Review the requested bed setup and update it when supported by the assigned stateroom.",caller:"You want the bed setup changed. Let the Cruise Specialist determine whether the stateroom supports the request."},
+  fas:{label:"Free at Sea",trainee:"Review the applicable Free at Sea selections and complete the requested addition, removal or verification using the approved workflow.",caller:"You are calling about the Free at Sea selections on the reservation."},
+  ppsrvc:{label:"Pre-Paid Service Charges",trainee:"Review and complete the requested Pre-Paid Service Charges change, then verify the updated reservation total.",caller:"You want to add, remove or review Pre-Paid Service Charges."},
+  care:{label:"Norwegian Care",trainee:"Review the Travel Protection request and complete the applicable Norwegian Care workflow, including any required pricing or eligibility discussion.",caller:"You want to add, remove or discuss Norwegian Care."},
+  air_transfer:{label:"Air / Transfers",trainee:"Review the applicable air or transfer request in the approved guidance and complete the requested servicing changes, including any payment or transfer implications.",caller:"You want to make a change involving air or transfers. Provide the trip details as the Cruise Specialist asks."},
+  dining_amenity:{label:"Dining / Entertainment / Amenity",trainee:"Review availability and complete the requested dining, entertainment, spa or amenity action, including any payment or confirmation required.",caller:"You want to add or change an onboard dining, entertainment, spa or amenity item."},
+  coupon_credit:{label:"Coupon / Credit",trainee:"Review the requested coupon or credit for eligibility, apply it in the correct order when eligible, and verify the updated balance.",caller:"You have a coupon, FCC, CruiseNext or other credit you want reviewed or applied."},
+  price_drop:{label:"Price Drop",trainee:"Research current pricing and follow the approved price-drop workflow. Explain the outcome and any effect on the reservation before making changes.",caller:"You noticed a different price and want the reservation reviewed."},
+  payment:{label:"Payment / Additional Deposit",trainee:"Review the amount due and collect the requested payment or additional deposit using training payment information when appropriate.",caller:"You are prepared to make any required payment after the servicing changes are reviewed."},
+  cancel_reinstate:{label:"Cancel / Reinstate",trainee:"Follow the applicable cancellation or reinstatement workflow, including eligibility, pricing, stateroom availability, refund or amount-due information and documentation.",caller:"You are calling about cancelling or reinstating the reservation. Allow the Cruise Specialist to determine the applicable workflow."}
+};
+
+function followUpOriginalCallerType(source){
+  if(!source)return "direct_guest";
+  if(source.followUpRoleplay&&source.sourceScenarioSnapshot)return source.sourceScenarioSnapshot.originalCaller||"direct_guest";
+  if(source.reservationWorkflow==="modify"){
+    if(["travel_agent","ta_group"].includes(source.gdprCallerType))return "travel_agent";
+    if(source.gdprCallerType==="direct_guest")return "direct_guest";
+  }
+  if(source.department==="Guest Services"&&source.reservationWorkflow==="new")return source.newCallerType==="travel_agent"?"travel_agent":"direct_guest";
+  return "direct_guest";
+}
+function followUpResolvedCaller(source,selection){return selection==="same"?followUpOriginalCallerType(source):selection}
+function followUpSelectedChanges(){return [...document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]:checked')].map(x=>x.value)}
+
+function followUpSourceSnapshot(source){
+  const sailing=source.sailing||{};
+  return {
+    sourceTitle:source.title||focusTitle(source),
+    focuses:focusNamesForData(source),
+    guests:[source.guest1,source.guest2].filter(Boolean),
+    ship:sailing.ship||"",sailDate:sailing.sailingDate||"",itinerary:sailing.title||"",departure:sailing.departure||"",duration:sailing.duration||"",
+    category:source.category||"",location:source.location||"",side:source.side||"",agency:source.agency||"",market:source.market||"",
+    originalCaller:followUpOriginalCallerType(source),fas:!!source.fas,travel:!!source.travel,psc:!!source.psc,airEnabled:!!source.airEnabled,
+    confirmationEmail:source.email||"training123@ncl.com"
+  };
+}
+
+function followUpSourceSummaryHtml(source){
+  const snap=source.followUpRoleplay&&source.sourceScenarioSnapshot?source.sourceScenarioSnapshot:followUpSourceSnapshot(source);
+  const guests=(snap.guests||[]).length?snap.guests.join(" + "):"Guest(s) from the original reservation";
+  const sail=snap.ship?`${snap.ship}${snap.sailDate?` • ${formatSailingDate(snap.sailDate)}`:""}`:"Use the original practice reservation";
+  return `<div class="followup-source-label">ORIGINAL PRACTICE RESERVATION</div><strong>${escapeHtml(snap.sourceTitle||"Previous Scenario")}</strong><span>${escapeHtml(guests)} • ${escapeHtml(sail)}</span><small>The follow-up uses this same reservation after the original practice has been completed.</small>`;
+}
+
+function updateFollowUpAgencyField(){
+  const source=state.currentScenario;
+  const resolved=followUpResolvedCaller(source,$("followUpCallerType")?.value||"same");
+  $("followUpAgencyField")?.classList.toggle("hidden-field",resolved!=="travel_agent");
+}
+
+function openFollowUpRoleplayBuilder(){
+  const current=state.currentScenario;if(!current)return;
+  const cfg=current.followUpRoleplay?(current.followUpConfig||{}):{};
+  $("followUpSourceSummary").innerHTML=followUpSourceSummaryHtml(current);
+  $("followUpCallerType").value=cfg.callerSelection||"same";
+  $("followUpAgency").value=cfg.agency||(followUpOriginalCallerType(current)==="travel_agent"?String(current.agency||current.sourceScenarioSnapshot?.agency||""):"");
+  document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]').forEach(cb=>cb.checked=(cfg.changes||[]).includes(cb.value));
+  $("followUpCustomChanges").value=cfg.customChanges||"";
+  $("followUpIncludeCard").checked=cfg.includeCard!==false;
+  $("followUpKeepBenefits").checked=cfg.keepBenefits!==false;
+  $("followUpBuilderNotice").className="notice warning hidden-field";
+  $("followUpBuilderNotice").textContent="";
+  updateFollowUpAgencyField();
+  $("followUpRoleplayDialog").showModal();
+}
+function closeFollowUpRoleplayBuilder(){if($("followUpRoleplayDialog")?.open)$("followUpRoleplayDialog").close()}
+
+function followUpGdprHtml(d){
+  const ta=d.gdprCallerType==="travel_agent";
+  return `<section class="scenario-section visual-section gdpr-section"><div class="section-label">VERIFY BEFORE SERVICING</div>${scenarioIconHeading('🔐','GDPR Verification')}<div class="critical-callout"><strong>Reservation Number is REQUIRED.</strong><span>Do not discuss or modify the reservation until the appropriate verification has been completed.</span></div><div class="gdpr-grid"><div><span>Caller Type</span><strong>${ta?"Travel Agent":"Direct Guest"}</strong></div><div><span>Required First</span><strong>Reservation Number</strong></div>${ta?`<div><span>Travel Agent Identifier</span><strong>Agency ID / Agency Phone Number</strong><small>${d.followUpConfig?.agency?escapeHtml(d.followUpConfig.agency):"Caller must provide the appropriate agency identifier"}</small></div>`:""}<div><span>Reservation Verification</span><strong>Guest Full Name</strong><small>Use the guest(s) on the original practice reservation</small></div><div><span>Sailing Verification</span><strong>Ship & Full Sail Date</strong><small>Confirm against the existing reservation</small></div></div></section>`;
+}
+
+function followUpSnapshotHtml(d){
+  const s=d.sourceScenarioSnapshot||{};
+  const guests=(s.guests||[]).length?s.guests.join(" + "):"Use guest(s) from original practice";
+  const benefits=[s.fas?"Free at Sea":null,s.psc?"Pre-Paid Service Charges":null,s.travel?"Norwegian Care":null,s.airEnabled?"Air / Transfers":null].filter(Boolean);
+  return `<section class="scenario-section visual-section followup-snapshot-section"><div class="section-label">EXISTING RESERVATION</div>${scenarioIconHeading('🗂️','Use the Reservation from the Previous Practice')}<div class="scenario-detail-grid"><div><span>Original Scenario</span><strong>${escapeHtml(s.sourceTitle||"Previous Scenario")}</strong><small>${escapeHtml((s.focuses||[]).join(" + "))}</small></div><div><span>Guest(s)</span><strong>${escapeHtml(guests)}</strong><small>Use the reservation created by the trainee</small></div><div><span>Sailing</span><strong>${escapeHtml(s.ship||"Original sailing")}</strong><small>${s.sailDate?escapeHtml(formatSailingDate(s.sailDate)):escapeHtml(s.itinerary||"Use original reservation")}</small></div><div><span>Current Stateroom / Category</span><strong>${escapeHtml(s.category||"Review in Seaweb")}</strong><small>Verify the actual reservation before servicing</small></div><div><span>Existing Benefits</span><strong>${escapeHtml(benefits.join(" • ")||"Review existing reservation")}</strong><small>Do not assume they remain unchanged after servicing</small></div><div><span>Reservation Number</span><strong>Use the reservation created in the original practice</strong><small>The caller must provide it during GDPR</small></div></div></section>`;
+}
+
+function followUpChangesHtml(d){
+  const cfg=d.followUpConfig||{};
+  const changes=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]).filter(Boolean);
+  const cards=changes.map((item,i)=>`<div class="followup-change-card"><span>${String(i+1).padStart(2,"0")}</span><div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.trainee)}</small></div></div>`).join("");
+  const custom=cfg.customChanges?`<div class="instruction-strip followup-custom-request"><strong>Caller-Specific Details</strong><span>${escapeHtml(cfg.customChanges).replace(/\n/g,"<br>")}</span></div>`:"";
+  return `<section class="scenario-section visual-section followup-request-section"><div class="section-label">SERVICING REQUEST</div>${scenarioIconHeading('🛠️','Changes Requested by the Caller')}<p>Listen to the caller, research the request, explain any impact, and receive approval before completing changes that affect pricing or the reservation.</p><div class="followup-change-card-list">${cards}</div>${custom}${cfg.keepBenefits?`<div class="instruction-strip"><strong>Verify Existing Benefits</strong><span>After making the requested changes, verify that the reservation's existing promotions, add-ons, service charges, protection and other applicable items remain correct.</span></div>`:""}</section>`;
+}
+
+function followUpCallerRoleHtml(d){
+  const cfg=d.followUpConfig||{};
+  const prompts=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]).filter(Boolean).map(item=>`<li>${escapeHtml(item.caller)}</li>`).join("");
+  return `<section class="scenario-section visual-section caller-role-section"><div class="section-label">CALLER ROLE CARD</div>${scenarioIconHeading('☎️',d.gdprCallerType==="travel_agent"?"Travel Agent":"Direct Guest")}<div class="roleplay-caller-rule"><strong>Do not give the Cruise Specialist everything at once.</strong><span>Respond naturally. Let the Cruise Specialist ask questions, complete GDPR, research the reservation and control the servicing flow.</span></div><ul class="scenario-bullets">${prompts}</ul>${cfg.customChanges?`<div class="caller-private-note"><strong>Use these details during the call:</strong><span>${escapeHtml(cfg.customChanges).replace(/\n/g,"<br>")}</span></div>`:""}</section>`;
+}
+
+function followUpPaymentHtml(d){
+  const cfg=d.followUpConfig||{};
+  if(!cfg.includeCard)return `<section class="scenario-section visual-section payment-section"><div class="section-label">PAYMENT REVIEW</div>${scenarioIconHeading('💳','Check the Updated Amount Due')}<p>After servicing the reservation, review whether the changes create an additional deposit, payment, refund or other balance impact. Advise the caller before completing the transaction.</p></section>`;
+  const card=d.card||currentTrainingCard();
+  return `<section class="scenario-section visual-section payment-section"><div class="section-label">PAYMENT REVIEW</div>${scenarioIconHeading('💳','Check for Additional Payment')}<p>Review whether the servicing changes create an additional deposit or other amount due. If payment is required and the caller agrees to proceed, use the training card below.</p><div class="scenario-payment-card"><div class="training-only-label">TRAINING / TEST DATA ONLY</div><p><strong>Card #:</strong> ${escapeHtml(card?.number||"4917 6100 0000 0000")}<br><strong>Expiration:</strong> ${escapeHtml(card?.expiration||"04/2027")}<br><strong>CCV:</strong> ${escapeHtml(card?.ccv||"123")}<br><strong>Billing Address:</strong> ${escapeHtml(card?.address||"123 Sesame Street, Miami, FL 33126")}</p></div></section>`;
+}
+
+function followUpRequiredActionsHtml(d){
+  const email=d.sourceScenarioSnapshot?.confirmationEmail||d.email||"training123@ncl.com";
+  return `<section class="scenario-section visual-section required-actions-section"><div class="section-label">REQUIRED ACTIONS</div>${scenarioIconHeading('✅','Complete the Servicing Call')}${checklistHtml(["Go into Edit and make the approved servicing changes.","Review the updated pricing / reservation total and any amount due or refund before finalizing the changes.","Store Changes after all approved updates are complete.","Leave the appropriate reservation comments using Compass.",`Send the appropriate updated confirmation${d.gdprCallerType==="travel_agent"?"s to the Guest and Travel Agent":""} to ${email}.`,"Recap every completed change and any important reservation information with the caller.","Complete the appropriate customer-satisfaction question and Norwegian Cruise Line closing.","Switch roles and repeat the exercise so both trainees practice the Cruise Specialist role."])}</section>`;
+}
+
+function followUpFinalCheckHtml(d){
+  const cfg=d.followUpConfig||{};
+  const selected=(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean);
+  const checks=["Reservation Number obtained",d.gdprCallerType==="travel_agent"?"Travel Agent GDPR completed":"Direct Guest GDPR completed","Willingness to assist expressed",...selected.map(x=>`${x} request addressed`),cfg.customChanges?"Caller-specific change instructions completed":null,"Updated pricing / reservation impact reviewed",cfg.keepBenefits?"Existing promotions / add-ons verified after changes":null,"Any additional payment / refund requirement checked","Store Changes completed","Compass reservation comments added","Updated confirmation sent","Full reservation recap completed","Proper closing completed","Trainees switched roles and repeated the exercise"].filter(Boolean);
+  return `<section class="scenario-section visual-section final-check-section">${scenarioIconHeading('✅','Final Roleplay Check')}${checklistHtml(checks)}</section>`;
+}
+
+function buildFollowUpRoleplayHtml(d){
+  const source=d.sourceScenarioSnapshot||{};
+  const callerLabel=d.gdprCallerType==="travel_agent"?"Travel Agent":"Direct Guest";
+  return `<div class="scenario-meta-row"><span class="chip">Guest Services</span><span class="chip">Follow-Up Servicing</span><span class="chip">Roleplay</span><span class="chip">${escapeHtml(callerLabel)}</span></div><h2 class="scenario-main-title">🎭 SEAweb Follow-Up Servicing Roleplay – ${escapeHtml(source.sourceTitle||"Existing Reservation")}</h2><p class="scenario-intro">Use the reservation completed during the original practice scenario. One trainee will be the <strong>Cruise Specialist</strong> and the other will be the <strong>${escapeHtml(callerLabel)}</strong>. The caller is contacting Norwegian Cruise Line again to make changes to the existing reservation.</p><div class="scenario-completion-box"><strong>✅ When you are finished</strong><span>Store all approved changes, complete comments and confirmations, recap the reservation, then switch roles and repeat.</span></div>${roleplaySetupHtml(d)}${followUpSnapshotHtml(d)}${followUpGdprHtml(d)}${followUpCallerRoleHtml(d)}${followUpChangesHtml(d)}${followUpPaymentHtml(d)}${followUpRequiredActionsHtml(d)}${followUpFinalCheckHtml(d)}<section class="scenario-section visual-section trainer-only"><div class="section-label">TRAINER GUIDE</div>${scenarioIconHeading('🧭','Follow-Up Roleplay Coaching')}<p>This roleplay intentionally follows the original practice reservation. Allow the caller to reveal the requested changes naturally. The Cruise Specialist should complete GDPR first, research each change rather than assuming the outcome, explain pricing / reservation impact, obtain approval, Store Changes, document, confirm and recap.</p><div class="instruction-strip"><strong>Original Scenario</strong><span>${escapeHtml(source.sourceTitle||"Previous practice")} • ${escapeHtml((source.focuses||[]).join(" + "))}</span></div></section>`;
+}
+
+function createFollowUpRoleplay(){
+  const current=state.currentScenario;if(!current)return;
+  const base=current.followUpRoleplay?current.sourceScenarioSnapshot:followUpSourceSnapshot(current);
+  const changes=followUpSelectedChanges();
+  const customChanges=$("followUpCustomChanges").value.trim();
+  if(!changes.length&&!customChanges){const n=$("followUpBuilderNotice");n.className="notice warning";n.textContent="Select at least one servicing change or enter the caller's custom change request.";return}
+  const callerSelection=$("followUpCallerType").value;
+  const resolvedCaller=callerSelection==="same"?(base.originalCaller||followUpOriginalCallerType(current)):callerSelection;
+  const agency=$("followUpAgency").value.trim()||(resolvedCaller==="travel_agent"?String(base.agency||""):"");
+  const config={callerSelection,callerType:resolvedCaller,agency,changes,customChanges,includeCard:$("followUpIncludeCard").checked,keepBenefits:$("followUpKeepBenefits").checked};
+  const sourceCard=current.card||currentTrainingCard();
+  const now=new Date().toISOString();
+  const d={...current,id:makeUuid(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
+  d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();runValidator();$("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";$("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
+}
+
+function updateFollowUpRoleplayButton(){
+  const btn=$("followUpRoleplayBtn");if(!btn)return;const d=state.currentScenario;btn.disabled=!d;btn.textContent=d?.followUpRoleplay?"Edit Follow-Up Roleplay":"Create Follow-Up Roleplay";btn.title=d?"Build a new servicing callback using this reservation and choose the changes the caller wants to make.":"Generate a scenario first.";
+}
+
+
 function generateScenario(){
   const focusRecords=selectedFocusRecords();
   if(!focusRecords.length){
@@ -2474,7 +3879,7 @@ function generateScenario(){
   const d=scenarioData();
   const metas=focusRecords.map(r=>r.meta);
   const meta=metas[0]||{};
-  const guestNames=[d.guest1,d.guest2].filter(Boolean);
+  const guestNames=scenarioGuestNames(d).filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
   const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
@@ -2496,21 +3901,25 @@ function generateScenario(){
 
   const html=`
     <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip">${d.focuses.length} focus${d.focuses.length===1?'':'es'}</span></div>
-    <h2 class="scenario-main-title">🛳️ SEAweb Practice Scenario – ${escapeHtml(focusTitle(d))}</h2>
-    <p class="scenario-intro">Please complete the following scenario <strong>independently</strong>. If you encounter any difficulties, refer to the <strong>Seaweb User Guide in NCLHelp</strong> for step-by-step guidance.</p>
-    ${completionInstructionsHtml()}
+    <h2 class="scenario-main-title">${isRoleplayScenario(d)?'🎭 SEAweb Roleplay Scenario':'🛳️ SEAweb Practice Scenario'} – ${escapeHtml(focusTitle(d))}</h2>
+    <p class="scenario-intro">${isRoleplayScenario(d)?'Work with a partner and allow the Cruise Specialist to control the call naturally.':'Please complete the following scenario <strong>independently</strong>.'} If you encounter any difficulties, refer to the <strong>Seaweb User Guide in NCLHelp</strong> for step-by-step guidance.</p>
+    ${completionInstructionsHtml(d)}
     ${focusSummaryHtml(d)}
+    ${roleplaySetupHtml(d)}
 
     <section class="scenario-section visual-section call-section">${scenarioIconHeading('☎️','Call Scenario')}${customerStoryHtml(d,meta,sailText,guestNames)}</section>
+    ${curriculumScenarioDetailsHtml(d)}
 
     ${bookingSourceSectionHtml(d,agencyDisplay)}
     ${d.reservationWorkflow==='modify'?gdprScenarioHtml(d):''}
     ${modificationDetailsVisualHtml(d)}
     ${sailingDetailsVisualHtml(d,pricing)}
     ${guestInformationVisualHtml(d)}
+    ${latitudesScenarioHtml(d)}
     ${offersAddonsVisualHtml(d)}
+    ${detailedFocusConfigHtml(d)}
     ${couponScenarioHtml(d)}
-    ${d.airEnabled?airScenarioHtml(d):''}
+    ${d.airEnabled && !(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length)?airScenarioHtml(d):''}
     ${paymentVisualHtml(d,paymentInstruction)}
     ${requiredActionsVisualHtml(d)}
     ${callFlowSupportHtml(d,meta)}
@@ -2524,7 +3933,47 @@ function generateScenario(){
   d.html=html;state.currentScenario=d;runValidator();
   $("scenarioStatus").textContent=blockingErrors()?"Needs Review":"Ready for Trainee";
   $("scenarioStatus").className="status-badge "+(blockingErrors()?"review":"ready");
+  updateRoleplayScenarioButton();
+  updateFollowUpRoleplayButton();
+  return d;
 }
+
+function updateRoleplayScenarioButton(){
+  const btn=$("roleplayScenarioBtn");
+  if(!btn)return;
+  const d=state.currentScenario;
+  btn.disabled=!d;
+  if(!d){
+    btn.textContent="Make Roleplay";
+    btn.title="Generate a scenario first.";
+    return;
+  }
+  if(isDedicatedRoleplay(d)||d.followUpRoleplay){
+    btn.textContent=d.followUpRoleplay?"Follow-Up Roleplay":"Roleplay Scenario";
+    btn.title=d.followUpRoleplay?"This callback scenario is already a roleplay.":"This Scenario Focus is designed as a roleplay.";
+    btn.disabled=true;
+    btn.classList.add("active");
+    return;
+  }
+  btn.disabled=false;
+  btn.classList.toggle("active",isRoleplayScenario(d));
+  btn.textContent=isRoleplayScenario(d)?"Standard Scenario":"Make Roleplay";
+  btn.title=isRoleplayScenario(d)?"Convert this card back to a standard individual practice scenario.":"Convert this completed scenario into a two-person roleplay.";
+}
+
+$("roleplayScenarioBtn").onclick=()=>{
+  if(!state.currentScenario)return;
+  if(isDedicatedRoleplay(state.currentScenario))return;
+  state.currentScenario.roleplayMode=!state.currentScenario.roleplayMode;
+  generateScenario();
+  flash(state.currentScenario.roleplayMode?"Roleplay version created.":"Returned to the standard scenario.");
+};
+
+$("followUpRoleplayBtn").onclick=openFollowUpRoleplayBuilder;
+$("followUpCallerType").onchange=updateFollowUpAgencyField;
+$("clearFollowUpChangesBtn").onclick=()=>document.querySelectorAll('#followUpChangeOptions input[type="checkbox"]').forEach(cb=>cb.checked=false);
+$("buildFollowUpRoleplayBtn").onclick=createFollowUpRoleplay;
+$("followUpRoleplayDialog").addEventListener("click",e=>{if(e.target===$("followUpRoleplayDialog"))closeFollowUpRoleplayBuilder()});
 
 $("generateBtn").onclick=generateScenario;
 $("clearScenarioBtn").onclick=()=>{if(confirm("Clear the current scenario and start a brand-new one? Unsaved changes will be lost."))resetScenarioForm();};
@@ -2535,17 +3984,85 @@ function runValidator(){
   const meta=currentFocusMeta()||{};
   const metas=selectedFocusMetas();
 
+  if(d.followUpRoleplay){
+    const cfg=d.followUpConfig||{};
+    add("passed","Follow-up servicing roleplay","Uses the reservation created in the original practice scenario.");
+    add("passed","Reservation verification rule","Reservation Number is REQUIRED before discussing or servicing the reservation.");
+    add("passed","GDPR caller path",d.gdprCallerType==="travel_agent"?"Travel Agent GDPR":"Direct Guest GDPR");
+    if(d.gdprCallerType==="travel_agent"&&!cfg.agency)add("warning","Travel Agency identifier not entered","Provide an Agency ID or agency phone number for the Travel Agent GDPR path.");
+    if(!(cfg.changes||[]).length&&!cfg.customChanges)add("error","No servicing change selected","Choose at least one follow-up change or enter a custom caller request.");
+    else add("passed","Servicing request configured",[...(cfg.changes||[]).map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),cfg.customChanges?"Custom request details":null].filter(Boolean).join(" • "));
+    if(d.cardRequired&&d.card)add("passed","Training payment fallback included",`${d.card.label||"Training Card"} • TRAINING / TEST DATA ONLY`);
+    if(d.confirmation&&d.email)add("passed","Updated confirmation required",d.email);
+    if(d.commenting)add("passed","Compass comments required","The generated roleplay requires reservation comments.");
+    state.validation=checks;
+    renderValidator();
+    return checks;
+  }
+
   if(!d.department)add("error","Department missing","Choose Guest Services or Outbound Sales.");
   else add("passed","Department selected",`${d.department} • ${focusNamesForData(d).join(" + ")}`);
   add("passed","Reservation workflow selected",d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation");
   if(d.reservationWorkflow==="new"&&!d.guest1 && !metas.some(m=>m.kind==="demo"))add("error","Missing primary guest","Guest 1 is required for new-reservation trainee scenarios.");
   else if(d.guest1)add("passed","Primary guest present",d.guest1);
-  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo"))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(d.reservationWorkflow==="new"&&d.guestCount>1 && !d.guest2 && !metas.some(m=>m.kind==="demo") && !isMultipleReservationScenario(d))add("warning","Guest 2 is blank","The scenario has multiple guests selected. Guest 2 should normally be named or intentionally created by the trainee.");
+  if(isMultipleReservationScenario(d) && d.reservationWorkflow==="new"){
+    const reservations=Array.isArray(d.reservations)?d.reservations:[];
+    if(reservations.length<2){
+      add("error","Multiple reservation details missing","Multiple Reservations requires at least two separate reservation profiles.");
+    }else{
+      reservations.forEach((r,i)=>{
+        const names=(r.guests||[]).slice(0,+r.guestCount||r.guests?.length||0);
+        if(!names[0])add("error",`Reservation ${i+1} primary guest missing`,`Enter the primary guest name for Reservation ${i+1}.`);
+        const missing=names.map((name,j)=>!name?j+1:null).filter(Boolean);
+        if(missing.length)add("warning",`Reservation ${i+1} guest name${missing.length===1?' is':'s are'} blank`,`Enter or intentionally leave blank Guest ${missing.join(", Guest ")} for Reservation ${i+1}.`);
+        if(!r.category)add("warning",`Reservation ${i+1} stateroom missing`,`Choose a stateroom category for Reservation ${i+1}.`);
+      });
+      add("passed",`${reservations.length} reservation profiles configured`,reservations.map((r,i)=>`${r.guestCount} guest${r.guestCount===1?'':'s'} in Reservation ${i+1}`).join(' • '));
+      add("passed","Reservation relationship",d.reservationRelationship||"Same Sailing / Linked");
+    }
+  }
   if(d.latitudes){
     const mix=getGuestProfileMix(d);
     const missing=mix.flags.reduce((list,isPast,i)=>{if(isPast&&!mix.numbers[i])list.push(i+1);return list;},[]);
     if(missing.length)add("warning","Past Guest Latitudes number missing",`Guest ${missing.join(", Guest ")} ${missing.length===1?"is":"are"} marked Past Guest but missing a training Latitudes number.`);
     else add("passed","Guest status configured",`${mix.pastCount} Past Guest${mix.pastCount===1?"":"s"} • ${mix.newCount} New Guest${mix.newCount===1?"":"s"}.`);
+  }
+
+  if(isMultipleAuthorizedAny(d)){
+    if(d.reservationWorkflow!=="new")add("error","Multiple-reservation workflow mismatch","This scenario must use Create New Reservation.");
+    if(d.newCallerType!=="direct_us")add("error","Caller type mismatch","Maria Lopez is a Direct Guest — U.S. caller.");
+    if(d.guestCount!==4)add("warning","Travel party should contain four guests","Maria, Sofia, Ana and Luis are traveling across two reservations.");
+    if(d.category!=="Balcony" || d.reservations?.[1]?.category!=="Balcony")add("warning","Balcony category expected","Both reservations require connecting Balcony staterooms.");
+    if(d.reservationRelationship!=="Connecting")add("warning","Connecting rooms required","The Authorized Person scenario requires two staterooms that actually connect, not just adjacent rooms.");
+    if(d.payment!=="Initial Deposit")add("warning","Separate deposits required","Process the $250 deposit on each reservation separately.");
+    if(!d.cardRequired||!d.card)add("error","Training card required","Maria is paying both deposits with the training credit card.");
+    if(d.sailing){
+      if(isMultipleAuthorizedCruisetourScenario(d) && String(d.sailing.ship||"").toLowerCase()!=="pride of america")add("error","Pride of America required","The Cruisetour scenario must use Pride of America.");
+      if(isMultipleAuthorizedCruisetourScenario(d) && !/honolulu/i.test(d.sailing.departure||""))add("warning","Honolulu departure expected","Verify the selected Pride of America sailing departs Honolulu.");
+      if(isMultipleAuthorizedScenario(d) && !/galveston/i.test(d.sailing.departure||""))add("warning","Galveston departure expected","The standard scenario requires a March 2027 Caribbean sailing from Galveston.");
+    }else{
+      add("warning","Select the training sailing","Use Real Sailing Search to choose the exact March 2027 sailing before assigning the scenario.");
+    }
+    add("passed","Authorized Person requirement","Parents' reservation must include: Authorized Person: Maria Lopez, CC 0000.");
+    add("passed","TWITH requirement","Both reservations must be linked using TWITH before ending the call.");
+    if(isMultipleAuthorizedCruisetourScenario(d))add("passed","Cruisetour requirement","Use the exact 11-Day Oahu Explorer Hyatt Waikiki Ocean View Cruisetour with the 4-day pre-cruise component on both reservations.");
+  }
+
+  if(isSoloStudioScenario(d)){
+    if(d.reservationWorkflow!=="new")add("error","Solo practice workflow mismatch","Solo Guest / Studio Booking must use Create New Reservation.");
+    if(d.newCallerType!=="travel_agent")add("error","Solo practice caller mismatch","Kyle James must be set as a Travel Agent caller.");
+    if(d.guestCount!==1)add("error","Solo occupancy mismatch","This practice scenario requires exactly 1 guest.");
+    if(d.category!=="Studio / Solo")add("warning","Studio category not selected","The Solo practice requires a Studio category.");
+    if(d.payment!=="Minimum Deposit")add("warning","Minimum deposit expected","The Solo practice requires taking the minimum deposit.");
+  }
+
+  if(isAddGuestUpgradeRoleplay(d)){
+    if(d.reservationWorkflow!=="modify")add("error","Service roleplay workflow mismatch","Add Guest & Upgrade Stateroom – Roleplay must use Modify Existing Reservation.");
+    if(d.gdprCallerType!=="travel_agent")add("error","Travel Agent GDPR required","Kyle James is the Travel Agent caller for this roleplay.");
+    if(d.modificationType!=="add_guest")add("error","Add Guest modification required","The service roleplay must use Add Guest.");
+    if(d.modificationLatitudes!=="272279126")add("warning","Taylor Latitudes number","Expected training Latitudes #272279126 for Taylor.");
+    add("passed","Reservation verification rule","Reservation Number is REQUIRED before servicing the reservation.");
   }
 
   if(d.department==="Guest Services"){
@@ -2591,6 +4108,13 @@ function runValidator(){
   }
 
   if(d.reservationWorkflow==="modify"){
+    if(isReinstateRoleplay(d)){
+      if(d.department!=="Guest Services")add("error","Roleplay department mismatch","Reinstate Cancelled Reservation – Roleplay is designed for Guest Services.");
+      if(d.modificationType!=="cancel_reinstate")add("error","Roleplay workflow mismatch","This roleplay must use Cancel / Reinstate Reservation.");
+      if(!["direct_guest","travel_agent","ta_group"].includes(d.gdprCallerType))add("warning","Select the roleplay caller type","Choose Direct Guest or Travel Agent based on the cancelled reservation being used.");
+      else add("passed","Roleplay caller type selected",gdprProfile(d.gdprCallerType)?.label||d.gdprCallerType);
+      add("passed","Roleplay verification rule","Reservation Number is REQUIRED before servicing the reservation.");
+    }
     if(d.existingReservationNumber)add("passed","Existing reservation identified",d.existingReservationNumber);
     else add("warning","Training reservation number not entered","Enter the previously created training reservation number or provide it to the trainee separately.");
 
@@ -2612,9 +4136,15 @@ function runValidator(){
   }else{
     if(s){
       add("passed","Real sailing selected",`${s.ship||"NCL ship"} • ${s.title||"NCL itinerary"}`);
-      if(!s.sailingDate)add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
-      else if(s.sailingDateVerified)add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
-      else add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer because the public NCL card did not expose an exact date. Verify it in NCL.com U.S. or Seaweb before class.`);
+      if(!s.sailingDate){
+        add("error","Specific sailing date required","Choose the exact sailing date before assigning the scenario.");
+      }else if(s.sailingDateSourceType==="ncl"){
+        add("passed","Exact sailing date selected",`${formatSailingDate(s.sailingDate)} • NCL.com U.S.`);
+      }else if(s.sailingDateSourceType==="public-schedule"){
+        add("warning","Public schedule date selected",`${formatSailingDate(s.sailingDate)} • ${s.sailingDateSource||"Public schedule"}. Verify the final date in NCL.com U.S. or Seaweb before class.`);
+      }else{
+        add("warning","Verify trainer-entered sailing date",`${formatSailingDate(s.sailingDate)} was entered by the trainer. Verify it in NCL.com U.S. or Seaweb before class.`);
+      }
       if(s.duration) add("passed","Duration sourced from NCL",`${s.duration} days`);
       if(s.ports?.length)add("passed","Ports of call available",`${s.ports.length} public-source port entries loaded.`);
       else add("warning","Ports need verification","Public result did not expose a usable port list. Verify the itinerary in Seaweb/NCL.com before class.");
@@ -2626,6 +4156,22 @@ function runValidator(){
 
     if(d.category==="Random")add("info","Random category","Trainer should confirm the assigned category before releasing the scenario.");
     else add("passed","Category instruction is explicit",d.category);
+  }
+
+  if(specialRequestFocusActive() || (d.specialRequests||[]).length){
+    if(!(d.specialRequests||[]).length)add("warning","Special requests not specified","Choose the exact special request and the guest it applies to.");
+    else d.specialRequests.forEach((item,i)=>{if(!item.guest)add("error",`Special Request ${i+1} guest missing`,`Choose which guest the request applies to.`);if(!item.type)add("error",`Special Request ${i+1} type missing`,`Choose the type of special request.`);if(item.guest&&item.type)add("passed",`Special Request ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
+  }
+
+  if(adaFocusActive() || (d.adaNeeds||[]).length){
+    if(!(d.adaNeeds||[]).length)add("error","Accessibility need not specified","ADA / Special Requests requires the trainer to identify the guest and the type of accessibility need.");
+    else d.adaNeeds.forEach((item,i)=>{if(!item.guest)add("error",`Accessibility Need ${i+1} guest missing`,`Choose which guest has the accessibility need.`);if(!item.type)add("error",`Accessibility Need ${i+1} type missing`,`Choose the type of accessibility need.`);if(item.guest&&item.type)add("passed",`Accessibility Need ${i+1} configured`,`${item.guest} • ${item.type}${item.detail?` • ${item.detail}`:""}`);});
+  }
+
+  if(priceProgramFocusActive() || priceProgramLabels(d.pricePrograms).length){
+    const programs=priceProgramLabels(d.pricePrograms);
+    if(!programs.length)add("error","Price Programs not selected","Choose ALL4CHO or the specific Free at Sea components / price programs being added.");
+    else add("passed","Price Programs configured",programs.join(" • "));
   }
 
   if(couponWorkflowRequested() || (d.coupons||[]).length){
@@ -2642,7 +4188,18 @@ function runValidator(){
     }
   }
 
-  if(d.airEnabled){
+  if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length){
+    const configured=d.airGuestSelections.filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");
+    if(airFocusActive()&&!configured.length)add("error","Air / Transfers not configured","Select the air type and/or transfer setup for at least one guest.");
+    configured.forEach((item,i)=>{
+      const meta=airProgramMeta(item.airProgram),label=airGuestTypes.find(a=>a.value===item.airProgram)?.label||"No NCL Air";
+      add("passed",`Air / Transfer guest setup ${i+1}`,`${item.guest||"Guest"} • ${label}${item.gateway?` • ${item.gateway}`:""} • ${item.transfers}`);
+      if(item.airProgram!=="none"&&!meta)add("error",`Air type missing for ${item.guest||`Guest ${i+1}`}`,"Choose the applicable NCL Air product.");
+      if(item.airProgram==='bundled'){const eligibility=bundledAirEligibility({...d,airProgram:'bundled',airTripType:item.tripType});if(eligibility.status==='ineligible')add("error",`Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);else add("warning",`Verify Bundled Air eligibility – ${item.guest||`Guest ${i+1}`}`,eligibility.message);}
+    });
+  }
+
+  if(d.airEnabled && !(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.length)){
     const airMeta=airProgramMeta(d.airProgram);
     if(!airMeta){
       add("error","NCL Air Program not selected","Choose the applicable NCL Air Program before assigning the scenario.");
@@ -2758,6 +4315,7 @@ function inlineComputedStyles(root){
   });
 }
 
+const INTERACTIVE_SHARE_LOGO_DATA='';
 function makeOffscreenShareHost(){
   const host=document.createElement("div");
   host.className="share-render-host";
@@ -2972,8 +4530,9 @@ function onePageSailText(d){
 function onePageGuestStatusHtml(d){
   if(!d.latitudes)return `<div class="one-page-muted">Create or verify all guest profiles using the training details.</div>`;
   const mix=getGuestProfileMix(d);
+  const guestNames=scenarioGuestNames(d);
   return `<div class="one-page-guest-list">${Array.from({length:d.guestCount},(_,i)=>{
-    const name=i===0?(d.guest1||"Guest 1"):i===1?(d.guest2||"Guest 2"):`Guest ${i+1}`;
+    const name=guestNames[i]||`Guest ${i+1}`;
     const isPast=!!mix.flags[i];
     const number=mix.numbers[i]||"";
     return `<div class="one-page-guest-row ${isPast?"past":"new"}"><div><strong>${escapeHtml(name)}</strong><span>Guest ${i+1}</span></div><div><b>${isPast?"Past Guest":"New Guest"}</b>${isPast?`<small>${number?`Latitudes # ${escapeHtml(number)}`:"Latitudes # — verify in Seaweb"}</small>`:`<small>Create training profile</small>`}</div></div>`;
@@ -2983,10 +4542,15 @@ function onePageGuestStatusHtml(d){
 function onePageReferenceHtml(d){
   const s=d.sailing;
   const agency=d.department==="Outbound Sales"?`${d.market} • Agency ${d.agency}`:`Agency ${d.agency}`;
+  const multi=isMultipleReservationScenario(d)&&Array.isArray(d.reservations)&&d.reservations.length>=2;
+  const roomItems=multi
+    ? d.reservations.slice(0,2).map((r,i)=>[`Reservation ${i+1}`,`${reservationGuestLabel(r,i)} • ${reservationStateroomLabel(r)}`])
+    : [["Stateroom",`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`]];
   const items=[
     ["Agency",agency],
     ["Sailing",onePageSailText(d)],
-    ["Stateroom",`${d.category}${d.location!=="Any"?` • ${d.location}`:""}${d.side!=="Any"?` • ${d.side} side`:""}`],
+    ...roomItems,
+    ...(multi?[["Relationship",d.reservationRelationship||"Same Sailing / Linked"]]:[]),
     ["Payment / Credit",d.payment],
     ["Promotions",promotionSummary(d)],
     ["Protection",protectionSummary(d)],
@@ -3017,7 +4581,7 @@ function onePageTrainingCardHtml(d){
 function makeOnePageTraineeClone(){
   const d=state.currentScenario||scenarioData();
   const meta=currentFocusMeta()||{};
-  const guestNames=[d.guest1,d.guest2].filter(Boolean);
+  const guestNames=scenarioGuestNames(d).filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const companion=guestNames[1]||"";
   const s=d.sailing;
@@ -3611,6 +5175,784 @@ async function copyCardFormatted(){
   }
 }
 
+
+function interactiveScenarioFilename(mode="trainee"){
+  const d=state.currentScenario||scenarioData();
+  const dept=(d.department||"Seaweb").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"");
+  const focus=(focusTitle(d)||"Scenario").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,54);
+  const type=isRoleplayScenario(d)||d.followUpRoleplay?"Roleplay":"Scenario";
+  const view=mode==="trainer"?"Trainer":"Trainee";
+  return `${dept}-${focus}-${type}-${view}-Interactive.html`;
+}
+
+async function currentGeneratorStylesForInteractiveShare(){
+  try{
+    const response=await fetch("/styles.css?v=1.9.41",{cache:"no-store"});
+    if(response.ok)return await response.text();
+  }catch(_){}
+  return "";
+}
+
+function interactiveShareOverrides(){
+  return `
+:root{
+  --interactive-sand:#EBE7DF;--interactive-white:#fff;--interactive-black:#101828;
+  --interactive-mid:#475467;--interactive-border:#D0D5DD;--interactive-aqua:#A7CAC6;
+  --interactive-teal:#00484F;--interactive-ocean:#006099;--interactive-blue:#0A84BD;
+  --interactive-success:#147A5B;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body.interactive-share-page{
+  margin:0!important;background:var(--interactive-sand)!important;color:var(--interactive-black)!important;
+  font-family:Poppins,"Segoe UI",Arial,sans-serif!important;
+}
+.interactive-top-accent{height:10px;background:var(--interactive-aqua)}
+.interactive-shell{max-width:1460px;margin:0 auto;padding:16px 22px 46px}
+.interactive-brand{min-height:56px;display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:8px}
+.interactive-brand img{height:39px;max-width:176px;object-fit:contain;object-position:left center}
+.interactive-brand-fallback{font-weight:850;letter-spacing:.03em}
+.interactive-brand-meta{text-align:right}
+.interactive-brand-meta strong{display:block;font-size:14px}
+.interactive-brand-meta span{display:block;color:var(--interactive-mid);font-size:12px;margin-top:1px}
+.interactive-toolbar{
+  position:sticky;top:0;z-index:50;display:flex;gap:9px;align-items:center;flex-wrap:wrap;
+  padding:10px 0 12px;margin-bottom:8px;background:rgba(235,231,223,.96);
+  backdrop-filter:blur(10px);border-bottom:1px solid rgba(167,202,198,.8)
+}
+.interactive-toolbar-spacer{flex:1}
+.interactive-btn{
+  border:1px solid var(--interactive-border);background:#fff;color:var(--interactive-black);
+  border-radius:7px;padding:9px 13px;font-weight:750;font-size:13px;cursor:pointer
+}
+.interactive-btn:hover{border-color:var(--interactive-blue)}
+.interactive-btn.primary{background:var(--interactive-blue);border-color:var(--interactive-blue);color:#fff}
+.interactive-btn.teal{background:var(--interactive-teal);border-color:var(--interactive-teal);color:#fff}
+.interactive-btn.danger{color:#B42318;background:transparent}
+.interactive-save-note{font-size:11px;color:var(--interactive-mid)}
+.interactive-header{margin:13px 0 14px}
+.interactive-header h1{margin:7px 0 5px;font-size:32px;line-height:1.1;letter-spacing:-.02em}
+.interactive-header p{margin:0;color:var(--interactive-mid);font-size:14px}
+.interactive-progress-wrap{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;margin:13px 0 18px}
+.interactive-progress-track{height:12px;border-radius:999px;background:#DCE4E5;overflow:hidden}
+.interactive-progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--interactive-teal),var(--interactive-blue));transition:width .25s ease}
+.interactive-progress-text{min-width:108px;text-align:right;color:var(--interactive-teal);font-size:13px;font-weight:850}
+.interactive-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:18px;align-items:start}
+.interactive-nav{
+  position:sticky;top:76px;max-height:calc(100vh - 98px);overflow:auto;background:#fff;
+  border:1px solid var(--interactive-border);border-radius:10px;box-shadow:0 8px 25px rgba(16,24,40,.07)
+}
+.interactive-nav-title{padding:14px 14px 10px;font-weight:850;font-size:13px;border-bottom:1px solid #EAECF0}
+.interactive-nav a{
+  display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #EAECF0;
+  color:var(--interactive-black);text-decoration:none;font-size:12px
+}
+.interactive-nav a:hover{background:#F2F8F7}
+.interactive-nav a.active{background:#F3F8FB;box-shadow:inset 4px 0 0 var(--interactive-blue)}
+.interactive-nav a.done .interactive-nav-num{background:var(--interactive-success);color:#fff}
+.interactive-nav-num{
+  width:23px;height:23px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;
+  background:#EAF4F6;color:var(--interactive-ocean);font-size:11px;font-weight:850
+}
+.interactive-main{min-width:0}
+.interactive-scenario-wrap{background:transparent!important;padding:0!important;margin:0!important;max-width:none!important;border:0!important;box-shadow:none!important}
+.interactive-step{
+  position:relative;scroll-margin-top:90px;margin-bottom:16px!important;background:#fff!important;
+  border:1px solid var(--interactive-border)!important;border-radius:10px!important;
+  box-shadow:0 3px 14px rgba(16,24,40,.04)!important;padding:18px 20px!important
+}
+.interactive-stepbar{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 0 10px;
+  margin:0 0 12px;border-bottom:1px solid #EAECF0
+}
+.interactive-stepbar-label{color:var(--interactive-ocean);font-size:10px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+.interactive-complete-btn{
+  border:1px solid var(--interactive-aqua);background:#EEF7F7;color:var(--interactive-teal);
+  border-radius:7px;padding:7px 10px;font-size:12px;font-weight:850;cursor:pointer
+}
+.interactive-complete-btn.done{background:var(--interactive-success);border-color:var(--interactive-success);color:#fff}
+.interactive-section-notes{margin-top:14px;padding-top:12px;border-top:1px dashed #D0D5DD}
+.interactive-section-notes summary{cursor:pointer;color:var(--interactive-ocean);font-weight:800;font-size:12px}
+.interactive-section-notes textarea{
+  width:100%;min-height:80px;margin-top:9px;border:1px solid #98A2B3;border-radius:7px;
+  padding:10px 11px;resize:vertical;font:inherit;color:var(--interactive-black);background:#fff
+}
+.interactive-task-input{width:18px;height:18px;accent-color:var(--interactive-teal);flex:0 0 auto;margin:1px 0 0}
+.interactive-step .task-checklist li,.interactive-step .visual-check-list li{display:flex!important;align-items:flex-start!important;gap:9px!important}
+.interactive-step .task-checklist .check-box{display:none!important}
+.interactive-step li.interactive-task-done>span:last-child{color:#667085;text-decoration:line-through;text-decoration-thickness:1px}
+.interactive-roleplay-banner{
+  display:none;margin-bottom:14px;padding:12px 14px;border-left:5px solid var(--interactive-teal);
+  background:#F2F8F7;border-radius:0 8px 8px 0
+}
+.interactive-roleplay-banner strong{display:block;margin-bottom:2px}
+body.interactive-roleplay .interactive-roleplay-banner{display:block}
+body.interactive-trainee .trainer-only,body.interactive-trainee .trainer-section{display:none!important}
+body.interactive-trainer .trainer-only,body.interactive-trainer .trainer-section{display:block}
+.interactive-share-page .scenario-main-title{font-size:30px!important;line-height:1.12!important;margin-bottom:6px!important}
+.interactive-share-page .scenario-intro{font-size:14px!important;line-height:1.5!important}
+.interactive-share-page .scenario-completion-box{
+  margin:13px 0 16px!important;background:#F3F8FB!important;border-left:5px solid var(--interactive-blue)!important;border-radius:7px!important
+}
+.interactive-share-page .visual-section-heading{font-size:19px!important}
+.interactive-share-page .section-label{font-weight:900!important;letter-spacing:.06em!important}
+.interactive-share-page strong{font-weight:800}
+.interactive-bottom-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:1000px){
+  .interactive-layout{grid-template-columns:1fr}.interactive-nav{display:none}.interactive-shell{padding:13px}
+}
+@media(max-width:700px){
+  .interactive-header h1{font-size:26px}.interactive-brand-meta{display:none}.interactive-toolbar{position:relative}.interactive-step{padding:15px!important}
+}
+@media print{
+  @page{
+    size:letter portrait;
+    /* Wider print-safe gutter so browser PDF engines cannot clip text at the page edge. */
+    margin:.52in .58in .55in;
+  }
+
+  html,body{
+    width:auto!important;
+    min-width:0!important;
+    height:auto!important;
+    overflow:visible!important;
+  }
+
+  body.interactive-share-page{
+    background:#fff!important;
+    color:#101828!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+
+  /* Keep the PDF visually consistent with the interactive scenario. */
+  .interactive-top-accent{
+    display:block!important;
+    height:7px!important;
+    margin:0 0 8px!important;
+    background:var(--interactive-aqua)!important;
+  }
+  .interactive-toolbar,
+  .interactive-nav,
+  .interactive-save-note,
+  .interactive-bottom-actions{
+    display:none!important;
+  }
+
+  .interactive-shell{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    /* Extra inner gutter protects against printer/PDF renderer edge clipping. */
+    padding:0 .04in!important;
+    box-sizing:border-box!important;
+  }
+
+  .interactive-brand{
+    display:flex!important;
+    min-height:34px!important;
+    margin:0 0 8px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-brand img{
+    height:28px!important;
+    max-width:142px!important;
+  }
+  .interactive-brand-meta strong{font-size:10px!important}
+  .interactive-brand-meta span{font-size:8px!important}
+
+  .interactive-header{
+    margin:7px 0 8px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-header h1{
+    margin:0 0 4px!important;
+    font-size:19px!important;
+    line-height:1.16!important;
+    letter-spacing:-.01em!important;
+  }
+  .interactive-header p{
+    margin:0!important;
+    font-size:9.5px!important;
+    line-height:1.4!important;
+  }
+
+  .interactive-roleplay-banner{
+    margin:7px 0 9px!important;
+    padding:8px 10px!important;
+    font-size:9px!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+
+  .interactive-progress-wrap{
+    display:grid!important;
+    grid-template-columns:1fr auto!important;
+    gap:8px!important;
+    margin:6px 0 10px!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-progress-track{height:7px!important}
+  .interactive-progress-text{
+    min-width:68px!important;
+    font-size:8.5px!important;
+  }
+
+  .interactive-layout,
+  .interactive-main,
+  .interactive-scenario-wrap{
+    display:block!important;
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:visible!important;
+  }
+
+  /* Allow long steps to flow across pages rather than leaving large blank areas. */
+  .interactive-step,
+  .interactive-scenario-wrap .scenario-section,
+  .interactive-scenario-wrap .trainer-section{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin:0 0 9px!important;
+    padding:11px 12px!important;
+    border:1px solid #D0D5DD!important;
+    border-radius:8px!important;
+    box-shadow:none!important;
+    background:#fff!important;
+    break-inside:auto!important;
+    page-break-inside:auto!important;
+    overflow:visible!important;
+  }
+
+  /* Keep the Step header from the interactive view. */
+  .interactive-stepbar{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+    margin:0 0 7px!important;
+    padding:0 0 6px!important;
+    border-bottom:1px solid #EAECF0!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-stepbar-label{
+    font-size:7.5px!important;
+    line-height:1.2!important;
+  }
+  .interactive-complete-btn{
+    display:none!important;
+  }
+
+  /* Keep individual cards / callouts together where practical. */
+  .interactive-step .scenario-detail-grid>div,
+  .interactive-step .scenario-guest-card,
+  .interactive-step .roleplay-role-card,
+  .interactive-step .multi-res-card,
+  .interactive-step .followup-change-card,
+  .interactive-step .training-card-box,
+  .interactive-step .scenario-payment-card,
+  .interactive-step .instruction-strip,
+  .interactive-step .critical-callout,
+  .interactive-step .authorized-comment-box,
+  .interactive-step blockquote{
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+
+  /* Portrait-friendly layout while preserving the same card organization. */
+  .interactive-share-page .scenario-detail-grid,
+  .interactive-share-page .scenario-guest-grid,
+  .interactive-share-page .trainer-info-grid,
+  .interactive-share-page .roleplay-role-grid,
+  .interactive-share-page .multi-res-grid,
+  .interactive-share-page .gdpr-grid,
+  .interactive-share-page .followup-change-card-list{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:7px!important;
+  }
+
+  .interactive-share-page .scenario-main-title{
+    margin:0 0 5px!important;
+    font-size:18px!important;
+    line-height:1.2!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-share-page .scenario-intro{
+    margin:0 0 8px!important;
+    font-size:9.5px!important;
+    line-height:1.45!important;
+  }
+  .interactive-share-page .scenario-meta-row{
+    gap:4px!important;
+    margin:0 0 6px!important;
+  }
+  .interactive-share-page .scenario-meta-row .chip{
+    font-size:7px!important;
+    padding:3px 5px!important;
+  }
+  .interactive-share-page .scenario-completion-box{
+    margin:7px 0 9px!important;
+    padding:7px 9px!important;
+    border-left-width:4px!important;
+    break-inside:avoid!important;
+    page-break-inside:avoid!important;
+  }
+  .interactive-share-page .scenario-completion-box strong{font-size:8.5px!important}
+  .interactive-share-page .scenario-completion-box span{font-size:8px!important}
+
+  .interactive-share-page .visual-section-heading{
+    margin:0 0 6px!important;
+    font-size:13px!important;
+    line-height:1.25!important;
+    break-after:avoid-page;
+    page-break-after:avoid;
+  }
+  .interactive-share-page .scenario-icon{
+    width:20px!important;
+    height:20px!important;
+    flex-basis:20px!important;
+    font-size:15px!important;
+  }
+  .interactive-share-page .section-label{
+    font-size:7px!important;
+    line-height:1.15!important;
+  }
+
+  .interactive-share-page p,
+  .interactive-share-page li{
+    font-size:9px!important;
+    line-height:1.42!important;
+    orphans:2;
+    widows:2;
+  }
+  .interactive-share-page small{
+    font-size:7.7px!important;
+    line-height:1.35!important;
+  }
+
+  .interactive-share-page .scenario-detail-grid>div,
+  .interactive-share-page .scenario-guest-card,
+  .interactive-share-page .roleplay-role-card,
+  .interactive-share-page .multi-res-card,
+  .interactive-share-page .followup-change-card{
+    padding:7px 8px!important;
+  }
+  .interactive-share-page .scenario-detail-grid span,
+  .interactive-share-page .scenario-guest-card>span{
+    font-size:6.8px!important;
+  }
+  .interactive-share-page .scenario-detail-grid strong,
+  .interactive-share-page .scenario-guest-card>strong{
+    font-size:9px!important;
+    line-height:1.35!important;
+  }
+
+  .interactive-task-input{
+    width:13px!important;
+    height:13px!important;
+    margin-top:1px!important;
+  }
+  .interactive-step .task-checklist,
+  .interactive-step .visual-check-list{
+    gap:3px!important;
+  }
+  .interactive-step .task-checklist li,
+  .interactive-step .visual-check-list li{
+    gap:6px!important;
+    margin:0!important;
+  }
+
+  /* Empty notes disappear from the PDF; completed notes print with the scenario. */
+  .interactive-section-notes{
+    display:none!important;
+  }
+  .interactive-section-notes.interactive-print-has-content{
+    display:block!important;
+    margin-top:8px!important;
+    padding-top:7px!important;
+    border-top:1px dashed #D0D5DD!important;
+  }
+  .interactive-section-notes.interactive-print-has-content summary{
+    display:none!important;
+  }
+  .interactive-section-notes.interactive-print-has-content textarea{
+    display:block!important;
+    width:100%!important;
+    min-height:42px!important;
+    padding:6px 7px!important;
+    border:1px solid #D0D5DD!important;
+    border-radius:5px!important;
+    background:#fff!important;
+    font-size:8px!important;
+    line-height:1.35!important;
+    overflow:visible!important;
+    resize:none!important;
+  }
+
+  body.interactive-trainee .trainer-only,
+  body.interactive-trainee .trainer-section{
+    display:none!important;
+  }
+
+  /* Constrain inherited Generator content to the portrait printable width. */
+  .interactive-share-page table,
+  .interactive-share-page img,
+  .interactive-share-page svg,
+  .interactive-share-page .scenario-paper,
+  .interactive-share-page .scenario-section,
+  .interactive-share-page .trainer-section{
+    max-width:100%!important;
+  }
+  .interactive-share-page img,
+  .interactive-share-page svg{
+    height:auto!important;
+  }
+  .interactive-share-page table{
+    width:100%!important;
+    table-layout:fixed!important;
+  }
+  .interactive-share-page th,
+  .interactive-share-page td{
+    min-width:0!important;
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+
+  /* Never allow an inherited no-wrap rule or long value to push a card beyond the page. */
+  .interactive-share-page .interactive-main,
+  .interactive-share-page .interactive-step,
+  .interactive-share-page .scenario-section,
+  .interactive-share-page .trainer-section,
+  .interactive-share-page .scenario-detail-grid>div,
+  .interactive-share-page .scenario-guest-card,
+  .interactive-share-page .roleplay-role-card,
+  .interactive-share-page .multi-res-card,
+  .interactive-share-page .followup-change-card,
+  .interactive-share-page .training-card-box,
+  .interactive-share-page .scenario-payment-card,
+  .interactive-share-page .instruction-strip,
+  .interactive-share-page .critical-callout,
+  .interactive-share-page .authorized-comment-box{
+    min-width:0!important;
+    max-width:100%!important;
+  }
+  .interactive-share-page .interactive-step *,
+  .interactive-share-page .interactive-header *,
+  .interactive-share-page .interactive-brand *{
+    white-space:normal!important;
+    overflow-wrap:anywhere!important;
+    word-break:normal!important;
+  }
+}
+`;
+}
+
+function interactiveStandaloneClient(config){
+  const STORAGE_KEY=config.storageKey;
+  const title=config.title;
+  const viewLabel=config.viewLabel;
+  const state={completed:{},fields:{}};
+  const $=(sel,root=document)=>root.querySelector(sel);
+  const $$=(sel,root=document)=>Array.from(root.querySelectorAll(sel));
+  const safeText=value=>String(value||"").replace(/\s+/g," ").trim();
+
+  function loadState(){
+    try{
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      if(saved&&typeof saved==="object"){
+        state.completed=saved.completed||{};
+        state.fields=saved.fields||{};
+      }
+    }catch(_){}
+  }
+  function persist(){
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch(_){}
+    const status=$("#interactiveSaveStatus");
+    if(status){
+      status.textContent="Saved just now";
+      clearTimeout(persist._t);
+      persist._t=setTimeout(()=>status.textContent="Progress saves automatically on this device.",1400);
+    }
+  }
+
+  const content=$("#interactiveScenarioContent");
+  const rawSections=$$(".scenario-section, .trainer-section",content).filter(el=>el.parentElement===content);
+  const visibleSections=rawSections.filter(el=>getComputedStyle(el).display!=="none");
+
+  visibleSections.forEach((section,index)=>{
+    const id=`interactive-step-${index+1}`;
+    section.id=id;
+    section.classList.add("interactive-step");
+    const label=section.querySelector(".section-label")?.textContent
+      ||section.querySelector(".trainer-kicker")?.textContent
+      ||`STEP ${index+1}`;
+    const heading=section.querySelector(".visual-section-heading")?.textContent
+      ||section.querySelector("h3")?.textContent
+      ||label;
+
+    const bar=document.createElement("div");
+    bar.className="interactive-stepbar";
+    bar.innerHTML=`<span class="interactive-stepbar-label">STEP ${index+1} • ${safeText(label)}</span><button type="button" class="interactive-complete-btn" data-step="${id}">Mark Complete</button>`;
+    section.insertBefore(bar,section.firstChild);
+
+    const notes=document.createElement("details");
+    notes.className="interactive-section-notes";
+    notes.innerHTML=`<summary>Notes / answers for this section</summary><textarea data-interactive-save="${id}-notes" placeholder="Write notes, answers, reservation details, or coaching reminders here..."></textarea>`;
+    section.appendChild(notes);
+
+    const nav=document.createElement("a");
+    nav.href=`#${id}`;
+    nav.dataset.step=id;
+    nav.innerHTML=`<span class="interactive-nav-num">${index+1}</span><span>${safeText(heading)}</span>`;
+    $("#interactiveNav").appendChild(nav);
+  });
+
+  $$(".task-checklist li, .visual-check-list li",content).forEach((li,index)=>{
+    const oldBox=li.querySelector(".check-box");
+    if(oldBox)oldBox.remove();
+    const input=document.createElement("input");
+    input.type="checkbox";
+    input.className="interactive-task-input";
+    input.dataset.interactiveSave=`task-${index}`;
+    li.insertBefore(input,li.firstChild);
+    input.addEventListener("change",()=>{
+      li.classList.toggle("interactive-task-done",input.checked);
+      saveFields();
+    });
+  });
+
+  function saveFields(){
+    $$("[data-interactive-save]").forEach(el=>{
+      const key=el.dataset.interactiveSave;
+      state.fields[key]=el.type==="checkbox"?el.checked:el.value;
+    });
+    persist();
+  }
+  function restoreFields(){
+    $$("[data-interactive-save]").forEach(el=>{
+      const key=el.dataset.interactiveSave;
+      if(!(key in state.fields))return;
+      if(el.type==="checkbox")el.checked=!!state.fields[key];
+      else el.value=state.fields[key]??"";
+      const li=el.closest("li");
+      if(li&&el.type==="checkbox")li.classList.toggle("interactive-task-done",el.checked);
+    });
+  }
+  function renderCompleted(){
+    $$(".interactive-complete-btn").forEach(btn=>{
+      const done=!!state.completed[btn.dataset.step];
+      btn.classList.toggle("done",done);
+      btn.textContent=done?"Completed ✓":"Mark Complete";
+      const nav=$(`#interactiveNav a[data-step="${btn.dataset.step}"]`);
+      if(nav)nav.classList.toggle("done",done);
+    });
+  }
+  function updateProgress(){
+    const buttons=$$(".interactive-complete-btn");
+    const done=buttons.filter(btn=>state.completed[btn.dataset.step]).length;
+    const pct=buttons.length?Math.round(done/buttons.length*100):0;
+    $("#interactiveProgressBar").style.width=pct+"%";
+    $("#interactiveProgressText").textContent=`${pct}% complete`;
+  }
+
+  $$(".interactive-complete-btn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const key=btn.dataset.step;
+      state.completed[key]=!state.completed[key];
+      renderCompleted();updateProgress();persist();
+      if(state.completed[key]){
+        const buttons=$$(".interactive-complete-btn");
+        const idx=buttons.indexOf(btn);
+        const next=buttons[idx+1]?.closest(".interactive-step");
+        if(next)setTimeout(()=>next.scrollIntoView({behavior:"smooth",block:"start"}),160);
+      }
+    });
+  });
+  $$("[data-interactive-save]").forEach(el=>el.addEventListener(el.type==="checkbox"?"change":"input",saveFields));
+
+  function buildSummary(){
+    const lines=[title,viewLabel,"",`Progress: ${$("#interactiveProgressText").textContent}`,""];
+    visibleSections.forEach((section,index)=>{
+      const heading=safeText(section.querySelector(".visual-section-heading")?.textContent||section.querySelector("h3")?.textContent||`Step ${index+1}`);
+      const done=!!state.completed[section.id];
+      const notes=section.querySelector(".interactive-section-notes textarea")?.value?.trim()||"";
+      const tasks=$$(".interactive-task-input",section);
+      const checked=tasks.filter(x=>x.checked).length;
+      lines.push(`${done?"✓":"○"} ${index+1}. ${heading}`);
+      if(tasks.length)lines.push(`   Checklist: ${checked}/${tasks.length}`);
+      if(notes)lines.push(`   Notes: ${notes}`);
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+  async function copySummary(){
+    const text=buildSummary();
+    try{
+      await navigator.clipboard.writeText(text);
+      alert("Progress summary copied.");
+    }catch(_){
+      const ta=document.createElement("textarea");
+      ta.value=text;document.body.appendChild(ta);ta.select();
+      document.execCommand("copy");ta.remove();
+      alert("Progress summary copied.");
+    }
+  }
+
+  $("#interactivePrintBtn").addEventListener("click",()=>window.print());
+  $("#interactiveBottomPrintBtn").addEventListener("click",()=>window.print());
+  $("#interactiveCopyBtn").addEventListener("click",copySummary);
+  $("#interactiveBottomCopyBtn").addEventListener("click",copySummary);
+  $("#interactiveNotesBtn").addEventListener("click",()=>{
+    const notes=$$(".interactive-section-notes");
+    const openSome=notes.some(x=>!x.open);
+    notes.forEach(x=>x.open=openSome);
+    $("#interactiveNotesBtn").textContent=openSome?"Close All Notes":"Open All Notes";
+  });
+  $("#interactiveResetBtn").addEventListener("click",()=>{
+    if(!confirm("Reset this interactive worksheet? All saved progress and notes on this device will be cleared."))return;
+    try{localStorage.removeItem(STORAGE_KEY);}catch(_){}
+    location.reload();
+  });
+
+  if("IntersectionObserver" in window){
+    const observer=new IntersectionObserver(entries=>{
+      const hit=entries.filter(e=>e.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+      if(!hit)return;
+      $$("#interactiveNav a").forEach(a=>a.classList.toggle("active",a.dataset.step===hit.target.id));
+    },{rootMargin:"-90px 0px -60% 0px",threshold:[0,.15,.4]});
+    visibleSections.forEach(section=>observer.observe(section));
+  }
+
+  function prepareInteractivePrint(){
+    $$(".interactive-section-notes").forEach(details=>{
+      const textarea=details.querySelector("textarea");
+      const hasText=!!textarea?.value?.trim();
+      details.classList.toggle("interactive-print-has-content",hasText);
+      if(hasText)details.open=true;
+    });
+  }
+  function cleanupInteractivePrint(){
+    $$(".interactive-section-notes").forEach(details=>{
+      details.classList.remove("interactive-print-has-content");
+    });
+  }
+  window.addEventListener("beforeprint",prepareInteractivePrint);
+  window.addEventListener("afterprint",cleanupInteractivePrint);
+
+  loadState();restoreFields();renderCompleted();updateProgress();
+}
+
+async function buildInteractiveScenarioDocument(mode="trainee"){
+  if(!ensureScenarioReady())return "";
+  const d=state.currentScenario;
+  const roleplay=!!(isRoleplayScenario(d)||d.followUpRoleplay);
+  const scenarioHtml=d.html||$("scenarioOutput").innerHTML;
+  const generatorCss=await currentGeneratorStylesForInteractiveShare();
+  const title=`${roleplay?"SEAweb Interactive Roleplay":"SEAweb Interactive Practice Scenario"} – ${focusTitle(d)}`;
+  const storageId=(d.id||`${d.department}-${focusTitle(d)}`).replace(/[^A-Za-z0-9_-]+/g,"-");
+  const viewLabel=mode==="trainer"?"Trainer View":"Trainee View";
+  const bodyClass=`interactive-share-page interactive-${mode}${roleplay?" interactive-roleplay":""}`;
+  const clientScript=`(${interactiveStandaloneClient.toString()})(${JSON.stringify({
+    storageKey:`seawebInteractive-${storageId}-${mode}`,
+    title,
+    viewLabel
+  })});`;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>
+${generatorCss}
+${interactiveShareOverrides()}
+</style>
+</head>
+<body class="${bodyClass}">
+<div class="interactive-top-accent"></div>
+<div class="interactive-shell">
+  <header class="interactive-brand">
+    <div>${INTERACTIVE_SHARE_LOGO_DATA?`<img src="${INTERACTIVE_SHARE_LOGO_DATA}" alt="Norwegian Cruise Line">`:`<div class="interactive-brand-fallback">NORWEGIAN CRUISE LINE</div>`}</div>
+    <div class="interactive-brand-meta"><strong>${roleplay?"SEAweb INTERACTIVE ROLEPLAY":"SEAweb INTERACTIVE SCENARIO"}</strong><span>${escapeHtml(d.department)} • ${escapeHtml(viewLabel)}</span></div>
+  </header>
+
+  <div class="interactive-toolbar">
+    <button class="interactive-btn teal" id="interactivePrintBtn">Print / Save PDF (Portrait)</button>
+    <button class="interactive-btn" id="interactiveCopyBtn">Copy Progress Summary</button>
+    <button class="interactive-btn" id="interactiveNotesBtn">Open All Notes</button>
+    <span class="interactive-toolbar-spacer"></span>
+    <span class="interactive-save-note" id="interactiveSaveStatus">Progress saves automatically on this device.</span>
+    <button class="interactive-btn danger" id="interactiveResetBtn">Reset Worksheet</button>
+  </div>
+
+  <section class="interactive-header">
+    <h1>${escapeHtml(title)}</h1>
+    <p>Follow the scenario step by step. Complete the interactive checklists, mark each section complete, and use the notes areas as you work.</p>
+  </section>
+
+  <div class="interactive-roleplay-banner"><strong>🎭 Partner Roleplay</strong><span>Use the role assignments and caller information in the scenario. Let the Cruise Specialist control the call naturally, then switch roles when instructed.</span></div>
+
+  <div class="interactive-progress-wrap">
+    <div class="interactive-progress-track"><div class="interactive-progress-bar" id="interactiveProgressBar"></div></div>
+    <div class="interactive-progress-text" id="interactiveProgressText">0% complete</div>
+  </div>
+
+  <div class="interactive-layout">
+    <nav class="interactive-nav" id="interactiveNav"><div class="interactive-nav-title">Scenario Progress</div></nav>
+    <main class="interactive-main">
+      <article id="interactiveScenarioContent" class="interactive-scenario-wrap scenario-paper">${scenarioHtml}</article>
+      <div class="interactive-bottom-actions">
+        <button class="interactive-btn teal" id="interactiveBottomPrintBtn">Print / Save PDF (Portrait)</button>
+        <button class="interactive-btn primary" id="interactiveBottomCopyBtn">Copy Progress Summary</button>
+      </div>
+    </main>
+  </div>
+</div>
+<script>${clientScript.replace(/<\/script/gi,"<\\/script")}</script>
+</body>
+</html>`;
+}
+
+async function downloadInteractiveScenario(mode="trainee"){
+  if(!ensureScenarioReady())return;
+  const btn=mode==="trainer"?$("downloadInteractiveTrainerBtn"):$("downloadInteractiveTraineeBtn");
+  const old=btn?.innerHTML||"";
+  if(btn){
+    btn.disabled=true;
+    btn.innerHTML=`<span class="share-menu-icon">…</span><span><strong>Building Interactive HTML…</strong><small>Creating a self-contained guided worksheet</small></span>`;
+  }
+  try{
+    const html=await buildInteractiveScenarioDocument(mode);
+    if(!html)throw new Error("The interactive scenario could not be generated.");
+    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=interactiveScenarioFilename(mode);
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),2500);
+    closeShareMenu();
+    flash(`${mode==="trainer"?"Trainer":"Trainee"} interactive scenario downloaded.`);
+  }catch(err){
+    alert(`Could not create the interactive scenario: ${err.message}`);
+  }finally{
+    if(btn){btn.disabled=false;btn.innerHTML=old;}
+  }
+}
+
 function openShareMenu(){
   $("shareScenarioMenu").classList.add("open");
   $("shareScenarioBtn").setAttribute("aria-expanded","true");
@@ -3623,6 +5965,8 @@ $("shareScenarioBtn").onclick=(e)=>{
   e.stopPropagation();
   $("shareScenarioMenu").classList.contains("open")?closeShareMenu():openShareMenu();
 };
+$("downloadInteractiveTraineeBtn").onclick=()=>downloadInteractiveScenario("trainee");
+$("downloadInteractiveTrainerBtn").onclick=()=>downloadInteractiveScenario("trainer");
 $("downloadAdaptivePdfBtn").onclick=downloadAdaptivePdf;
 $("downloadAdaptivePngBtn").onclick=downloadAdaptivePng;
 $("copyCardImageBtn").onclick=copyCardAsImage;
@@ -3710,7 +6054,7 @@ $("libraryDepartmentFilter").onchange=renderLibrary;
 window.toggleFavorite=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.favorite=!x.favorite;setSaved(a);renderLibrary()};
 window.archiveSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(x)x.archived=!x.archived;setSaved(a);renderLibrary()};
 window.deleteSaved=(id)=>{if(!confirm("Delete this saved scenario?"))return;setSaved(saved().filter(x=>x.id!==id));renderLibrary()};
-window.duplicateSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(!x)return;const copy={...x,id:crypto.randomUUID(),title:x.title+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};a.unshift(copy);setSaved(a);renderLibrary()};
+window.duplicateSaved=(id)=>{const a=saved();const x=a.find(v=>v.id===id);if(!x)return;const copy={...x,id:makeUuid(),title:x.title+" (Copy)",createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};a.unshift(copy);setSaved(a);renderLibrary()};
 window.openSaved=(id)=>{
   const x=saved().find(v=>v.id===id);if(!x)return;
   state.currentScenario=x;state.selectedSailing=x.sailing||null;
@@ -3735,14 +6079,36 @@ window.openSaved=(id)=>{
   updateGdprPreview();
   $("scenarioApproach").value=x.approach||"variation";
   $("difficulty").value=x.difficulty||"Intermediate";
-  $("guestCount").value=String(x.guestCount||2);
+  const savedReservations=Array.isArray(x.reservations)?x.reservations:[];
+  const savedR1=savedReservations[0]||null;
+  const savedR2=savedReservations[1]||null;
+  $("guestCount").value=String(savedR1?.guestCount||x.reservation1GuestCount||x.guestCount||2);
   $("agency").value=x.agency||($("department").value==="Guest Services"?"5":$("marketAgency").value);
-  $("guest1").value=x.guest1||"";$("guest2").value=x.guest2||"";
-  if([...$("category").options].some(o=>o.value===x.category)) $("category").value=x.category;
-  if([...$("locationPref").options].some(o=>o.value===x.location)) $("locationPref").value=x.location;
-  if([...$("sidePref").options].some(o=>o.value===x.side)) $("sidePref").value=x.side;
+  $("guest1").value=savedR1?.guests?.[0]??x.guest1??"";
+  $("guest2").value=savedR1?.guests?.[1]??x.guest2??"";
+  if($("reservationCount"))$("reservationCount").value=String(Math.max(2,Math.min(8,x.reservationCount||savedReservations.length||2)));
+  if($("reservation2GuestCount"))$("reservation2GuestCount").value=String(savedR2?.guestCount||x.reservation2GuestCount||2);
+  if($("reservation2Guest1"))$("reservation2Guest1").value=savedR2?.guests?.[0]||"";
+  if($("reservation2Guest2"))$("reservation2Guest2").value=savedR2?.guests?.[1]||"";
+  if($("reservationRelationship"))$("reservationRelationship").value=x.reservationRelationship||"Same Sailing / Linked";
+  const extraSaved={};savedReservations.slice(2).forEach((r,i)=>{extraSaved[i+3]=r;});
+  updateMultipleReservationUI(extraSaved);
+  if(savedR1?.guests){
+    savedR1.guests.slice(2).forEach((name,i)=>{const input=$(`reservation1Guest${i+3}`);if(input)input.value=name||"";});
+  }
+  if(savedR2?.guests){
+    savedR2.guests.slice(2).forEach((name,i)=>{const input=$(`reservation2Guest${i+3}`);if(input)input.value=name||"";});
+  }
+  if([...$("category").options].some(o=>o.value===(savedR1?.category||x.category))) $("category").value=savedR1?.category||x.category;
+  if(savedR2 && $("reservation2Category") && [...$("reservation2Category").options].some(o=>o.value===savedR2.category))$("reservation2Category").value=savedR2.category;
+  if([...$("locationPref").options].some(o=>o.value===(savedR1?.location||x.location))) $("locationPref").value=savedR1?.location||x.location;
+  if([...$("sidePref").options].some(o=>o.value===(savedR1?.side||x.side))) $("sidePref").value=savedR1?.side||x.side;
+  if(savedR2 && $("reservation2LocationPref") && [...$("reservation2LocationPref").options].some(o=>o.value===savedR2.location))$("reservation2LocationPref").value=savedR2.location;
+  if(savedR2 && $("reservation2SidePref") && [...$("reservation2SidePref").options].some(o=>o.value===savedR2.side))$("reservation2SidePref").value=savedR2.side;
   if([...$("paymentAction").options].some(o=>o.value===x.payment)) $("paymentAction").value=x.payment;
-  $("pricing").value=x.pricing||"";$("confirmationEmail").value=x.email||"training123@ncl.com";
+  $("pricing").value=savedR1?.pricing??x.pricing??"";
+  if($("reservation2Pricing"))$("reservation2Pricing").value=savedR2?.pricing||"";
+  $("confirmationEmail").value=x.email||"training123@ncl.com";
   $("latitudesToggle").checked=!!x.latitudes;$("commentToggle").checked=!!x.commenting;$("confirmToggle").checked=x.confirmation!==false;
   refreshLatitudesPanel(x.latitudesNumbers||[],x.pastGuestFlags||[]);
   $("couponToggle").checked=!!x.couponEnabled || !!(x.coupons&&x.coupons.length);
@@ -3755,6 +6121,12 @@ window.openSaved=(id)=>{
   $("airOneWayDirection").value=x.airOneWayDirection||"to_cruise";
   $("airGateway").value=x.airGateway||"";
   updateAirProgramPreview();
+  setSpecialRequestRows(x.specialRequests||[]);
+  setAdaNeedRows(x.adaNeeds||[]);
+  setPricePrograms(x.pricePrograms||{all4cho:!!x.fas,prepaidServiceCharges:!!x.psc});
+  const legacyAirSelections=Array.isArray(x.airGuestSelections)&&x.airGuestSelections.length?x.airGuestSelections:(x.airEnabled?[{guest:formGuestNames()[0]||x.guest1||"Guest 1",airProgram:x.airProgram||"none",tripType:x.airTripType||"round_trip",gateway:x.airGateway||"",transfers:"No NCL Transfers"}]:[]);
+  setAirGuestSelections(legacyAirSelections);
+  refreshFocusConfigurationPanels();
   $("trainerNotes").value=x.trainerNotes||"";
   if(x.cardProfile && trainingCards[x.cardProfile])$("trainingCardProfile").value=x.cardProfile;
   renderTrainingCard();
@@ -3765,7 +6137,7 @@ window.openSaved=(id)=>{
     $("trainingCardAddress").value=x.card.address||"";
   }
   syncAgencyCallerLogic();
-  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();go("generator");
+  renderSelectedSailing();$("scenarioOutput").innerHTML=x.html||"";runValidator();updateRoleplayScenarioButton();updateFollowUpRoleplayButton();renderWizardReviewSummary();go("generator");showGeneratedScenarioScreen();
 };
 $("exportBtn").onclick=()=>{
   const blob=new Blob([JSON.stringify({version:1,exportedAt:new Date().toISOString(),scenarios:saved()},null,2)],{type:"application/json"});
@@ -3774,12 +6146,239 @@ $("exportBtn").onclick=()=>{
 $("importFile").onchange=async(e)=>{
   const f=e.target.files[0];if(!f)return;
   try{const data=JSON.parse(await f.text()),incoming=Array.isArray(data)?data:data.scenarios;if(!Array.isArray(incoming))throw Error("No scenarios found in backup.");
-    const map=new Map(saved().map(x=>[x.id,x]));incoming.forEach(x=>map.set(x.id||crypto.randomUUID(),x));setSaved([...map.values()]);renderLibrary();flash(`Imported ${incoming.length} scenario(s).`);
+    const map=new Map(saved().map(x=>[x.id,x]));incoming.forEach(x=>map.set(x.id||makeUuid(),x));setSaved([...map.values()]);renderLibrary();flash(`Imported ${incoming.length} scenario(s).`);
   }catch(err){alert("Import failed: "+err.message)}
 };
+
+
+const generatorWizardState={currentStep:1,ready:false};
+
+function wizardFieldNode(target){
+  if(!target)return null;
+  return target.closest?.('label') || target;
+}
+
+function appendWizardNodes(host,nodes,gridClass='wizard-form-grid'){
+  if(!host)return null;
+  const grid=document.createElement('div');
+  grid.className=gridClass;
+  nodes.filter(Boolean).forEach(node=>grid.appendChild(node));
+  if(grid.children.length)host.appendChild(grid);
+  return grid;
+}
+
+function wizardSection(host,{icon='•',title,subtitle='',className=''},nodes=[]){
+  if(!host)return null;
+  const section=document.createElement('section');
+  section.className=`wizard-detail-card ${className}`.trim();
+  section.innerHTML=`<div class="wizard-detail-card-head"><span class="wizard-detail-icon" aria-hidden="true">${icon}</span><div><strong>${escapeHtml(title)}</strong>${subtitle?`<small>${escapeHtml(subtitle)}</small>`:''}</div></div><div class="wizard-detail-card-body"></div>`;
+  const body=section.querySelector('.wizard-detail-card-body');
+  nodes.filter(Boolean).forEach(node=>body.appendChild(node));
+  host.appendChild(section);
+  return section;
+}
+
+function enabledWizardTasks(){
+  const items=[
+    ['Commenting Tool',$("commentToggle")?.checked],
+    ['Guest Confirmation',$("confirmToggle")?.checked],
+    ['Guest Status / Latitudes',$("latitudesToggle")?.checked],
+    ['Travel Protection',$("travelToggle")?.checked],
+    ['Credits / Coupons',$("couponToggle")?.checked]
+  ].filter(([,on])=>on).map(([name])=>name);
+  const specials=collectSpecialRequests();if(specials.length)items.push(`${specials.length} Special Request${specials.length===1?'':'s'}`);
+  const ada=collectAdaNeeds();if(ada.length)items.push(`${ada.length} ADA / Accessibility Need${ada.length===1?'':'s'}`);
+  const programs=priceProgramLabels(collectPricePrograms());if(programs.length)items.push(`Price Programs: ${programs.join(', ')}`);
+  const air=collectAirGuestSelections().filter(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers");if(air.length)items.push(`Air / Transfers for ${air.length} guest${air.length===1?'':'s'}`);
+  return items;
+}
+
+function reservationReviewText(){
+  const res1=reservation1GuestNamesFromForm().filter(Boolean);
+  const bits=[];
+  bits.push(`${res1.length||+$('guestCount')?.value||1} guest${(res1.length||+$('guestCount')?.value||1)===1?'':'s'}`);
+  if($('category')?.value)bits.push($('category').value);
+  if(state.selectedSailing?.ship)bits.push(state.selectedSailing.ship);
+  if(multipleReservationFormActive())bits.push(`${multipleReservationTotal()} reservations total`);
+  if($('paymentAction')?.value)bits.push($('paymentAction').value);
+  return bits.join(' • ');
+}
+
+function renderWizardReviewSummary(){
+  const host=$("wizardReviewSummary");
+  if(!host)return;
+  const workflow=$("reservationWorkflow")?.value||'new';
+  const focuses=selectedFocusRecords().map(r=>r.meta.name);
+  const tasks=enabledWizardTasks();
+  const caller=workflow==='modify'
+    ? guestServicesAgencyDisplay($("agency")?.value||'')
+    : newReservationCallerLabel({department:$("department")?.value||'Guest Services',newCallerType:$("newCallerType")?.value||'direct_us'});
+  host.innerHTML=`
+    <div class="wizard-review-cards">
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">▦</span><strong>Scenario Type</strong><button type="button" data-edit-step="1">Edit ✎</button></div>
+        <h4>${escapeHtml(focuses.join(' + ')||'No scenario focus selected')}</h4>
+        <p>${escapeHtml($("department")?.value||'')} • ${escapeHtml(workflow==='modify'?'Modify Existing Reservation':'Create New Reservation')} • ${escapeHtml($("difficulty")?.value||'')}</p>
+      </section>
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">♟</span><strong>Reservation Details</strong><button type="button" data-edit-step="2">Edit ✎</button></div>
+        <h4>${escapeHtml(caller)}</h4>
+        <p>${escapeHtml(reservationReviewText())}</p>
+      </section>
+      <section class="wizard-review-card">
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">⚙</span><strong>Additional Options</strong><button type="button" data-edit-step="3">Edit ✎</button></div>
+        <h4>${tasks.length?`${tasks.length} option${tasks.length===1?'':'s'} selected`:'No additional options selected'}</h4>
+        <p>${escapeHtml(tasks.join(' • ')||'You can go back and add optional training elements.')}</p>
+      </section>
+    </div>`;
+  host.querySelectorAll('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.editStep)));
+}
+
+function showGeneratorWizardStep(step){
+  const normalized=Math.max(1,Math.min(4,Number(step)||1));
+  generatorWizardState.currentStep=normalized;
+  document.querySelectorAll('#generator [data-step-panel]').forEach(panel=>panel.classList.toggle('active',panel.dataset.stepPanel===String(normalized)));
+  document.querySelectorAll('#generator .wizard-step-button').forEach(btn=>{
+    const stepNum=Number(btn.dataset.wizardStep);
+    btn.classList.toggle('active',stepNum===normalized);
+    btn.classList.toggle('complete',stepNum<normalized);
+    const num=btn.querySelector('.wizard-step-number');
+    if(num)num.textContent=stepNum<normalized?'✓':String(stepNum);
+  });
+  if(normalized===4)renderWizardReviewSummary();
+  $("generatorWizard")?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function showWizardScenarioSetup(step=1){
+  const generator=$("generator");
+  generator?.classList.add('wizard-active');
+  generator?.classList.remove('generated-active');
+  showGeneratorWizardStep(step);
+}
+
+function showGeneratedScenarioScreen(){
+  const generator=$("generator");
+  generator?.classList.remove('wizard-active');
+  generator?.classList.add('generated-active');
+  generator?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function setupGeneratedScreenTabs(){
+  document.querySelectorAll('#generator .generated-tab').forEach(btn=>btn.addEventListener('click',()=>{
+    document.querySelectorAll('#generator .generated-tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const output=$("scenarioOutput");
+    const trainerOnly=btn.dataset.generatedTab==='trainer';
+    output?.classList.toggle('trainer-guide-only',trainerOnly);
+    output?.scrollIntoView({behavior:'smooth',block:'start'});
+  }));
+}
+
+function setupGeneratorWizard(){
+  const wizard=$("generatorWizard");
+  if(!wizard || generatorWizardState.ready)return;
+  document.body.classList.add('wizard-generator-mode');
+  $("generator")?.classList.add('wizard-active');
+
+  const step1=$("wizardStep1Content");
+  const step2=$("wizardStep2Content");
+  const step3=$("wizardStep3Content");
+  const step4=$("wizardStep4Content");
+
+  const setupStrip=document.createElement('section');
+  setupStrip.className='wizard-setup-strip';
+  const setupGrid=document.createElement('div');
+  setupGrid.className='wizard-setup-grid';
+  [wizardFieldNode($("department")),wizardFieldNode($("reservationWorkflow")),$("newCallerTypeField"),wizardFieldNode($("difficulty")),wizardFieldNode($("scenarioApproach"))].filter(Boolean).forEach(node=>setupGrid.appendChild(node));
+  setupStrip.innerHTML='<div class="wizard-mini-heading"><strong>Scenario Setup</strong><small>Choose the department, workflow, caller type, and difficulty.</small></div>';
+  setupStrip.appendChild(setupGrid);
+  step1.appendChild(setupStrip);
+  const focusField=document.querySelector('.focus-picker-field');
+  if(focusField)step1.appendChild(focusField);
+  if($('trainingDay'))step1.appendChild($('trainingDay'));
+
+  const sailingTools=document.createElement('div');
+  sailingTools.className='wizard-sailing-tools';
+  const findSailing=document.createElement('button');
+  findSailing.type='button';findSailing.className='secondary tiny';findSailing.textContent='Find / Change Sailing';findSailing.onclick=()=>go('search');
+  sailingTools.appendChild(findSailing);
+  wizardSection(step2,{icon:'☎',title:'Caller & Booking Source',subtitle:'Who is calling and which booking source should be used?'},[$("marketAgencyField"),$("agencyField")]);
+  const guestSection=wizardSection(step2,{icon:'♟',title:'Guests & Stateroom',subtitle:'Enter guest names, count, category and location preferences.'},[$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField")]);
+  if(guestSection){
+    const tools=document.createElement('div');tools.className='wizard-inline-tools';tools.appendChild($("generateNamesBtn"));guestSection.querySelector('.wizard-detail-card-body').appendChild(tools);
+  }
+  wizardSection(step2,{icon:'⚓',title:'Sailing Details',subtitle:'Use a real NCL sailing when the scenario requires one.'},[$("selectedSailingSummary"),sailingTools]);
+  wizardSection(step2,{icon:'$',title:'Pricing & Booking Action',subtitle:'Set the payment action, advertised quote, and confirmation email.'},[wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail"))]);
+  if($("multipleReservationPanel"))step2.appendChild($("multipleReservationPanel"));
+  if($("modificationPanel"))step2.appendChild($("modificationPanel"));
+
+  if($("curriculumNote"))step3.appendChild($("curriculumNote"));
+  const scenarioTasks=document.querySelector('#generator fieldset');
+  if(scenarioTasks)step3.appendChild(scenarioTasks);
+  if($("focusConfigurationHub"))step3.appendChild($("focusConfigurationHub"));
+  ["airProgramPanel","latitudesNumberPanel","couponPanel","trainingCardPanel"].forEach(id=>{if($(id))step3.appendChild($(id));});
+
+  const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
+  const reviewAction=document.createElement('div');
+  reviewAction.className='wizard-generate-row';
+  const generateBtn=$("generateBtn");
+  generateBtn.textContent='Generate Scenario →';
+  reviewAction.appendChild(generateBtn);
+  step4.appendChild(reviewAction);
+
+  const oldActions=document.querySelector('#generator .generator-setup-panel > .actions');
+  if(oldActions)oldActions.classList.add('wizard-orphan-actions');
+  const clearBtn=$("clearScenarioBtn");
+  if(clearBtn)clearBtn.classList.add('wizard-hidden-source-button');
+
+  wizard.querySelectorAll('[data-wizard-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardStep)));
+  wizard.querySelectorAll('[data-wizard-next]').forEach(btn=>btn.addEventListener('click',()=>{
+    if(btn.dataset.wizardNext==='2' && !selectedFocusRecords().length){alert('Choose at least one Scenario Focus to continue.');return;}
+    showGeneratorWizardStep(btn.dataset.wizardNext);
+  }));
+  wizard.querySelectorAll('[data-wizard-prev]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.wizardPrev)));
+
+  $("wizardCancelBtn")?.addEventListener('click',()=>go('dashboard'));
+  $("wizardStartOverBtn")?.addEventListener('click',()=>{
+    if(confirm('Clear the current scenario and start a brand-new one? Unsaved changes will be lost.'))resetScenarioForm();
+  });
+  $("editScenarioSetupBtn")?.addEventListener('click',()=>showWizardScenarioSetup(4));
+
+  const originalGenerate=generateScenario;
+  generateBtn.onclick=()=>{
+    generateBtn.disabled=true;
+    const previousText=generateBtn.textContent;
+    generateBtn.textContent='Generating…';
+    try{
+      const generated=originalGenerate();
+      if(generated||state.currentScenario){
+        showGeneratedScenarioScreen();
+        requestAnimationFrame(()=>$("scenarioOutput")?.scrollIntoView({behavior:'smooth',block:'start'}));
+      }
+    }catch(error){
+      console.error('Scenario generation failed:',error);
+      const message=error?.message?`Scenario could not be generated: ${error.message}`:'Scenario could not be generated. Please review the selected options and try again.';
+      alert(message);
+    }finally{
+      generateBtn.disabled=false;
+      generateBtn.textContent=previousText||'Generate Scenario →';
+    }
+  };
+
+  setupGeneratedScreenTabs();
+
+  document.querySelectorAll('#generator input, #generator select, #generator textarea').forEach(el=>{
+    el.addEventListener('change',renderWizardReviewSummary);
+    el.addEventListener('input',renderWizardReviewSummary);
+  });
+
+  generatorWizardState.ready=true;
+  showWizardScenarioSetup(1);
+  renderWizardReviewSummary();
+}
 
 function flash(msg){const n=document.createElement("div");n.className="notice success";n.style.cssText="position:fixed;right:20px;bottom:20px;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.15)";n.textContent=msg;document.body.appendChild(n);setTimeout(()=>n.remove(),2200)}
 function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
-populateMarketAgencies();populateTrainingCards();updateDepartmentUI();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();
+populateMarketAgencies();populateTrainingCards();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderWizardReviewSummary();

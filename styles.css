@@ -1236,3 +1236,484 @@ footer{background:var(--black);color:var(--sand);border-top:0;letter-spacing:.05
 @media(max-width:760px){
   .itinerary-date-grid{grid-template-columns:1fr}
 }
+
+
+/* V1.9.24 • automatic exact sailing date lookup */
+#exactSailingDateSelect:disabled{
+  background:#F2F4F7;
+  color:#667085;
+}
+.itinerary-date-chooser .notice.info{
+  transition:opacity .15s ease;
+}
+
+
+/* V1.9.27 • Hybrid sailing-date source */
+.selected-date-source{
+  margin-top:5px;
+  font-size:9px;
+  line-height:1.4;
+  font-weight:650;
+}
+.ncl-date-source{color:#067647}
+
+
+/* V1.9.28 • Reinstate Cancelled Reservation roleplay */
+.roleplay-setup-section{
+  background:#F8FBFC;
+  border-left:5px solid #0A84BD;
+  padding:16px 18px;
+  border-radius:0 10px 10px 0;
+}
+.roleplay-role-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+  margin:12px 0;
+}
+.roleplay-role-card{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:13px 14px;
+  background:#fff;
+  border:1px solid #D6E5EB;
+  border-radius:8px;
+}
+.roleplay-role-card>span{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1px;
+  color:#006099;
+}
+.roleplay-role-card>strong{font-size:13px;color:#101828}
+.roleplay-role-card>small{font-size:10px;line-height:1.45;color:#667085}
+.roleplay-switch-banner{
+  display:flex;
+  gap:10px;
+  align-items:flex-start;
+  margin-top:10px;
+  padding:11px 12px;
+  background:#EEF8F7;
+  border:1px solid #C6DFDC;
+  border-radius:7px;
+}
+.roleplay-switch-banner strong{white-space:nowrap;color:#00484F}
+.roleplay-switch-banner span{font-size:11px;line-height:1.45;color:#344054}
+@media(max-width:700px){
+  .roleplay-role-grid{grid-template-columns:1fr}
+  .roleplay-switch-banner{flex-direction:column}
+}
+
+
+/* V1.9.29 • post-generation roleplay converter + curriculum roleplays */
+.roleplay-toggle-btn{
+  border-color:#8EBFC2;
+  background:#F0F8F8;
+  color:#00484F;
+  font-weight:700;
+}
+.roleplay-toggle-btn:not(:disabled):hover{
+  background:#DDEEEE;
+}
+.roleplay-toggle-btn.active{
+  background:#00484F;
+  color:#fff;
+  border-color:#00484F;
+}
+.curriculum-specific-section{
+  background:#FCFCFB;
+  border:1px solid #E4E7EC;
+  border-radius:10px;
+  padding:16px 18px;
+}
+.curriculum-specific-section .scenario-detail-grid{
+  margin-top:10px;
+}
+
+/* V1.9.31 • Follow-Up Servicing Roleplay Builder */
+.followup-roleplay-btn{background:#EEF8F7;border-color:#68ACAA;color:#00484F;font-weight:750}
+.followup-roleplay-btn:not(:disabled):hover{background:#DDEEEE}
+.followup-dialog{width:min(1040px,calc(100vw - 28px));max-height:92vh;padding:0;border:0;border-radius:14px;box-shadow:0 24px 70px rgba(16,24,40,.24);background:#fff}
+.followup-dialog::backdrop{background:rgba(16,24,40,.58);backdrop-filter:blur(2px)}
+.followup-dialog-card{display:flex;flex-direction:column;gap:18px;padding:22px;max-height:92vh;overflow:auto}
+.followup-dialog-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid #E4E7EC;padding-bottom:16px}
+.followup-dialog-head h2{margin:2px 0 5px}.followup-dialog-head p{margin:0;color:#667085;max-width:720px}
+.dialog-close{min-width:38px;width:38px;height:38px;border-radius:50%;padding:0;font-size:24px;line-height:1;background:#F2F4F7;border:1px solid #EAECF0}
+.followup-source-card{display:flex;flex-direction:column;gap:4px;padding:14px 16px;border-left:5px solid #0A84BD;background:#F7FBFD;border-radius:0 8px 8px 0}
+.followup-source-card strong{font-size:15px}.followup-source-card span,.followup-source-card small{color:#475467}
+.followup-source-label{font-size:9px;letter-spacing:1.1px;font-weight:850;color:#006099}
+.followup-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.followup-change-section{border:1px solid #E4E7EC;border-radius:10px;padding:14px}
+.followup-change-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.followup-change-head>div{display:flex;flex-direction:column;gap:2px}.followup-change-head small{color:#667085}
+.followup-change-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.followup-change-grid>label{display:flex;flex-direction:row;align-items:flex-start;gap:9px;min-height:70px;padding:10px;border:1px solid #D0D5DD;border-radius:8px;background:#fff;cursor:pointer}
+.followup-change-grid>label:has(input:checked){border-color:#68ACAA;background:#F2FAF9;box-shadow:inset 0 0 0 1px #68ACAA}
+.followup-change-grid input{width:auto;margin-top:3px}.followup-change-grid span{display:flex;flex-direction:column;gap:2px}.followup-change-grid strong{font-size:11px}.followup-change-grid small{font-size:9px;line-height:1.35;color:#667085}
+.followup-custom-field textarea{min-height:110px;resize:vertical}
+.followup-options-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.followup-options-row .check-line{display:flex;flex-direction:row;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid #D0D5DD;border-radius:8px;background:#FCFCFD}.followup-options-row input{width:auto;margin-top:2px}
+.followup-dialog-actions{display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #E4E7EC;padding-top:16px}
+.followup-snapshot-section{background:#F8FBFC;border-left:5px solid #0A84BD}.critical-callout{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;margin:10px 0 12px;background:#FFF6E0;border-left:4px solid #F0C24B;border-radius:0 7px 7px 0}.critical-callout strong{white-space:nowrap}
+.gdpr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.gdpr-grid>div{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:#fff;border:1px solid #E4E7EC;border-radius:7px}.gdpr-grid span{font-size:9px;font-weight:800;color:#006099;text-transform:uppercase;letter-spacing:.5px}.gdpr-grid small{color:#667085}
+.followup-change-card-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:12px 0}.followup-change-card{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;border:1px solid #D6E5EB;background:#fff;border-radius:8px}.followup-change-card>span{display:grid;place-items:center;min-width:28px;height:28px;border-radius:50%;background:#EAF4F6;color:#006099;font-size:9px;font-weight:850}.followup-change-card>div{display:flex;flex-direction:column;gap:3px}.followup-change-card small{font-size:10px;line-height:1.4;color:#667085}
+.roleplay-caller-rule,.caller-private-note{display:flex;flex-direction:column;gap:4px;padding:11px 13px;border-radius:8px;margin:10px 0}.roleplay-caller-rule{background:#EEF8F7;border:1px solid #C6DFDC}.caller-private-note{background:#FFF6E0;border:1px solid #F2D789}
+@media(max-width:900px){.followup-change-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.followup-form-grid,.followup-options-row,.followup-change-grid,.gdpr-grid,.followup-change-card-list{grid-template-columns:1fr}.followup-dialog-card{padding:16px}.followup-dialog-actions{position:sticky;bottom:0;background:#fff;padding-bottom:2px}}
+
+
+/* V1.9.32 • Multiple Reservations + Authorized Person scenarios */
+.multi-res-section .scenario-detail-grid{
+  margin-bottom:12px;
+}
+.multi-res-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  margin:14px 0;
+}
+.multi-res-card{
+  border:1px solid #D6E5EB;
+  background:#fff;
+  border-radius:9px;
+  overflow:hidden;
+}
+.multi-res-card-head{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  padding:11px 13px;
+  background:#F2F8FA;
+  border-bottom:1px solid #D6E5EB;
+}
+.multi-res-card-head span{
+  font-size:9px;
+  font-weight:850;
+  letter-spacing:1px;
+  color:#006099;
+}
+.multi-res-card-head strong{
+  font-size:14px;
+}
+.multi-res-card ul{
+  margin:0;
+  padding:12px 16px 12px 30px;
+}
+.multi-res-card li{
+  margin:5px 0;
+  line-height:1.4;
+}
+.authorized-person-section{
+  background:#FFF9EA;
+  border-left:5px solid #F0C24B;
+}
+.authorized-script{
+  margin:12px 0;
+  padding:13px 15px;
+  background:#fff;
+  border:1px solid #F2D789;
+  border-radius:8px;
+  font-size:11px;
+  line-height:1.6;
+}
+.authorized-comment-box{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:11px 13px;
+  background:#fff;
+  border:1px solid #E4E7EC;
+  border-radius:8px;
+}
+.authorized-comment-box span{
+  font-size:9px;
+  font-weight:850;
+  color:#006099;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+@media(max-width:760px){
+  .multi-res-grid{grid-template-columns:1fr}
+}
+
+
+/* V1.9.33 • Interactive Scenario Sharing */
+.share-menu-group-label{
+  padding:8px 12px 5px;
+  font-size:9px;
+  line-height:1;
+  font-weight:850;
+  letter-spacing:1.05px;
+  color:#667085;
+}
+.interactive-share-menu{
+  width:min(430px,calc(100vw - 32px));
+  max-height:min(660px,calc(100vh - 120px));
+  overflow:auto;
+}
+.interactive-share-primary{
+  background:#F2F8F7 !important;
+  border-left:4px solid #00484F !important;
+}
+.interactive-share-primary .share-menu-icon{
+  background:#00484F !important;
+  color:#fff !important;
+}
+.interactive-share-menu .recommended-share-option::after{
+  content:"Recommended";
+  align-self:center;
+  margin-left:auto;
+  padding:3px 6px;
+  border-radius:999px;
+  background:#EAF4F6;
+  color:#00484F;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+}
+
+/* V1.9.36 • Separate inputs for multiple-reservation scenarios */
+.form-grid-contents{display:contents}
+.guest-count-hidden{display:none!important}
+.multiple-reservation-panel{
+  margin:18px 0;
+  padding:16px;
+  border:1px solid #8EBFC2;
+  border-left:5px solid #006099;
+  border-radius:8px;
+  background:#F7FBFB;
+}
+.multiple-reservation-panel-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  margin-bottom:15px;
+  padding-bottom:12px;
+  border-bottom:1px solid rgba(0,72,79,.18);
+}
+.multiple-reservation-panel-head>div{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.multiple-reservation-panel-head strong{
+  font-size:14px;
+  color:#00484F;
+}
+.multiple-reservation-panel-head>div>span{
+  font-size:11px;
+  line-height:1.5;
+  color:#5E6466;
+  max-width:720px;
+}
+.multiple-reservation-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:850px){
+  .multiple-reservation-form-grid{grid-template-columns:1fr}
+  .multiple-reservation-panel-head{flex-direction:column}
+}
+
+
+/* V1.9.38 full-screen guided wizard — NCL brand aligned */
+:root{
+  --wizard-navy:#0b2e59;
+  --wizard-blue:#087fbd;
+  --wizard-ocean:#006a98;
+  --wizard-teal:#168f96;
+  --wizard-aqua:#e9f7f7;
+  --wizard-sky:#eef8fd;
+  --wizard-ink:#10223d;
+  --wizard-muted:#637083;
+  --wizard-line:#d6e0e7;
+  --wizard-soft:#f7f9fb;
+}
+
+#generator .generator-workspace{display:block!important}
+#generator .generator-setup-panel,#generator .generated-scenario-panel{width:100%;max-width:none;position:static!important}
+#generator.wizard-active .generated-scenario-panel{display:none!important}
+#generator.generated-active .generator-setup-panel{display:none!important}
+#generator.generated-active .generated-scenario-panel{display:block!important}
+#generator.generated-active>.section-head,#generator.generated-active>.trainer-instructions{display:none!important}
+#generator.wizard-active .output-panel{display:none!important}
+#generator .generator-setup-panel{padding:0;background:transparent;border:0;box-shadow:none}
+#generator .generated-scenario-panel{padding:22px;border:1px solid var(--wizard-line);border-radius:10px;background:#fff;box-shadow:0 6px 24px rgba(15,55,85,.06)}
+
+.generator-wizard{display:flex;flex-direction:column;gap:0;background:#fff;border:1px solid #d4dde5;border-radius:10px;overflow:hidden;box-shadow:0 8px 26px rgba(15,55,85,.055)}
+.wizard-topline{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 20px;border-bottom:1px solid #e5eaee;background:#fff}
+.wizard-brand-copy{display:flex;flex-direction:column;gap:2px}.wizard-brand-copy>span{font-size:14px;font-weight:800;color:var(--wizard-navy)}.wizard-brand-copy>small{font-size:10px;color:var(--wizard-muted)}
+
+.wizard-progress{display:grid;grid-template-columns:auto 1fr auto 1fr auto 1fr auto;align-items:center;padding:16px 22px;background:#fbfcfd;border-bottom:1px solid #e5eaee}
+.wizard-step-button{display:flex;align-items:center;gap:9px;border:0;background:transparent;padding:0;color:#8190a0;cursor:pointer;font-family:inherit}
+.wizard-step-button:hover{color:var(--wizard-ocean)}
+.wizard-step-number{width:28px;height:28px;border-radius:999px;background:#a9bac9;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800;flex:0 0 28px;transition:.18s ease}
+.wizard-step-copy{display:flex;align-items:center}.wizard-step-copy strong{font-size:11px;white-space:nowrap;font-weight:700;color:inherit}
+.wizard-step-button.active{color:var(--wizard-blue)}.wizard-step-button.active .wizard-step-number{background:var(--wizard-blue);box-shadow:0 0 0 4px rgba(8,127,189,.09)}
+.wizard-step-button.complete{color:var(--wizard-teal)}.wizard-step-button.complete .wizard-step-number{background:var(--wizard-teal)}
+.wizard-connector{height:2px;background:#dce5eb;margin:0 18px;min-width:18px}
+
+.wizard-step-panel{display:none;padding:24px 24px 20px;background:#fff;min-height:560px}
+.wizard-step-panel.active{display:flex;flex-direction:column}
+.wizard-step-intro{margin-bottom:18px;max-width:800px}.wizard-step-kicker{display:block;font-size:11px;font-weight:800;color:var(--wizard-blue);letter-spacing:.03em;text-transform:uppercase;margin-bottom:4px}.wizard-step-intro h3{margin:0 0 4px;font-size:24px;color:var(--wizard-navy);letter-spacing:-.02em}.wizard-step-intro p{margin:0;color:var(--wizard-muted);font-size:12px;line-height:1.5}
+.wizard-step-content{display:flex;flex-direction:column;gap:16px;flex:1}
+.wizard-nav{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:22px;padding-top:18px;border-top:1px solid #e5eaee}
+.wizard-nav .primary{margin-left:auto;min-width:185px}
+.review-nav{justify-content:flex-start}.review-nav .secondary{margin-right:auto}
+
+/* Step 1 setup strip */
+.wizard-setup-strip{border:1px solid var(--wizard-line);border-radius:9px;background:var(--wizard-soft);padding:14px 16px}
+.wizard-mini-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}.wizard-mini-heading strong{font-size:12px;color:var(--wizard-navy)}.wizard-mini-heading small{font-size:10px;color:var(--wizard-muted)}
+.wizard-setup-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.wizard-setup-grid label{margin:0}.wizard-setup-grid label>span:not(.field-hint){font-size:10px}.wizard-setup-grid .field-hint{font-size:8.5px;line-height:1.3;margin-top:4px}.wizard-setup-grid select,.wizard-setup-grid input{min-height:40px;font-size:11px;padding:8px 10px}
+
+/* Scenario focus cards */
+.wizard-generator-mode #generator .focus-picker-field{gap:8px}.wizard-generator-mode #generator .focus-picker-field>.field-title{display:none}
+.wizard-generator-mode #generator .focus-picker{position:static}.wizard-generator-mode #generator .focus-picker-trigger{display:none!important}
+.wizard-generator-mode #generator .focus-picker-menu{display:block!important;position:static;inset:auto;max-height:none;box-shadow:none;border:0;border-radius:0;overflow:visible;background:transparent}
+.wizard-generator-mode #generator .focus-picker-head{padding:0 0 10px;border:0;background:transparent}.wizard-generator-mode #generator .focus-picker-head strong{font-size:13px;color:var(--wizard-navy)}.wizard-generator-mode #generator .focus-picker-head small{font-size:10px;color:var(--wizard-muted);margin-top:2px}
+.wizard-generator-mode #generator .focus-picker-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:0;max-height:none;overflow:visible}
+.wizard-generator-mode #generator .focus-choice{position:relative;display:block!important;padding:0!important;margin:0!important;border:0!important;background:transparent!important;cursor:pointer}
+.wizard-generator-mode #generator .focus-choice input{position:absolute;opacity:0;pointer-events:none}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;width:100%;min-height:170px;padding:18px 14px 15px;border:1px solid #d7e0e7;border-radius:7px;background:#fff;transition:border-color .16s,box-shadow .16s,background .16s,transform .16s}
+.wizard-generator-mode #generator .focus-choice:hover .focus-card-body{border-color:#95c7df;box-shadow:0 5px 18px rgba(9,91,136,.07);transform:translateY(-1px)}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body{border:2px solid var(--wizard-blue);background:linear-gradient(180deg,#f5fbff 0%,#fff 100%);box-shadow:0 0 0 3px rgba(8,127,189,.08)}
+.focus-card-icon{width:44px;height:44px;display:grid;place-items:center;color:var(--wizard-blue);margin-bottom:2px}.focus-card-icon svg{width:36px;height:36px;fill:currentColor}
+.wizard-generator-mode #generator .focus-choice strong{font-size:12px;line-height:1.25;color:var(--wizard-navy);font-weight:800}
+.wizard-generator-mode #generator .focus-choice small{font-size:9.5px;line-height:1.45;color:#5f6c7a;max-width:210px}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body:after{content:"Selected";position:absolute;top:10px;right:10px;padding:3px 6px;border-radius:999px;background:#e3f3fb;color:#006d9d;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.wizard-generator-mode #generator .focus-picker-actions{padding:10px 0 0;border:0;justify-content:flex-start}.wizard-generator-mode #generator #doneFocusBtn{display:none!important}
+.wizard-generator-mode #generator .selected-focus-chips{display:none}.wizard-generator-mode #generator .focus-picker-field>.field-hint{display:none}
+
+/* Step 2 grouped cards */
+.wizard-detail-card{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start;border:1px solid var(--wizard-line);border-radius:8px;padding:14px 16px;background:#fff}
+.wizard-detail-card-head{display:flex;align-items:flex-start;gap:11px;padding-top:3px}.wizard-detail-icon{width:34px;height:34px;border-radius:999px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-size:16px;font-weight:800;flex:0 0 34px}.wizard-detail-card-head>div{display:flex;flex-direction:column;gap:3px}.wizard-detail-card-head strong{font-size:12px;color:var(--wizard-navy)}.wizard-detail-card-head small{font-size:9px;line-height:1.35;color:var(--wizard-muted)}
+.wizard-detail-card-body{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px;align-items:start}.wizard-detail-card-body>label,.wizard-detail-card-body>.form-grid-contents{margin:0}.wizard-detail-card-body input,.wizard-detail-card-body select,.wizard-detail-card-body textarea{min-height:42px}.wizard-detail-card-body .field-hint{font-size:9px;line-height:1.35}
+.wizard-detail-card-body .selected-sailing{grid-column:1/-1;margin:0}.wizard-sailing-tools{grid-column:1/-1;display:flex;justify-content:flex-end}.wizard-inline-tools{grid-column:1/-1;display:flex;justify-content:flex-end}
+.wizard-detail-card-body>.form-grid-contents{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px}
+#wizardStep2Content>.multiple-reservation-panel,#wizardStep2Content>.modification-panel{margin:0;border-radius:8px}
+
+/* Step 3 toggle cards */
+#wizardStep3Content fieldset{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#wizardStep3Content fieldset legend{grid-column:1/-1;font-size:13px;font-weight:800;color:var(--wizard-navy);margin-bottom:2px}
+#wizardStep3Content fieldset .check{position:relative;display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center;gap:4px;min-height:86px;padding:15px 62px 15px 52px;border:1px solid var(--wizard-line);border-radius:8px;background:#fff;color:var(--wizard-ink);cursor:pointer}
+#wizardStep3Content fieldset .check:before{position:absolute;left:14px;top:16px;width:28px;height:28px;border-radius:6px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-size:15px;font-weight:800}
+#wizardStep3Content fieldset .check:nth-of-type(1):before{content:"💬"}#wizardStep3Content fieldset .check:nth-of-type(2):before{content:"✉"}#wizardStep3Content fieldset .check:nth-of-type(3):before{content:"★"}#wizardStep3Content fieldset .check:nth-of-type(4):before{content:"★"}#wizardStep3Content fieldset .check:nth-of-type(5):before{content:"◆"}#wizardStep3Content fieldset .check:nth-of-type(6):before{content:"$"}#wizardStep3Content fieldset .check:nth-of-type(7):before{content:"✈"}#wizardStep3Content fieldset .check:nth-of-type(8):before{content:"◇"}
+#wizardStep3Content fieldset .check input{appearance:none;position:absolute;right:14px;top:17px;width:34px;height:19px;border-radius:999px;background:#c7d3dd;border:0;margin:0;cursor:pointer;transition:.18s ease}
+#wizardStep3Content fieldset .check input:after{content:"";position:absolute;width:15px;height:15px;left:2px;top:2px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:.18s ease}
+#wizardStep3Content fieldset .check input:checked{background:var(--wizard-blue)}#wizardStep3Content fieldset .check input:checked:after{left:17px}
+#wizardStep3Content fieldset .check:has(input:checked){border-color:#9bcde2;background:#f8fcfe}
+#wizardStep3Content .air-program-panel,#wizardStep3Content .latitudes-number-panel,#wizardStep3Content .coupon-panel,#wizardStep3Content .payment-training-panel,#wizardStep3Content .curriculum-note{margin:0;border-radius:8px}
+
+/* Step 4 review */
+.wizard-review-summary{background:transparent;border:0;padding:0}.wizard-review-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.wizard-review-card{border:1px solid var(--wizard-line);border-radius:8px;padding:15px;background:#fff;min-height:160px}.wizard-review-card-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:12px}.wizard-review-icon{width:30px;height:30px;border-radius:6px;background:#eef7fc;color:var(--wizard-blue);display:grid;place-items:center;font-weight:800}.wizard-review-card-head strong{font-size:11px;color:var(--wizard-navy)}.wizard-review-card-head button{border:0;background:transparent;color:var(--wizard-blue);font:inherit;font-size:9px;font-weight:700;cursor:pointer}.wizard-review-card h4{font-size:13px;line-height:1.35;margin:0 0 6px;color:var(--wizard-navy)}.wizard-review-card p{font-size:9.5px;line-height:1.5;color:var(--wizard-muted);margin:0}
+#wizardStep4Content .wizard-detail-card{grid-template-columns:180px 1fr}.wizard-generate-row{display:flex;justify-content:flex-end;margin-top:4px}.wizard-generate-row .primary{min-width:180px;background:#078b88;border-color:#078b88}.wizard-generate-row .primary:hover{background:#047775}
+.wizard-orphan-actions,.wizard-hidden-source-button{display:none!important}
+
+/* Generated scenario screen */
+.generated-success-banner{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:13px 15px;margin-bottom:14px;border:1px solid #9dddc1;border-left:4px solid #1a9a6d;border-radius:7px;background:#effaf4}.generated-success-copy{display:flex;align-items:center;gap:10px}.generated-success-copy>div{display:flex;flex-direction:column;gap:2px}.generated-success-copy strong{font-size:12px;color:#0d5f42}.generated-success-copy small{font-size:9px;color:#477260}.generated-check{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#1a9a6d;color:#fff;font-weight:900}
+.generated-tabs{display:flex;gap:6px;border-bottom:1px solid #dce4ea;margin-bottom:12px}.generated-tab{border:0;border-bottom:3px solid transparent;background:transparent;padding:10px 14px;font-family:inherit;font-size:10px;font-weight:700;color:#667085;cursor:pointer}.generated-tab.active{color:var(--wizard-navy);border-bottom-color:var(--wizard-blue);background:#f8fbfd}
+#generator.generated-active .output-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 14px;padding:0}.generated-scenario-panel .output-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.generated-scenario-panel .scenario-paper{width:100%;max-width:none;min-height:0;padding:22px;border:1px solid #cfd8df;border-radius:7px}
+
+/* Keep NCL brand treatment prominent */
+#generator .wizard-step-panel .primary,#generator .generated-scenario-panel .primary{background:var(--ncl-blue);border-color:var(--ncl-blue)}
+#generator .wizard-step-panel .primary:hover,#generator .generated-scenario-panel .primary:hover{background:var(--ocean-blue)}
+
+@media(max-width:1200px){
+  .wizard-setup-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wizard-review-cards{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .wizard-progress{grid-template-columns:1fr 1fr;gap:10px}.wizard-connector{display:none}.wizard-step-button{padding:8px;border:1px solid #e0e7ed;border-radius:7px;background:#fff}
+  .wizard-detail-card{grid-template-columns:1fr}.wizard-detail-card-body{grid-template-columns:1fr}.wizard-detail-card-body>.form-grid-contents{grid-template-columns:1fr}.wizard-setup-grid{grid-template-columns:1fr 1fr}
+  #wizardStep3Content fieldset{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .wizard-topline{padding:12px 14px}.wizard-progress{grid-template-columns:1fr;padding:12px 14px}.wizard-step-panel{padding:18px 14px;min-height:auto}.wizard-setup-grid{grid-template-columns:1fr}.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:1fr}.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:145px}.wizard-nav{flex-direction:column;align-items:stretch}.wizard-nav .primary{margin-left:0}.generated-success-banner{align-items:flex-start;flex-direction:column}.generated-scenario-panel .output-toolbar{align-items:flex-start;flex-direction:column}
+}
+#generator.wizard-active>.section-head,#generator.wizard-active>.trainer-instructions{display:none!important}
+#wizardStep3Content fieldset .check .task-card-copy{display:flex;flex-direction:column;gap:4px;min-width:0}
+#wizardStep3Content fieldset .check .task-card-copy strong{font-size:11px;color:var(--wizard-navy);font-weight:800;line-height:1.25}
+#wizardStep3Content fieldset .check .task-card-copy small{font-size:9px;color:var(--wizard-muted);line-height:1.4;font-weight:500}
+#wizardStep3Content fieldset .check:has(#latitudesToggle):before{content:"★"}
+#wizardStep3Content fieldset .check:has(#commentToggle):before{content:"💬"}
+#wizardStep3Content fieldset .check:has(#confirmToggle):before{content:"✉"}
+#wizardStep3Content fieldset .check:has(#fasToggle):before{content:"★"}
+#wizardStep3Content fieldset .check:has(#travelToggle):before{content:"◆"}
+#wizardStep3Content fieldset .check:has(#pscToggle):before{content:"$"}
+#wizardStep3Content fieldset .check:has(#airToggle):before{content:"✈"}
+#wizardStep3Content fieldset .check:has(#couponToggle):before{content:"◇"}
+#scenarioOutput.trainer-guide-only> :not(.trainer-guide){display:none!important}
+#scenarioOutput.trainer-guide-only .trainer-guide{margin-top:0}
+
+
+/* V1.9.39 compact scenario focus cards */
+.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:10px 12px 12px}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:112px;padding:14px 10px 12px;justify-content:flex-start;gap:7px}
+.wizard-generator-mode #generator .focus-choice svg{width:28px;height:28px}
+.wizard-generator-mode #generator .focus-choice strong{font-size:11.5px;line-height:1.25;max-width:160px}
+.wizard-generator-mode #generator .focus-card-toggle{margin-top:auto;border:1px solid #c8d5df;background:#fff;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;color:#27506a;cursor:pointer;transition:all .16s ease}
+.wizard-generator-mode #generator .focus-card-toggle:hover{border-color:#8fbad4;background:#f5fbff}
+.wizard-generator-mode #generator .focus-card-description{display:none;font-size:9px;line-height:1.4;color:#5f6c7a;max-width:180px;margin-top:2px}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-description{display:block}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-body{min-height:150px;box-shadow:0 8px 20px rgba(9,91,136,.08)}
+.wizard-generator-mode #generator .focus-choice.expanded .focus-card-toggle{background:#eef7fb;border-color:#8fbad4;color:#0f4f73}
+@media(max-width:1280px){.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* V1.9.40 tabbed Scenario Focus + detailed focus configuration */
+.wizard-generator-mode #generator .focus-category-tabs{display:flex;align-items:stretch;gap:0;border:1px solid var(--wizard-line);border-radius:8px 8px 0 0;overflow:hidden;background:#f7f9fb;margin:0 0 12px}
+.wizard-generator-mode #generator .focus-category-tab{position:relative;display:flex;align-items:center;justify-content:center;gap:7px;flex:1;min-height:46px;padding:9px 10px;border:0;border-right:1px solid var(--wizard-line);background:#f7f9fb;color:#40536a;font-family:inherit;font-size:10px;font-weight:750;cursor:pointer;transition:.16s ease}
+.wizard-generator-mode #generator .focus-category-tab:last-child{border-right:0}
+.wizard-generator-mode #generator .focus-category-tab:hover{background:#eef7fb;color:var(--wizard-ocean)}
+.wizard-generator-mode #generator .focus-category-tab.active{background:var(--ncl-blue);color:#fff}
+.wizard-generator-mode #generator .focus-category-tab b{display:grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#dff3fb;color:#006b98;font-size:8px}
+.wizard-generator-mode #generator .focus-category-tab.active b{background:#fff;color:var(--ncl-blue)}
+.wizard-generator-mode #generator .focus-category-icon{font-size:14px;line-height:1}
+.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:0}
+.wizard-generator-mode #generator .focus-choice.focus-category-hidden{display:none!important}
+.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:105px;padding:14px 10px 12px;justify-content:center;gap:8px;border-radius:7px}
+.wizard-generator-mode #generator .focus-choice strong{font-size:11px;line-height:1.25;max-width:165px}
+.wizard-generator-mode #generator .focus-choice input:checked + .focus-card-body:after{top:8px;right:8px}
+.wizard-generator-mode #generator .focus-card-toggle,.wizard-generator-mode #generator .focus-card-description{display:none!important}
+.wizard-generator-mode #generator .focus-picker-actions{padding:10px 0 0}
+
+.reservation-count-control{min-width:150px;margin:0!important;font-size:9px!important;font-weight:700!important;color:#344054!important}
+.reservation-count-control select{margin-top:5px;min-height:38px!important;background:#fff}
+.additional-reservations-container{display:grid;gap:12px;margin-top:12px}
+.additional-reservation-card{border:1px solid #ccd9e2;border-radius:8px;background:#fff;overflow:hidden}
+.additional-reservation-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 14px;background:#f6fafc;border-bottom:1px solid #d9e3e9}
+.additional-reservation-head>div{display:flex;flex-direction:column;gap:2px}.additional-reservation-head strong{font-size:12px;color:var(--wizard-navy)}.additional-reservation-head span:not(.status-badge){font-size:9px;color:var(--wizard-muted)}
+.additional-reservation-card .multiple-reservation-form-grid{padding:14px}
+
+.focus-configuration-hub{display:grid;gap:14px}
+.focus-config-panel{border:1px solid var(--wizard-line);border-radius:9px;background:#fff;overflow:hidden}
+.focus-config-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 15px;background:#f7fafc;border-bottom:1px solid #dce5ea}
+.focus-config-head>div{display:flex;flex-direction:column;gap:3px}.focus-config-head strong{font-size:12px;color:var(--wizard-navy)}.focus-config-head span:not(.status-badge){font-size:9px;line-height:1.4;color:var(--wizard-muted)}
+.focus-config-rows{display:grid;gap:10px;padding:13px 15px}
+.focus-config-row{display:grid;grid-template-columns:1fr 1.2fr 1.6fr auto;gap:10px;align-items:end;padding:11px;border:1px solid #e1e7ec;border-radius:7px;background:#fff}
+.focus-config-row label{margin:0}.focus-config-row select,.focus-config-row input{min-height:40px;font-size:10px}.focus-config-detail{min-width:0}.focus-config-remove{margin-bottom:1px}
+
+.price-program-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:13px 15px 8px}
+.program-choice{position:relative;display:flex!important;flex-direction:row!important;align-items:flex-start!important;gap:9px;padding:11px;border:1px solid #d9e2e8;border-radius:7px;background:#fff;cursor:pointer;margin:0!important}
+.program-choice:hover{border-color:#98c7db;background:#fbfdfe}.program-choice:has(input:checked){border-color:var(--wizard-blue);background:#f1faff;box-shadow:0 0 0 2px rgba(8,127,189,.06)}
+.program-choice input{width:16px;height:16px;margin:2px 0 0;flex:0 0 auto}.program-choice span{display:flex;flex-direction:column;gap:2px}.program-choice strong{font-size:10px;color:var(--wizard-navy)}.program-choice small{font-size:8.5px;line-height:1.35;color:var(--wizard-muted)}
+.master-program{grid-column:span 2;background:#eef8fc;border-color:#a9d2e2}.ta-program{background:#fbfaf5}
+.price-program-other{display:block;margin:4px 15px 15px!important}.price-program-other input{margin-top:6px}
+
+.air-guest-rows{display:grid;gap:10px;padding:13px 15px}
+.air-guest-row{display:grid;grid-template-columns:155px 1.25fr .8fr 1fr 1.25fr;gap:10px;align-items:end;padding:11px;border:1px solid #dfe7ec;border-radius:8px;background:#fff}
+.air-guest-name{align-self:center;display:flex;flex-direction:column;gap:3px}.air-guest-name span{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--wizard-muted)}.air-guest-name strong{font-size:11px;color:var(--wizard-navy);line-height:1.3}
+.air-guest-row label{margin:0}.air-guest-row select,.air-guest-row input{min-height:40px;font-size:9.5px}
+#airProgramPanel.focus-config-legacy-hidden{display:none!important}
+
+.detailed-focus-config-section{background:#fbfdfe;border-left:4px solid var(--wizard-blue);padding:17px 18px}
+.focus-config-output-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.focus-config-output{border:1px solid #dbe5eb;border-radius:8px;background:#fff;padding:12px}.focus-config-output h4{margin:0 0 8px!important;font-size:12px!important;color:var(--wizard-navy)}.focus-config-output ul{margin:0;padding-left:18px}.focus-config-output li{font-size:11px;line-height:1.45;margin:4px 0}
+
+@media(max-width:1200px){
+  .wizard-generator-mode #generator .focus-category-tabs{flex-wrap:wrap}.wizard-generator-mode #generator .focus-category-tab{flex:1 1 30%;border-bottom:1px solid var(--wizard-line)}
+  .wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .focus-config-row{grid-template-columns:1fr 1fr}.focus-config-remove{justify-self:start}.price-program-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.air-guest-row{grid-template-columns:1fr 1fr}.air-guest-name{grid-column:1/-1}
+}
+@media(max-width:700px){
+  .wizard-generator-mode #generator .focus-category-tab{flex:1 1 50%}.wizard-generator-mode #generator .focus-picker-options{grid-template-columns:repeat(2,minmax(0,1fr))}.wizard-generator-mode #generator .focus-choice .focus-card-body{min-height:96px}
+  .focus-config-head,.additional-reservation-head{align-items:flex-start;flex-direction:column}.focus-config-row,.price-program-grid,.air-guest-row,.focus-config-output-grid{grid-template-columns:1fr}.master-program{grid-column:auto}.reservation-count-control{width:100%}
+}
