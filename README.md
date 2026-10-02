@@ -1200,3 +1200,38 @@ The presentation walks trainees through the full customer interaction in stages 
 - Confirmed the generated scenario retains the dedicated **Guest Status / Latitudes** section.
 - Past Guests display their entered Latitudes number in the generated scenario; New Guests are clearly labeled as new profiles.
 - The call-simulation presentation also carries each guest's Past/New Guest status and Latitudes number into the Reservation Details portion.
+
+
+## V1.9.44 – Visual Reservation Details
+
+Step 2 of the guided Scenario Generator was redesigned to use a more visual layout inspired by the approved mockup.
+
+### What changed
+- Rebuilt **Reservation Details** into a visual card-based layout with a sailing summary sidebar.
+- Replaced several dropdown-heavy controls with **clickable option buttons** for caller type, number of guests, stateroom category, location preference, and side preference.
+- Moved **Guest Status** and **Latitudes Number** into the **Guests & Stateroom** experience for each guest.
+- Removed the Guest Status / Latitudes task from Step 3 so trainers set those details directly in Step 2.
+- Expanded the multiple-reservation experience so trainers can set the **total number of reservations** and configure additional staterooms directly from Step 2.
+- Confirmed that the navigation no longer includes a Scenario Validator page in this build.
+
+
+## V1.9.45 – Visual Additional Options
+
+Step 3 now uses the same visual card-based design language as Step 2.
+
+### Additional Options redesign
+- Rebuilt Step 3 into visual sections for **Price Programs**, **Air & Transfers**, **Special Requests & Accessibility**, **Coupons / FCC**, **Other Call Requirements**, and **Assign to Guests / Reservations**.
+- Added a sailing-summary sidebar so Steps 2 and 3 feel like one consistent guided workflow.
+- Price Programs use large selectable tiles rather than a dense checkbox list. ALL4CHO remains available alongside individual Free at Sea components, PPSRVCHG, Kosher Meals, FlexNet, and AMEXCPP.
+- Air and transfers remain configurable **per guest**, including separate Air Type, transfer selection, itinerary type, and gateway.
+- Special Requests and ADA/Accessibility needs are visually assigned to the applicable guest.
+- The bottom assignment summary groups guest-specific options by reservation for multiple-reservation scenarios.
+
+### Coupon / credit update
+The available credit/coupon types are now exactly:
+- **Future Cruise Credit (FCC)**
+- **CruiseNext Credit**
+- **CruiseFirst Credit**
+- **Discount Coupon**
+
+Trainers can add multiple credits/coupons and independently assign each one to the guest using it, allowing any mix-and-match combination across guests. Past Guest Latitudes numbers from Step 2 automatically carry into the coupon setup when applicable.
