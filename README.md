@@ -1048,3 +1048,91 @@ The Scenario Focus area in the guided wizard was tightened up so trainers can se
 - Expanded the desktop grid so the Scenario Focus cards can display in more columns when space allows.
 
 This keeps the cleaner Option A flow while reducing visual overload in Step 1.
+
+## V1.9.40 – Tabbed Scenario Focus + Detailed Focus Setup
+
+The Scenario Focus step now follows the approved **Option 1 – Tabbed Categories** layout while preserving the full-screen guided wizard and current NCL brand styling.
+
+### Scenario Focus tabs
+Scenario Focus is organized into trainer-friendly categories:
+- Most Common
+- New Reservation
+- Servicing / Changes
+- Special Requests
+- Air & Transfers
+- Advanced
+
+The long descriptions are no longer shown on every card. The cards stay compact so trainers can see more choices at once, while the selected focuses remain available across tabs.
+
+### Special Requests by guest
+When a Special Requests focus is selected, Step 3 now lets the trainer:
+- choose the guest
+- choose the exact request type
+- add optional details
+- add multiple requests for different guests
+
+### ADA / accessibility needs by guest
+ADA focuses now require the trainer to identify:
+- which guest has the accessibility need
+- the type of need or accommodation
+- optional details
+
+Examples include wheelchair/limited mobility, accessible stateroom, mobility scooter, embarkation/debarkation assistance, hearing/visual impairment, service animal, medical equipment, and other accessibility needs.
+
+### Multiple Reservations
+Multiple Reservations now includes a **Total Reservations** selector supporting **2–8 reservations**.
+
+Each reservation can have its own:
+- guest count and guest names
+- stateroom category
+- location preference
+- side preference
+- advertised pricing
+
+The generated scenario, recap, validation, and required actions now reflect the full number of reservations instead of assuming only two.
+
+### FCC / coupons / discounts
+Credits & Coupons now uses a controlled **Source Guest** selector and supports:
+- CruiseNext Credit
+- Future Cruise Credit (FCC)
+- CruiseFirst Credit
+- 10% Discount Coupon
+- Percentage Discount Coupon
+- Latitudes / Guest Coupon
+- Promotional / Partner Coupon
+- Other Credit / Coupon
+
+Each item continues to capture the source guest, source Latitudes number, and optional value/details.
+
+### Price Programs & promotions
+Price Programs now provides exact selections for:
+- ALL4CHO
+- Unlimited Open Bar
+- Specialty Dining
+- Internet
+- Shore Excursions
+- Prepaid Service Charges
+- Kosher Meals
+- FlexNet
+- AMEXCPP
+- Other Price Program / Travel Agent Promotion
+
+Selecting **ALL4CHO** selects all four included Free at Sea components. Trainers can uncheck an individual component to build a partial selection instead.
+
+### Air & Transfers by guest
+Air and transfer setup is now configured independently for every guest.
+
+Each guest can have a different selection for:
+- No NCL Air
+- Bundled Air / AIRPROM3
+- Air Choice
+- Air Choice Plus
+- Independent Air – No Flights / Transfer Setup
+- Round Trip or One Way
+- Gateway / airport
+- No transfer, embarkation only, debarkation only, or round-trip transfers
+
+One guest can select air while another guest declines it, or guests can use different air products in the same training scenario.
+
+### Generated scenario + validation
+The generated trainee/trainer scenario now includes a dedicated **Scenario-Specific Setup** section showing the trainer-selected special requests, ADA needs, price programs, and per-guest air/transfer setup. Validation also checks that the required focus-specific details were completed.
