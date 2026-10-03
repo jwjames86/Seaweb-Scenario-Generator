@@ -320,7 +320,7 @@ const namePairs = [
 function go(page){
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.querySelectorAll(".nav").forEach(n=>n.classList.remove("active"));
-  $(page).classList.add("active");
+  $(page)?.classList.add("active");
   document.querySelector(`.nav[data-page="${page}"]`)?.classList.add("active");
   if(page==="library") renderLibrary();
   if(page==="simulations") renderSimulationLibrary();
@@ -329,9 +329,21 @@ function go(page){
     if(state.currentScenario) showGeneratedScenarioScreen();
     else showWizardScenarioSetup(generatorWizardState.currentStep||1);
   }
+  // Always open a newly selected area at the top of the page.
+  requestAnimationFrame(()=>{
+    window.scrollTo({top:0,left:0,behavior:"auto"});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+    document.querySelector('.brand-content')?.scrollTo?.({top:0,left:0,behavior:"auto"});
+  });
 }
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>go(n.dataset.page));
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+document.querySelectorAll('[data-go-card]').forEach(card=>card.addEventListener('click',e=>{
+  if(e.target.closest('button'))return;
+  go(card.dataset.goCard);
+}));
+
 
 function setMode(mode){
   state.mode=mode;
@@ -5481,7 +5493,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.50",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.51",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
