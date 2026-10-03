@@ -1316,3 +1316,22 @@ The SEAweb Call Simulation now uses the approved **Option 3 – Guided Journey**
 - Added stage-aware navigation so the left journey rail highlights the trainee's current portion of the call and can jump to each stage.
 - Updated responsive and print styling for the new guided layout.
 - Fixed duplicated cruise-duration wording such as **“7-Day 7-Day Caribbean...”** by detecting when the sailing title already includes the duration before adding a duration prefix.
+
+## V1.9.50 – Redesigned Home + Saved Call Simulations
+
+The home page and primary navigation were redesigned to match the approved NCL-inspired dashboard concept.
+
+### Home and navigation
+- New fixed navy left navigation with Dashboard, Real Sailing Search, Scenario Generator, Saved Scenario Library and Call Simulations.
+- New branded hero treatment and simplified primary actions for finding a sailing or generating a scenario.
+- New dashboard summary cards for Saved Scenarios, Ready for Trainee, Call Simulations and Favorites.
+- New four-step “Get Started” workflow, data-source panel, recent activity section and saved-call-simulation preview.
+- Uses the current NCL palette direction with sand, aqua, medium blue, ocean blue, turquoise and yellow/gold accents.
+
+### Call Simulations library
+- Added a dedicated **Call Simulations** page to the main navigation.
+- Added **Save Call Simulation** beside Launch Trainee Presentation after a scenario is generated.
+- Saved simulations store a browser-local snapshot of the scenario used to create the presentation.
+- Saved simulations can be searched and filtered by department.
+- Saved simulations can be relaunched later, favorited, deleted or reopened in the Scenario Generator.
+- Dashboard Call Simulations count now reflects saved call simulations instead of mirroring saved scenarios.
