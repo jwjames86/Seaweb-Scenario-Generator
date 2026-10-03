@@ -1351,3 +1351,33 @@ This release applies the approved homepage concept across the site and replaces 
 - Updated panels, buttons, forms, search results, libraries, and generator surfaces to share the same visual system.
 - **Navigation now always resets the newly selected page to the top**, fixing pages opening halfway down after switching tabs.
 - Added a clean hero image crop and branded resource imagery without reusing the guideline swipe photography.
+
+
+## V1.9.52 – Matched Tool Pages
+
+This release carries the Home page visual system across the four primary work areas.
+
+### Real Sailing Search
+- Added an image-led branded hero with quick links.
+- Reworked the search workspace into a cleaner white card on the Sand background.
+- Added Popular Destination shortcuts that prefill the Destination search.
+- Updated result cards and the itinerary/date chooser to match the Home page visual system.
+
+### Scenario Generator
+- Added a branded hero and Quick Start panel.
+- Restyled the guided wizard, progress steps, cards and selected controls to match the Home page.
+- Kept all existing scenario-generation, Guest Services, Outbound, GDPR, coupon, air, payment and Call Simulation functionality.
+
+### Call Simulations
+- Added a branded practice hero and department quick filters.
+- Converted saved simulations to a more visual card library.
+- Preserved launch, edit, favorite and delete actions.
+
+### Saved Scenarios
+- Added a branded library hero with Favorites, Export, Import and All Scenarios actions.
+- Updated filters and saved-scenario rows to match the Home page.
+- Added a Favorites-only view without changing the stored scenario data.
+
+### Navigation
+- Existing top navigation remains consistent across all pages.
+- Every tab continues to open at the top of the page when selected.
