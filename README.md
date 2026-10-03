@@ -1335,3 +1335,19 @@ The home page and primary navigation were redesigned to match the approved NCL-i
 - Saved simulations can be searched and filtered by department.
 - Saved simulations can be relaunched later, favorited, deleted or reopened in the Scenario Generator.
 - Dashboard Call Simulations count now reflects saved call simulations instead of mirroring saved scenarios.
+
+
+## V1.9.51 – Hero-Focus NCL Site Redesign
+
+This release applies the approved homepage concept across the site and replaces the persistent left sidebar with the selected **Hero Image Focus** horizontal navigation.
+
+### What changed
+- Rebuilt the global navigation as a **horizontal top navigation** with Home, Real Sailing Search, Scenario Generator, Call Simulations, and Saved Scenarios.
+- Uses the supplied **NCL shield + It’s Different Out Here™ lockup** in the navigation header.
+- Rebuilt the Dashboard to match the approved preview: immersive hero, learning journey, recent activity, training resources, call simulations, quick stats, and saved simulations.
+- Applied the NCL 2026 palette more consistently: Sand background with Aqua, Teal, Yellow, Ocean Blue, NCL Blue, and Turquoise accents.
+- Added restrained wave treatment and more negative space to keep the interface airy and uncluttered.
+- Continued using Poppins as the web-safe NCL typography substitute.
+- Updated panels, buttons, forms, search results, libraries, and generator surfaces to share the same visual system.
+- **Navigation now always resets the newly selected page to the top**, fixing pages opening halfway down after switching tabs.
+- Added a clean hero image crop and branded resource imagery without reusing the guideline swipe photography.
