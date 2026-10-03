@@ -7,18 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.48" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.50" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand-lockup">
-      <img src="/ncl-brand-lockup.png" alt="Norwegian Cruise Line — It’s Different Out Here" />
-    </div>
+  <header class="topbar dashboard-topbar">
     <div class="topbar-copy">
-      <div class="eyebrow">TRAINING &amp; DEVELOPMENT • SEAweb</div>
+      <div class="eyebrow">TRAINING &amp; DEVELOPMENT</div>
       <h1>Seaweb Scenario Generator</h1>
       <p>Build, present and reuse realistic training scenarios.</p>
-      <div class="brand-accent-bars" aria-hidden="true"><span></span><span></span><span></span></div>
     </div>
     <div class="mode-switch" role="group" aria-label="View mode">
       <button id="trainerModeBtn" class="active">Trainer View</button>
@@ -26,64 +22,84 @@
     </div>
   </header>
 
-  <div class="shell">
-    <aside class="sidebar">
-      <button class="nav active" data-page="dashboard">Dashboard</button>
-      <button class="nav" data-page="search">Real Sailing Search</button>
-      <button class="nav" data-page="generator">Scenario Generator</button>
-            <button class="nav" data-page="library">Saved Scenario Library</button>
-      <div class="sidebar-note">
-        <strong>Local Scenario Storage</strong>
-        <span>Saved scenarios stay in this browser unless exported. Regenerate older scenarios to use the V1.6 trainee layout.</span>
+  <div class="shell redesigned-shell">
+    <aside class="sidebar redesigned-sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-shield">NCL</div>
+        <div class="sidebar-tagline">It’s Different<br>Out Here™</div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Primary navigation">
+        <button class="nav active" data-page="dashboard"><span class="nav-icon">⌂</span><span>Dashboard</span></button>
+        <button class="nav" data-page="search"><span class="nav-icon">⌕</span><span>Real Sailing<br>Search</span></button>
+        <button class="nav" data-page="generator"><span class="nav-icon">▤</span><span>Scenario<br>Generator</span></button>
+        <button class="nav" data-page="library"><span class="nav-icon">▱</span><span>Saved Scenario<br>Library</span></button>
+        <button class="nav" data-page="simulations"><span class="nav-icon">◉</span><span>Call Simulations</span></button>
+      </nav>
+      <div class="sidebar-footer-art">
+        <div class="mini-ship">⌁</div>
+        <span>Explore<br>More Possibilities</span>
       </div>
     </aside>
 
     <main class="content">
-      <section id="dashboard" class="page active">
-        <div class="hero">
-          <div>
-            <span class="pill">V1.9.48 • Follow-Up Call Reason Fix</span>
-            <h2>Build realistic Seaweb practice scenarios faster.</h2>
-            <p>Search real NCL public sailings, build guided call simulations, and save reusable training scenarios.</p>
-            <div class="actions">
-              <button class="primary" data-go="search">Find Real Sailing</button>
-              <button class="secondary" data-go="generator">Generate Scenario</button>
+      <section id="dashboard" class="page active dashboard-redesign">
+        <div class="home-hero">
+          <div class="home-hero-overlay">
+            <div class="home-welcome"><span></span> WELCOME TO</div>
+            <h2>SEAweb Scenario<br>Generator</h2>
+            <p>Search real NCL public sailings, build guided call simulations,<br>and create reusable training scenarios.</p>
+            <div class="home-hero-actions">
+              <button class="primary hero-action" data-go="search"><span>⌕</span> Find Real Sailing <b>›</b></button>
+              <button class="secondary hero-action" data-go="generator"><span>▤</span> Generate Scenario <b>›</b></button>
             </div>
           </div>
-          <div class="hero-card">
-            <div class="source-row"><span class="dot live"></span><strong>Verified from NCL.com</strong></div>
-            <p>Ship, itinerary, ports, departure port, sailing month/date when exposed, public fare, taxes/fees, public offers.</p>
-            <div class="source-row"><span class="dot trainer"></span><strong>Trainer / Seaweb Data</strong></div>
-            <p>Agency, training guests, internal promo codes, exact deposit/final-payment details, Commenting Tool tasks and answer-key notes.</p>
+          <div class="hero-slogan">REAL SAILINGS.<br>REAL SITUATIONS.<br>GREATER PEOPLE.<span></span></div>
+        </div>
+
+        <div class="home-stat-grid">
+          <button class="home-stat" data-go="library"><span class="stat-icon aqua">▤</span><strong id="savedCount">0</strong><small>Saved Scenarios</small><b>›</b></button>
+          <button class="home-stat" data-go="library"><span class="stat-icon gold">♟</span><strong id="readyCount">0</strong><small>Ready for Trainee</small><b>›</b></button>
+          <button class="home-stat" data-go="simulations"><span class="stat-icon blue">◉</span><strong id="reviewCount">0</strong><small>Call Simulations</small><b>›</b></button>
+          <button class="home-stat" data-go="library"><span class="stat-icon sand">♡</span><strong id="favoriteCount">0</strong><small>Favorites</small><b>›</b></button>
+        </div>
+
+        <div class="home-content-grid">
+          <section class="home-card get-started-card">
+            <div class="home-card-eyebrow gold-line">GET STARTED</div>
+            <h3>Create Realistic Training Scenarios in Four Steps</h3>
+            <p>Turn real sailings into engaging call simulation exercises for effective training.</p>
+            <div class="home-flow">
+              <div><span>1</span><b>▤</b><strong>Choose Exercise Type</strong><small>Decide whether trainees are creating a new reservation or modifying an existing one.</small></div>
+              <i>→</i>
+              <div><span>2</span><b>⌕</b><strong>Find a Real Sailing</strong><small>Use Real Sailing Search for new-booking exercises or an existing reservation for modifications.</small></div>
+              <i>→</i>
+              <div><span>3</span><b>☷</b><strong>Build the Scenario</strong><small>Select department, workflow, scenario focus, guests, booking action and required details.</small></div>
+              <i>→</i>
+              <div><span>4</span><b>✓</b><strong>Generate and Review</strong><small>Create the scenario, switch views, and adjust it until it matches the skill you want to practice.</small></div>
+            </div>
+            <div class="home-tip"><strong>PRO TIP</strong><span>Use <em>Start New Scenario</em> whenever you want to clear the current exercise and begin again without carrying over guest names, reservation numbers, notes, payment details, or the previously generated card.</span></div>
+          </section>
+
+          <div class="home-side-stack">
+            <section class="home-card data-sources-card">
+              <div class="home-card-eyebrow gold-line">DATA SOURCES</div>
+              <div class="source-item"><span class="source-symbol gold">✦</span><div><strong>Verified from NCL.com</strong><p>Ship, itinerary, ports, departure port, sailing month/date when exposed, public fare, taxes/fees, and public offers.</p></div></div>
+              <div class="source-item"><span class="source-symbol aqua">♟</span><div><strong>Trainer / Seaweb Data</strong><p>Agency, training guests, internal promo codes, exact deposit/final-payment details, Commenting Tool tasks and answer-key notes.</p></div></div>
+            </section>
+            <section class="home-inspire"><div><span>INSPIRE. TRAIN. DELIVER.</span><strong>Same Incredible Journeys.<br>Stronger Teams.</strong></div></section>
           </div>
         </div>
 
-        <details class="trainer-instructions dashboard-instructions trainer-only" open>
-          <summary>
-            <span>Trainer Instructions — How to Use the Seaweb Scenario Generator</span>
-            <small>Recommended workflow from sailing search through sharing and saving</small>
-          </summary>
-          <div class="instructions-body">
-            <div class="instruction-step-grid">
-              <div class="instruction-step"><span>1</span><div><strong>Choose the type of exercise</strong><p>Decide whether trainees are creating a new reservation or modifying a reservation they created previously.</p></div></div>
-              <div class="instruction-step"><span>2</span><div><strong>Find a real sailing when needed</strong><p>Use Real Sailing Search for new-booking exercises. Modification exercises usually use an existing training reservation instead.</p></div></div>
-              <div class="instruction-step"><span>3</span><div><strong>Build the scenario</strong><p>Select the department, workflow, scenario focus, guests, booking action, and any required servicing details. Guest Services modifications automatically include the GDPR workflow.</p></div></div>
-              <div class="instruction-step"><span>4</span><div><strong>Generate and review</strong><p>Generate the scenario, switch between Trainer and Trainee views, and make adjustments until the exercise matches the skill you want to practice.</p></div></div>
-              <div class="instruction-step"><span>5</span><div><strong>Share, print, or save</strong><p>Use Share Scenario to download an interactive Trainee or Trainer scenario, or use the other export options for PDF, PNG, copy, and print. Save reusable scenarios to the local library and export JSON backups when needed.</p></div></div>
-            </div>
-            <div class="instruction-tip"><strong>Tip:</strong> Use <em>Start New Scenario</em> whenever you want to clear the current exercise and begin again without carrying over guest names, reservation numbers, notes, payment details, or the previously generated card.</div>
-          </div>
-        </details>
-
-        <div class="stat-grid">
-          <div class="stat"><span>Saved Scenarios</span><strong id="savedCount">0</strong></div>
-          <div class="stat"><span>Ready for Trainee</span><strong id="readyCount">0</strong></div>
-          <div class="stat"><span>Call Simulations</span><strong id="reviewCount">0</strong></div>
-          <div class="stat"><span>Favorites</span><strong id="favoriteCount">0</strong></div>
+        <div class="home-lower-grid">
+          <section class="home-card saved-sims-preview">
+            <div class="home-list-head"><div><span class="head-icon">◉</span><strong>SAVED CALL SIMULATIONS</strong></div><button type="button" data-go="simulations">View All ›</button></div>
+            <div id="dashboardSimulationList" class="dashboard-sim-list"><div class="empty-dashboard-row">No saved call simulations yet. Save one from a generated scenario to see it here.</div></div>
+          </section>
+          <section class="home-card recent-activity-card">
+            <div class="home-list-head"><div><span class="head-icon">◷</span><strong>RECENT ACTIVITY</strong></div></div>
+            <div id="dashboardRecentActivity" class="dashboard-activity-list"><div class="empty-dashboard-row">Your recent saved scenarios and simulations will appear here.</div></div>
+          </section>
         </div>
-
-        <div class="section-head"><div><h3>Department Quick Starts</h3><p>Jump directly into a Guest Services or Outbound Sales training focus.</p></div></div>
-        <div id="starterTemplates" class="card-grid"></div>
       </section>
 
       <section id="search" class="page">
@@ -720,6 +736,7 @@
               <div class="generated-success-copy"><span class="generated-check">✓</span><div><strong>Scenario Generated Successfully!</strong><small>Your training scenario is ready. Launch the trainee call simulation, or review the standard scenario below.</small></div></div>
               <div class="generated-success-actions">
                 <button id="launchTraineePresentationBtn" type="button" class="primary presentation-launch-btn">▶ Launch Trainee Presentation</button>
+                <button id="saveCallSimulationBtn" type="button" class="secondary tiny">Save Call Simulation</button>
                 <button id="editScenarioSetupBtn" type="button" class="secondary tiny">Edit Setup</button>
               </div>
             </div>
@@ -802,6 +819,21 @@
             </article>
           </div>
         </div>
+      </section>
+
+      <section id="simulations" class="page call-sim-library-page">
+        <div class="section-head">
+          <div><div class="eyebrow">TRAINING PRACTICE LIBRARY</div><h2>Call Simulations</h2><p>Save, relaunch and reuse guided call simulations created from your generated scenarios.</p></div>
+          <button id="newSimulationScenarioBtn" class="primary" type="button" data-go="generator">Create New Scenario</button>
+        </div>
+        <div class="panel simulation-library-toolbar">
+          <div class="library-filter-grid">
+            <select id="simulationDepartmentFilter"><option value="">All Departments</option><option>Guest Services</option><option>Outbound Sales</option></select>
+            <input id="simulationSearch" placeholder="Search simulation, ship, skill, guest, or department..." />
+          </div>
+          <div class="notice info">Saved call simulations stay in this browser. They keep a snapshot of the scenario used to generate the presentation so you can relaunch it later.</div>
+        </div>
+        <div id="simulationLibraryList" class="simulation-library-list"></div>
       </section>
 
       <section id="library" class="page">
@@ -901,6 +933,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.48"></script>
+  <script src="/app.js?v=1.9.50"></script>
 </body>
 </html>

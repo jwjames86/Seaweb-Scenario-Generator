@@ -323,7 +323,8 @@ function go(page){
   $(page).classList.add("active");
   document.querySelector(`.nav[data-page="${page}"]`)?.classList.add("active");
   if(page==="library") renderLibrary();
-  if(page==="dashboard") updateStats();
+  if(page==="simulations") renderSimulationLibrary();
+  if(page==="dashboard"){ updateStats(); renderDashboardHome(); }
   if(page==="generator" && generatorWizardState?.ready){
     if(state.currentScenario) showGeneratedScenarioScreen();
     else showWizardScenarioSetup(generatorWizardState.currentStep||1);
@@ -4062,6 +4063,22 @@ function updateFollowUpRoleplayButton(){
 }
 
 
+function sailingTitleWithDuration(s){
+  if(!s)return "cruise";
+  const raw=String(s.title||"cruise").trim();
+  const duration=String(s.duration||"").trim();
+  if(!duration)return raw;
+  const durationPattern=new RegExp(`^\\s*${duration}\\s*[-–— ]?\\s*day\\b`,"i");
+  if(durationPattern.test(raw))return raw;
+  return `${duration}-Day ${raw}`;
+}
+
+function sailingSentenceText(s){
+  if(!s)return "a trainer-selected Norwegian Cruise Line sailing";
+  const title=sailingTitleWithDuration(s);
+  return `${title} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`;
+}
+
 function generateScenario(){
   const focusRecords=selectedFocusRecords();
   if(!focusRecords.length){
@@ -4075,7 +4092,7 @@ function generateScenario(){
   const guestNames=scenarioGuestNames(d).filter(Boolean);
   const primary=guestNames[0]||"the guest";
   const s=d.sailing;
-  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const sailText=sailingSentenceText(s);
   const addOns=[];if(d.fas)addOns.push("Free at Sea");if(d.travel)addOns.push("Travel Protection");if(d.psc)addOns.push("Prepaid Service Charges");
   const pricing=d.pricing?`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>${escapeHtml(d.pricing)}. Reconfirm current Seaweb pricing before class.</span></div>`:`<div class="instruction-strip"><strong>💬 Quote Advertised Pricing</strong><span>Review the current Seaweb pricing and practice quoting what Seaweb displays. Do not use a fabricated amount.</span></div>`;
   const paymentInstruction={
@@ -4507,7 +4524,7 @@ function makeOnePageTraineeClone(){
   const primary=guestNames[0]||"the guest";
   const companion=guestNames[1]||"";
   const s=d.sailing;
-  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const sailText=sailingSentenceText(s);
   const tasks=traineeTaskList(d,meta);
   const finalChecks=beforeEndItems(d);
   const page=document.createElement("article");
@@ -5109,7 +5126,7 @@ function presentationFilename(mode="trainee"){
 function presentationSailText(d){
   const s=d.sailing;
   if(!s)return "Trainer-selected Norwegian Cruise Line sailing";
-  return [s.ship||"Norwegian Cruise Line",s.title||"Cruise",s.sailingDate?formatSailingDate(s.sailingDate):((s.sailingMonths||[]).join(", ")||"Date to verify"),s.departure?`From ${s.departure}`:""].filter(Boolean).join(" • ");
+  return [s.ship||"Norwegian Cruise Line",sailingTitleWithDuration(s),s.sailingDate?formatSailingDate(s.sailingDate):((s.sailingMonths||[]).join(", ")||"Date to verify"),s.departure?`From ${s.departure}`:""] .filter(Boolean).join(" • ");
 }
 
 function presentationCallerLabel(d){
@@ -5126,7 +5143,7 @@ function presentationStoryHtml(d){
   const meta=records[0]?.meta||{};
   const guests=scenarioGuestNames(d).filter(Boolean);
   const s=d.sailing;
-  const sailText=s?`${s.duration?`${s.duration}-day `:""}${s.title||"cruise"} on ${s.ship||"Norwegian Cruise Line"}${s.departure?`, departing from ${s.departure}`:""}${s.sailingDate?` on ${formatSailingDate(s.sailingDate)}`:(s.sailingMonths?.length?` during ${s.sailingMonths.join(", ")}`:"")}`:"a trainer-selected Norwegian Cruise Line sailing";
+  const sailText=sailingSentenceText(s);
   return customerStoryHtml(d,meta,sailText,guests);
 }
 
@@ -5189,7 +5206,7 @@ function presentationArtCard(kind,d){
   const ship=escapeHtml(d.sailing?.ship||'Norwegian Cruise Line');
   const sail=escapeHtml(d.sailing?.sailingDate?formatSailingDate(d.sailing.sailingDate):'Trainer-selected sailing');
   const departure=escapeHtml(d.sailing?.departure||'Departure to verify');
-  const route=escapeHtml(d.sailing?.title||focusTitle(d)||'Call Simulation');
+  const route=escapeHtml(d.sailing?sailingTitleWithDuration(d.sailing):(focusTitle(d)||'Call Simulation'));
   return `<div class="sim-art-card sim-art-${kind}"><div class="sim-art-scene"><span class="sim-art-sun"></span><span class="sim-art-wave wave-one"></span><span class="sim-art-wave wave-two"></span><span class="sim-art-ship"><i></i><b></b></span></div><div class="sim-art-copy"><span class="sim-art-eyebrow">IT'S DIFFERENT OUT HERE</span><strong>${ship}</strong><small>${route}</small><small>${sail} • ${departure}</small></div></div>`;
 }
 
@@ -5212,10 +5229,19 @@ function presentationVerificationHtml(d){
   if(!(d.department==="Guest Services" && d.reservationWorkflow==="modify"))return "";
   const isTa=['travel_agent','ta_group'].includes(d.gdprCallerType);
   const profile=gdprProfile(d.gdprCallerType|| (isTa?'travel_agent':'direct_guest')) || gdprProfile(isTa?'travel_agent':'direct_guest');
-  const askFirst=(profile?.askFirst||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  const askFirst=(profile?.askFirst||[]).filter(x=>!/reservation number/i.test(x)).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
   const fallback=(profile?.fallback||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
-  const always=(profile?.alwaysMandatory||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
-  return `<div class="sim-two-col"><div><div class="sim-verify-callout"><strong>GDPR is required for Guest Services existing reservations.</strong><span>Do not discuss or service the reservation until the correct verification path is complete.</span></div><div class="sim-verify-grid"><div class="sim-verify-card"><span>Verification Path</span><strong>${escapeHtml(profile?.label||'Direct Guest')}</strong><p>${escapeHtml(profile?.instruction||'Complete the appropriate verification before continuing.')}</p></div><div class="sim-verify-card"><span>Always Mandatory</span><ul>${always}</ul></div><div class="sim-verify-card"><span>Ask First</span><ul>${askFirst}</ul></div><div class="sim-verify-card"><span>Fallback Items</span><ul>${fallback}</ul></div></div></div><div>${presentationArtCard('verify',d)}</div></div>`;
+  const agencyRequired=isTa?`<div class="sim-gdpr-secondary-required"><span>TRAVEL PARTNER IDENTIFIER ALSO REQUIRED</span><strong>ABTA # / Agency ID / Phone #</strong></div>`:'';
+  return `<div class="sim-gdpr-layout">
+    <div class="sim-required-reservation"><span>GDPR • REQUIRED BEFORE SERVICING</span><strong>RESERVATION NUMBER</strong><b>REQUIRED</b><p>Obtain the Reservation Number before discussing or servicing the reservation.</p></div>
+    ${agencyRequired}
+    <div class="sim-verify-grid guided">
+      <div class="sim-verify-card"><span>Verification Path</span><strong>${escapeHtml(profile?.label||'Direct Guest')}</strong><p>${escapeHtml(profile?.instruction||'Complete the appropriate verification before continuing.')}</p></div>
+      <div class="sim-verify-card"><span>Ask After Reservation Number</span><ul>${askFirst||'<li>Follow the selected caller verification path.</li>'}</ul></div>
+      <div class="sim-verify-card"><span>Fallback Items</span><ul>${fallback}</ul></div>
+      <div class="sim-verify-card privacy"><span>Do Not Continue Until Verified</span><strong>Protect Guest Information</strong><p>Do not disclose reservation details or make changes until the correct verification requirement has been completed.</p></div>
+    </div>
+  </div>`;
 }
 
 function presentationRecipeHtml(d){
@@ -5290,6 +5316,24 @@ function presentationReasonHtml(d){
   return `<div class="sim-call-reason"><span>Reason for Call</span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(followUpPrimaryGuestName(d))} wants to ${escapeHtml(request)}.</small></div>`;
 }
 
+function presentationGuidedOpeningHtml(d,caller,focus){
+  const s=d.sailing;
+  const reason=d.followUpRoleplay?followUpReasonLabel(d):(focus||"Reservation Support");
+  const request=d.followUpRoleplay?`${followUpPrimaryGuestName(d)} wants to ${followUpRequestSentence(d)}.`:(d.reservationWorkflow==="modify"?"Service the existing reservation based on the caller's request.":"Create the requested new reservation.");
+  const skills=(d.focuses||[]).slice(0,5).map(x=>`<span>${escapeHtml(x)}</span>`).join('')||'<span>Scenario Skills</span>';
+  const gdpr=d.department==="Guest Services"&&d.reservationWorkflow==="modify";
+  const sailingCard=s?`<div class="sim-guided-card sailing"><span class="sim-guided-label">SAILING DETAILS</span><strong>${escapeHtml(s.ship||'Norwegian Cruise Line')}</strong><p>${escapeHtml(sailingTitleWithDuration(s))}</p><ul><li>${escapeHtml(s.sailingDate?formatSailingDate(s.sailingDate):'Date to verify')}</li><li>${escapeHtml(s.departure||'Departure port to verify')}</li></ul></div>`:`<div class="sim-guided-card sailing"><span class="sim-guided-label">SAILING DETAILS</span><strong>Trainer-selected sailing</strong><p>Verify the sailing in Seaweb.</p></div>`;
+  const gdprCard=gdpr?`<div class="sim-guided-card gdpr"><span class="sim-guided-label">GDPR VERIFICATION REQUIRED</span><strong>Complete GDPR before you service this reservation.</strong><div class="sim-guided-required"><span>Reservation Number</span><b>REQUIRED</b></div><ul><li>Guest Full Name</li><li>Ship &amp; Full Sail Date</li><li>Date of Birth / First Line of Address when needed as fallback verification</li></ul></div>`:`<div class="sim-guided-card discovery"><span class="sim-guided-label">CALL PATH</span><strong>${d.department==="Outbound Sales"?'Outbound Sales':'Guest Services Sales Call'}</strong><p>${d.department==="Outbound Sales"?'Direct Guest sales flow. No GDPR verification is required.':'New reservation: follow the Sales Recipe for Success. GDPR is not required.'}</p></div>`;
+  return `<div class="sim-guided-opening">
+    <div class="sim-guided-card caller"><span class="sim-guided-label">${d.department==="Outbound Sales"?'OUTBOUND CONTACT':'INCOMING CALL'} • ${escapeHtml(caller)}</span>${presentationStoryHtml(d)}</div>
+    <div class="sim-guided-card reason"><span class="sim-guided-label">REASON FOR CALL</span><strong>${escapeHtml(reason)}</strong><p>${escapeHtml(request)}</p></div>
+    ${sailingCard}
+    ${gdprCard}
+    <div class="sim-guided-card role"><span class="sim-guided-label">YOUR ROLE</span><strong>Cruise Specialist</strong><p>Listen for what the caller has already told you before deciding what to ask next.</p></div>
+    <div class="sim-guided-card skills"><span class="sim-guided-label">SKILLS INCLUDED</span><div class="sim-skill-chips">${skills}</div></div>
+  </div>`;
+}
+
 function buildCallSimulationSlides(d,mode="trainee"){
   const guests=presentationGuestRows(d);
   const developments=presentationDevelopments(d);
@@ -5306,19 +5350,20 @@ function buildCallSimulationSlides(d,mode="trainee"){
   const devTrainer=trainer?`<aside class="sim-trainer-note"><strong>Trainer Guide</strong><p>The trainee should connect each new detail to the correct guest and workflow. Coach them to document the correct guest, reservation, and promotion path rather than assuming everything applies to everyone.</p></aside>`:"";
   const outcomeTrainer=trainer?`<aside class="sim-trainer-note"><strong>Trainer Debrief</strong><p>Ask the trainee to explain how they used the department recipe, Seaweb, NCLHelp, verification when applicable, and the recap script to reach the final outcome.</p></aside>`:"";
   const slides=[];
-  slides.push({kicker:"THE CALL BEGINS",title:"Your Caller Is on the Line",subtitle:"Read the story like a real call. The caller will not hand you a checklist.",body:`<div class="sim-hero-layout"><div><div class="sim-story-card"><div class="sim-call-icon">☎</div><div><span class="sim-caller-label">${d.department==="Outbound Sales"?'Outbound Contact':'Incoming Call'} • ${escapeHtml(caller)}</span>${presentationStoryHtml(d)}</div></div>${presentationReasonHtml(d)}<div class="sim-pause"><strong>Your role:</strong> You are the Cruise Specialist. Listen for what the caller has already told you before deciding what to ask next.</div></div><div>${presentationArtCard('story',d)}</div></div>`});
-  slides.push({kicker:d.department==="Outbound Sales"?"OUTBOUND OPENING":"BRANDED INTRODUCTION",title:d.department==="Outbound Sales"?"Start the Outbound Conversation":"Open the Call the NCL Way",subtitle:d.department==="Outbound Sales"?"Confirm this is a Direct Guest sales opportunity before continuing.":"Use the approved Guest Services introduction, then let Step 2 determine the call path.",body:presentationConversationHtml(d)});
-  if(d.department==="Guest Services" && d.reservationWorkflow==="modify")slides.push({kicker:"GDPR VERIFICATION",title:"Verify Before You Service",subtitle:"GDPR applies to Guest Services existing reservations only.",body:presentationVerificationHtml(d)});
-  slides.push({kicker:"RECIPE FOR SUCCESS",title:d.department==="Outbound Sales"?(d.reservationWorkflow==="modify"?"Outbound Sales Follow-Up":"OB Sales Recipe for Success"):(d.reservationWorkflow==="modify"?"Guest Services Service Call Path":"Guest Services Sales Recipe for Success"),subtitle:"Use the recipe as a conversation guide, not a mechanical checklist.",body:presentationRecipeHtml(d)});
-  slides.push({kicker:"READING COMPREHENSION",title:"What Did You Hear?",subtitle:"Before touching Seaweb, make sure you understand the call.",body:`<div class="sim-question-grid"><label><span>1. Who is calling, and who are they booking or servicing for?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>2. What is the main reason for the call?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>3. What important details did the caller already provide?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>4. What do you still need to clarify before moving forward?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label></div>${comprehensionTrainer}`});
-  slides.push({kicker:"RESERVATION DETAILS",title:"Now Open Seaweb",subtitle:"Use these details to locate or build the correct reservation.",body:`<div class="sim-two-col"><div><div class="sim-info-grid"><div class="sim-info-card"><span>Booking Source</span><strong>${escapeHtml(source)}</strong></div><div class="sim-info-card"><span>Sailing</span><strong>${escapeHtml(presentationSailText(d))}</strong></div><div class="sim-info-card"><span>Reservation Workflow</span><strong>${escapeHtml(d.department==="Outbound Sales"&&d.reservationWorkflow==="modify"?"Sales Follow-Up / Existing Quote":d.reservationWorkflow==="modify"?"Service Existing Reservation":"Create New Reservation")}</strong></div>${d.followUpRoleplay?`<div class="sim-info-card"><span>Reason for Call</span><strong>${escapeHtml(followUpReasonLabel(d))}</strong><small>${escapeHtml(followUpRequestSentence(d))}</small></div>`:''}<div class="sim-info-card"><span>Payment / Booking Action</span><strong>${escapeHtml(d.payment||"Verify")}</strong></div>${presentationReservationCards(d)}</div>${d.pricing?`<div class="sim-quote"><span>Advertised Pricing Practice</span><strong>${escapeHtml(d.pricing)}</strong></div>`:""}</div><div>${presentationArtCard('details',d)}</div></div>`});
-  slides.push({kicker:"GUEST PROFILES",title:"Know Who Is Traveling",subtitle:"Use the guest status and Latitudes information already established in Step 2.",body:`<div class="sim-guest-grid">${profileCards}</div><div class="sim-pause"><strong>Before you continue:</strong> Confirm legal names and required guest information. A Past Guest's Latitudes number belongs to that individual guest profile.</div>`});
-  slides.push({kicker:"THE CALL DEVELOPS",title:"The Caller Shares More Information",subtitle:"Real calls evolve. Process each new detail and decide where it belongs.",body:`<div class="sim-two-col"><div><div class="sim-development-list">${devCards}</div><div class="sim-question-single"><label><span>What do these new details change about your workflow?</span><textarea data-save-field placeholder="Think through the next steps before continuing..."></textarea></label></div>${devTrainer}</div><div><div class="sim-conversation side"><div class="sim-bubble caller"><span>${escapeHtml(caller)}</span><p>Here are a few more details you need before we finish this reservation...</p></div><div class="sim-bubble specialist"><span>Cruise Specialist</span><p>Thank you. I will apply each detail to the correct guest and review any pricing or policy impact before we move forward.</p></div></div>${presentationArtCard('develop',d)}</div></div>`});
-  slides.push({kicker:"BUILD THE RESERVATION",title:"Complete the Seaweb Work",subtitle:"Use the caller's story and the reservation details to complete the required work.",body:`<div class="sim-two-col"><div><ul class="sim-task-list">${taskList}</ul><div class="sim-research-callout"><strong>Use NCLHelp when needed.</strong><span>Verify policies, eligibility, deadlines, inventory rules, and workflows instead of guessing.</span></div>${presentationPaymentHtml(d)}</div><div><div class="sim-side-checklist"><span>Keep in mind</span><ul><li>Follow the department recipe, not just Seaweb clicks.</li><li>Apply guest-specific options to the correct guest or reservation.</li><li>Explain any payment, deposit, or deadline before saving.</li><li>${d.department==="Outbound Sales"?'Outbound must collect payment to book; do not use Offer / Hold status.':'Guest Services may book or use Offer status when the scenario calls for it.'}</li></ul></div>${presentationArtCard('build',d)}</div></div>`});
-  slides.push({kicker:"FULL CALL FLOW",title:"Bring the Call to Completion",subtitle:"The Seaweb work is only part of the interaction. Complete the entire call experience.",body:`<div class="sim-flow"><div><b>1</b><span><strong>${d.department==="Outbound Sales"?'Outbound Opening':'Branded Introduction'}</strong><small>${d.department==="Outbound Sales"?'Confirm the guest is not currently working with a travel agent.':'Use the Guest Services branded introduction and identify the reason for the call.'}</small></span></div><div><b>2</b><span><strong>${d.department==="Guest Services"&&d.reservationWorkflow==="modify"?'GDPR Verification':'Qualify / Discover'}</strong><small>${d.department==="Guest Services"&&d.reservationWorkflow==="modify"?'Complete the correct GDPR path before servicing.':'Follow the department Recipe for Success. No GDPR is required for this call type.'}</small></span></div><div><b>3</b><span><strong>Research & Build</strong><small>Use Seaweb and NCLHelp to complete the requested work accurately.</small></span></div><div><b>4</b><span><strong>Review & Gain Agreement</strong><small>Review pricing, options, deadlines, and changes before saving or taking payment.</small></span></div><div><b>5</b><span><strong>Complete the Transaction</strong><small>${d.department==="Outbound Sales"?'Collect payment to book or document the sales follow-up if payment cannot be collected.':'Complete the booking, Offer status, payment, credit, or servicing action that applies.'}</small></span></div><div><b>6</b><span><strong>Recap & Document</strong><small>Use the department recap script when applicable, add required comments, and send confirmation.</small></span></div><div><b>7</b><span><strong>Ensure Satisfaction</strong><small>Ask whether there is anything else you can help with today.</small></span></div><div><b>8</b><span><strong>Branded Closing</strong><small>Use the department-appropriate close.</small></span></div></div>${presentationClosingHtml(d)}`});
-  slides.push({kicker:"RESERVATION RECAP",title:"Recap Before You End the Call",subtitle:d.department==="Guest Services"?"Use the Guest Services recap when a reservation is booked or placed in Offer status.":"Use the Outbound recap after the Direct Guest has booked.",body:presentationRecapHtml(d)});
-  slides.push({kicker:"EXPECTED OUTCOME",title:"What Should Be True When the Call Ends?",subtitle:"Use this as your final quality check before you tell the trainer you are complete.",body:`<ul class="sim-outcome-list">${outcomes}</ul><div class="sim-reservation-entry"><label>Reservation Number${d.multipleReservations?"s":""}<input data-save-field placeholder="Enter your completed training reservation number${d.multipleReservations?"s":""}..." /></label></div>${outcomeTrainer}`});
-  slides.push({kicker:"REFLECTION",title:"Think Like a Cruise Specialist",subtitle:"The goal is not just to finish Seaweb. Explain the decisions you made during the call.",body:`<div class="sim-question-grid"><label><span>What was the most important detail you had to catch from the caller's story?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>What did you verify in NCLHelp or Seaweb before acting?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>Which Recipe for Success steps mattered most on this call?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>How did you make sure the caller understood the final outcome?</span><textarea data-save-field placeholder="Type your response..."></textarea></label></div><div class="sim-finish"><strong>Call Simulation Complete</strong><span>Be ready to discuss your reservation, your decision-making, and your call flow with your trainer.</span></div>`});
+  slides.push({stage:1,kicker:"THE CALL BEGINS",title:"Your Caller Is on the Line",subtitle:"Read the story like a real call. The caller will not hand you a checklist.",body:presentationGuidedOpeningHtml(d,caller,focus)});
+  slides.push({stage:1,kicker:d.department==="Outbound Sales"?"OUTBOUND OPENING":"BRANDED INTRODUCTION",title:d.department==="Outbound Sales"?"Start the Outbound Conversation":"Open the Call the NCL Way",subtitle:d.department==="Outbound Sales"?"Confirm this is a Direct Guest sales opportunity before continuing.":"Use the approved Guest Services introduction, then let Step 2 determine the call path.",body:presentationConversationHtml(d)});
+  if(d.department==="Guest Services" && d.reservationWorkflow==="modify")slides.push({stage:2,kicker:"GDPR VERIFICATION",title:"Verify Before You Service",subtitle:"GDPR applies to Guest Services existing reservations only.",body:presentationVerificationHtml(d)});
+  slides.push({stage:2,kicker:"RECIPE FOR SUCCESS",title:d.department==="Outbound Sales"?(d.reservationWorkflow==="modify"?"Outbound Sales Follow-Up":"OB Sales Recipe for Success"):(d.reservationWorkflow==="modify"?"Guest Services Service Call Path":"Guest Services Sales Recipe for Success"),subtitle:"Use the recipe as a conversation guide, not a mechanical checklist.",body:presentationRecipeHtml(d)});
+  slides.push({stage:2,kicker:"READING COMPREHENSION",title:"What Did You Hear?",subtitle:"Before touching Seaweb, make sure you understand the call.",body:`<div class="sim-question-grid"><label><span>1. Who is calling, and who are they booking or servicing for?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>2. What is the main reason for the call?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>3. What important details did the caller already provide?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label><label><span>4. What do you still need to clarify before moving forward?</span><textarea data-save-field placeholder="Type your answer..."></textarea></label></div>${comprehensionTrainer}`});
+  slides.push({stage:3,kicker:"RESERVATION DETAILS",title:"Now Open Seaweb",subtitle:"Use these details to locate or build the correct reservation.",body:`<div class="sim-two-col"><div><div class="sim-info-grid"><div class="sim-info-card"><span>Booking Source</span><strong>${escapeHtml(source)}</strong></div><div class="sim-info-card"><span>Sailing</span><strong>${escapeHtml(presentationSailText(d))}</strong></div><div class="sim-info-card"><span>Reservation Workflow</span><strong>${escapeHtml(d.department==="Outbound Sales"&&d.reservationWorkflow==="modify"?"Sales Follow-Up / Existing Quote":d.reservationWorkflow==="modify"?"Service Existing Reservation":"Create New Reservation")}</strong></div>${d.followUpRoleplay?`<div class="sim-info-card"><span>Reason for Call</span><strong>${escapeHtml(followUpReasonLabel(d))}</strong><small>${escapeHtml(followUpRequestSentence(d))}</small></div>`:''}<div class="sim-info-card"><span>Payment / Booking Action</span><strong>${escapeHtml(d.payment||"Verify")}</strong></div>${presentationReservationCards(d)}</div>${d.pricing?`<div class="sim-quote"><span>Advertised Pricing Practice</span><strong>${escapeHtml(d.pricing)}</strong></div>`:""}</div><div>${presentationArtCard('details',d)}</div></div>`});
+  slides.push({stage:3,kicker:"GUEST PROFILES",title:"Know Who Is Traveling",subtitle:"Use the guest status and Latitudes information already established in Step 2.",body:`<div class="sim-guest-grid">${profileCards}</div><div class="sim-pause"><strong>Before you continue:</strong> Confirm legal names and required guest information. A Past Guest's Latitudes number belongs to that individual guest profile.</div>`});
+  slides.push({stage:3,kicker:"THE CALL DEVELOPS",title:"The Caller Shares More Information",subtitle:"Real calls evolve. Process each new detail and decide where it belongs.",body:`<div class="sim-two-col"><div><div class="sim-development-list">${devCards}</div><div class="sim-question-single"><label><span>What do these new details change about your workflow?</span><textarea data-save-field placeholder="Think through the next steps before continuing..."></textarea></label></div>${devTrainer}</div><div><div class="sim-conversation side"><div class="sim-bubble caller"><span>${escapeHtml(caller)}</span><p>Here are a few more details you need before we finish this reservation...</p></div><div class="sim-bubble specialist"><span>Cruise Specialist</span><p>Thank you. I will apply each detail to the correct guest and review any pricing or policy impact before we move forward.</p></div></div>${presentationArtCard('develop',d)}</div></div>`});
+  slides.push({stage:3,kicker:"BUILD THE RESERVATION",title:"Complete the Seaweb Work",subtitle:"Use the caller's story and the reservation details to complete the required work.",body:`<div class="sim-two-col"><div><ul class="sim-task-list">${taskList}</ul><div class="sim-research-callout"><strong>Use NCLHelp when needed.</strong><span>Verify policies, eligibility, deadlines, inventory rules, and workflows instead of guessing.</span></div>${presentationPaymentHtml(d)}</div><div><div class="sim-side-checklist"><span>Keep in mind</span><ul><li>Follow the department recipe, not just Seaweb clicks.</li><li>Apply guest-specific options to the correct guest or reservation.</li><li>Explain any payment, deposit, or deadline before saving.</li><li>${d.department==="Outbound Sales"?'Outbound must collect payment to book; do not use Offer / Hold status.':'Guest Services may book or use Offer status when the scenario calls for it.'}</li></ul></div>${presentationArtCard('build',d)}</div></div>`});
+  slides.push({stage:4,kicker:"FULL CALL FLOW",title:"Bring the Call to Completion",subtitle:"The Seaweb work is only part of the interaction. Complete the entire call experience.",body:`<div class="sim-flow"><div><b>1</b><span><strong>${d.department==="Outbound Sales"?'Outbound Opening':'Branded Introduction'}</strong><small>${d.department==="Outbound Sales"?'Confirm the guest is not currently working with a travel agent.':'Use the Guest Services branded introduction and identify the reason for the call.'}</small></span></div><div><b>2</b><span><strong>${d.department==="Guest Services"&&d.reservationWorkflow==="modify"?'GDPR Verification':'Qualify / Discover'}</strong><small>${d.department==="Guest Services"&&d.reservationWorkflow==="modify"?'Complete the correct GDPR path before servicing.':'Follow the department Recipe for Success. No GDPR is required for this call type.'}</small></span></div><div><b>3</b><span><strong>Research & Build</strong><small>Use Seaweb and NCLHelp to complete the requested work accurately.</small></span></div><div><b>4</b><span><strong>Review & Gain Agreement</strong><small>Review pricing, options, deadlines, and changes before saving or taking payment.</small></span></div><div><b>5</b><span><strong>Complete the Transaction</strong><small>${d.department==="Outbound Sales"?'Collect payment to book or document the sales follow-up if payment cannot be collected.':'Complete the booking, Offer status, payment, credit, or servicing action that applies.'}</small></span></div><div><b>6</b><span><strong>Recap & Document</strong><small>Use the department recap script when applicable, add required comments, and send confirmation.</small></span></div><div><b>7</b><span><strong>Ensure Satisfaction</strong><small>Ask whether there is anything else you can help with today.</small></span></div><div><b>8</b><span><strong>Branded Closing</strong><small>Use the department-appropriate close.</small></span></div></div>${presentationClosingHtml(d)}`});
+  slides.push({stage:4,kicker:"RESERVATION RECAP",title:"Recap Before You End the Call",subtitle:d.department==="Guest Services"?"Use the Guest Services recap when a reservation is booked or placed in Offer status.":"Use the Outbound recap after the Direct Guest has booked.",body:presentationRecapHtml(d)});
+  slides.push({stage:4,kicker:"EXPECTED OUTCOME",title:"What Should Be True When the Call Ends?",subtitle:"Use this as your final quality check before you tell the trainer you are complete.",body:`<ul class="sim-outcome-list">${outcomes}</ul><div class="sim-reservation-entry"><label>Reservation Number${d.multipleReservations?"s":""}<input data-save-field placeholder="Enter your completed training reservation number${d.multipleReservations?"s":""}..." /></label></div>${outcomeTrainer}`});
+  slides.push({stage:4,kicker:"REFLECTION",title:"Think Like a Cruise Specialist",subtitle:"The goal is not just to finish Seaweb. Explain the decisions you made during the call.",body:`<div class="sim-question-grid"><label><span>What was the most important detail you had to catch from the caller's story?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>What did you verify in NCLHelp or Seaweb before acting?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>Which Recipe for Success steps mattered most on this call?</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label><span>How did you make sure the caller understood the final outcome?</span><textarea data-save-field placeholder="Type your response..."></textarea></label></div><div class="sim-finish"><strong>Call Simulation Complete</strong><span>Be ready to discuss your reservation, your decision-making, and your call flow with your trainer.</span></div>`});
+  slides.forEach(slide=>{if(!slide.stage)slide.stage=3;});
   return slides;
 }
 
@@ -5352,10 +5397,23 @@ function callSimulationCss(){return `
 .sim-outcome-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;margin:0;padding:0}.sim-outcome-list li{padding:16px 18px;border-radius:18px;background:#fff;border:1px solid #dbe4ed;font-size:14px;line-height:1.6;color:#274258}.sim-reservation-entry{margin-top:18px}.sim-trainer-note{margin-top:16px;padding:16px 18px;border:1px solid #d8e0ea;border-left:6px solid var(--brand-blue);border-radius:18px;background:#f4f9fd}.sim-trainer-note strong{display:block;color:var(--brand-blue);margin-bottom:6px}.sim-trainer-note p{margin:4px 0;font-size:13px;line-height:1.55;color:#33465a}.sim-finish{margin-top:18px;padding:24px;text-align:center;border-radius:18px;background:linear-gradient(135deg,#eef9f7,#f8fbfd);border:1px solid #cfe2df}.sim-finish strong{display:block;color:var(--brand-teal);font-size:22px}.sim-finish span{display:block;margin-top:6px;color:var(--muted)}
 .sim-help{font-size:11px;color:var(--muted);text-align:center;margin-top:14px}
 .sim-footer{background:rgba(255,255,255,.9);border-top:1px solid rgba(0,72,79,.16);padding:14px 22px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px}.sim-nav-btn,.sim-tool-btn{border:1px solid #a8b4c0;background:#fff;color:#0b2f63;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.04)}.sim-nav-btn.primary{background:linear-gradient(135deg,var(--brand-blue),var(--brand-bright));border-color:var(--brand-blue);color:#fff}.sim-nav-btn:disabled{opacity:.35;cursor:not-allowed}.sim-progress-area{display:flex;align-items:center;gap:12px;justify-content:center}.sim-progress{width:min(560px,60vw);height:10px;border-radius:999px;background:#dae3ea;overflow:hidden}.sim-progress-bar{height:100%;background:linear-gradient(90deg,var(--brand-teal),var(--brand-bright),var(--brand-gold));width:0;transition:width .2s}.sim-counter{font-size:11px;color:var(--muted);font-weight:800;white-space:nowrap}.sim-tools{display:flex;gap:8px}
+
+/* V1.9.49 — Guided Journey call simulation */
+.sim-guided-shell{min-height:0;display:grid;grid-template-columns:250px minmax(0,1fr);overflow:hidden;background:#f8f6f0}
+.sim-journey{position:relative;overflow:hidden;background:linear-gradient(180deg,#073b63 0%,#005f76 57%,#68acaa 100%);padding:22px 16px;display:flex;flex-direction:column;gap:8px;color:#fff}
+.sim-journey:after{content:'';position:absolute;left:-20%;right:-20%;bottom:118px;height:90px;background:rgba(255,255,255,.16);border-radius:50% 50% 0 0/70% 70% 0 0;transform:rotate(-5deg);pointer-events:none}
+.sim-journey-brand{display:flex;align-items:center;gap:10px;padding:0 8px 18px;border-bottom:1px solid rgba(255,255,255,.22);margin-bottom:8px;position:relative;z-index:1}.sim-journey-brand>span{display:grid;place-items:center;width:52px;height:52px;background:#fff;color:#071b2e;font-size:20px;font-weight:800;border-radius:4px}.sim-journey-brand small{font-size:10px;letter-spacing:.18em;font-weight:800}
+.sim-journey-step{appearance:none;width:100%;border:0;background:transparent;color:rgba(255,255,255,.72);display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:start;text-align:left;padding:11px 9px;border-radius:12px;cursor:pointer;position:relative;z-index:1}.sim-journey-step:before{content:'';position:absolute;left:28px;top:49px;bottom:-9px;width:1px;background:rgba(255,255,255,.24)}.sim-journey-step:nth-of-type(5):before{display:none}.sim-journey-step b{width:34px;height:34px;border-radius:999px;border:2px solid rgba(255,255,255,.62);display:grid;place-items:center;font-size:14px}.sim-journey-step span{display:block;min-width:0}.sim-journey-step strong{display:block;color:#fff;font-size:13px;line-height:1.25;margin-bottom:4px}.sim-journey-step small{display:block;font-size:10px;line-height:1.35;color:rgba(255,255,255,.66)}.sim-journey-step.active{background:rgba(255,255,255,.12);color:#fff}.sim-journey-step.active b{background:#0A84BD;border-color:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.12)}
+.sim-journey-art{margin-top:auto;min-height:150px;border-radius:16px;position:relative;overflow:hidden;background:linear-gradient(180deg,#93d8ed 0%,#8ebfc2 44%,#00484f 100%);padding:18px;z-index:1}.sim-journey-art:before,.sim-journey-art:after{content:'';position:absolute;left:-20px;right:-20px;height:55px;border-radius:50% 50% 0 0/70% 70% 0 0;background:rgba(255,255,255,.25)}.sim-journey-art:before{bottom:18px}.sim-journey-art:after{bottom:-8px;background:rgba(235,231,223,.66)}.sim-journey-art span{position:relative;z-index:2;display:block;font-size:17px;line-height:1.08;font-weight:800;letter-spacing:.06em;color:#fff}.sim-journey-art i{position:absolute;width:68px;height:68px;border-radius:50%;background:#E6CD88;right:18px;top:18px;opacity:.9}
+.sim-shell.guided .sim-stage{padding:0;min-width:0;background:#f8f6f0}.sim-shell.guided .sim-deck{max-width:none;margin:0}.sim-shell.guided .sim-slide{min-height:100%;border:0;border-radius:0;box-shadow:none;padding:30px 34px 24px;background:#fff}.sim-shell.guided .sim-slide h1{font-size:44px;max-width:900px}.sim-shell.guided .sim-subtitle{font-size:16px;margin-bottom:20px}
+.sim-guided-opening{display:grid;grid-template-columns:1.35fr .9fr;grid-template-areas:'caller reason' 'sailing gdpr' 'role skills';gap:14px}.sim-guided-card{border:1px solid #d7e2ea;border-radius:16px;background:#fff;padding:17px 18px;min-width:0}.sim-guided-card.caller{grid-area:caller;border-left:5px solid #0A84BD}.sim-guided-card.reason{grid-area:reason;background:linear-gradient(135deg,#eef8fc,#fff);border-color:#c9dfeb}.sim-guided-card.sailing{grid-area:sailing;background:linear-gradient(135deg,#f4fbfd,#fff)}.sim-guided-card.gdpr,.sim-guided-card.discovery{grid-area:gdpr}.sim-guided-card.gdpr{background:linear-gradient(135deg,#fff0ed,#fff);border-color:#ffb1a8}.sim-guided-card.discovery{background:linear-gradient(135deg,#eef8f7,#fff);border-color:#b7d8d4}.sim-guided-card.role{grid-area:role;background:linear-gradient(135deg,#eaf7f6,#fff)}.sim-guided-card.skills{grid-area:skills;background:linear-gradient(135deg,#fff8e8,#fff)}
+.sim-guided-label{display:block;font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#006099;margin-bottom:8px}.sim-guided-card strong{display:block;color:#0b2f63;font-size:18px;line-height:1.35}.sim-guided-card p{margin:8px 0 0;font-size:14px;line-height:1.6;color:#34465a}.sim-guided-card.caller>p{font-size:15px}.sim-guided-card ul{margin:9px 0 0 18px;padding:0;color:#405266;font-size:12px;line-height:1.6}.sim-guided-required{margin:12px 0 6px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #ff938a;display:flex;gap:10px;align-items:center;justify-content:space-between}.sim-guided-required span{font-size:13px;font-weight:800;color:#7a352d}.sim-guided-required b{font-size:10px;letter-spacing:.12em;background:#d94132;color:#fff;border-radius:999px;padding:6px 9px}.sim-skill-chips{display:flex;gap:7px;flex-wrap:wrap}.sim-skill-chips span{display:inline-flex;padding:7px 9px;border-radius:999px;border:1px solid #c7dedb;background:#fff;color:#00484f;font-size:11px;font-weight:700}
+.sim-gdpr-layout{display:flex;flex-direction:column;gap:14px}.sim-required-reservation{position:relative;border:2px solid #ff938a;border-radius:18px;background:linear-gradient(135deg,#fff0ed 0%,#fff 72%);padding:22px 24px}.sim-required-reservation>span{display:block;font-size:10px;letter-spacing:.16em;font-weight:800;color:#8b3d34}.sim-required-reservation>strong{display:block;margin-top:7px;font-size:34px;letter-spacing:.02em;color:#0b2f63}.sim-required-reservation>b{position:absolute;right:20px;top:20px;padding:9px 13px;border-radius:999px;background:#d94132;color:#fff;font-size:11px;letter-spacing:.14em}.sim-required-reservation p{margin:8px 0 0;font-size:14px;color:#5c6675}.sim-gdpr-secondary-required{border:1px solid #E6CD88;border-radius:14px;padding:14px 16px;background:#fff9e8}.sim-gdpr-secondary-required span{display:block;font-size:10px;letter-spacing:.14em;font-weight:800;color:#7d651b}.sim-gdpr-secondary-required strong{display:block;margin-top:5px;color:#0b2f63;font-size:17px}.sim-verify-grid.guided .sim-verify-card.privacy{background:#f7fbfc;border-color:#cfe3e1}
+
 .sim-recipe-shell{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}.sim-recipe-note{padding:18px;border-radius:18px;background:linear-gradient(135deg,#EBE7DF,#fff);border:1px solid #e4dbc7;color:#334155;line-height:1.6;font-size:14px;position:sticky;top:0}.sim-recipe-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px;counter-reset:recipe}.sim-recipe-list li{counter-increment:recipe;display:grid;grid-template-columns:44px 1fr;gap:12px;align-items:start;padding:14px 16px;border:1px solid #dbe4ed;border-radius:16px;background:#fff}.sim-recipe-list li:before{content:counter(recipe);width:34px;height:34px;border-radius:10px;background:#8EBFC2;color:#0b2f63;font-weight:800;display:grid;place-items:center}.sim-recipe-list li span{font-size:13px;line-height:1.55;color:#2f4155}.sim-payment-card{margin-top:16px;padding:18px;border-radius:18px;background:linear-gradient(135deg,#fff9ea,#fff);border:1px solid #E6CD88;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}.sim-payment-card>span{grid-column:1/-1;font-size:10px;font-weight:800;letter-spacing:.14em;color:#876717}.sim-payment-card>strong{grid-column:1/-1;font-size:16px;color:#0b2f63}.sim-payment-card div{display:flex;flex-direction:column;gap:3px}.sim-payment-card b{font-size:11px;color:#667085}.sim-payment-card em{font-style:normal;font-size:13px;color:#1f2937}.sim-recap-card{background:#fff;border:1px solid #dbe4ed;border-radius:20px;overflow:hidden}.sim-recap-banner{padding:18px 20px;background:linear-gradient(90deg,#8EBFC2,#A7CAC6);color:#0b2f63}.sim-recap-banner strong{display:block;font-size:19px}.sim-recap-banner span{display:block;margin-top:4px;font-size:13px}.sim-recap-list{margin:0;padding:18px 22px 20px 48px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 24px}.sim-recap-list li{padding-left:4px;font-size:13px;line-height:1.55;color:#314355}
-@media(max-width:1100px){.sim-slide h1{font-size:38px}.sim-hero-layout,.sim-two-col,.sim-flow,.sim-question-grid,.sim-outcome-list,.sim-info-grid,.sim-verify-grid,.sim-recipe-shell,.sim-recap-list{grid-template-columns:1fr}.sim-header{grid-template-columns:1fr;justify-items:start}.sim-title{text-align:left}.sim-meta{text-align:left}.sim-story-card{grid-template-columns:1fr}.sim-call-icon{display:none}}
-@media(max-width:780px){body{overflow:auto}.sim-shell{height:auto;min-height:100vh}.sim-stage{padding:14px}.sim-slide{padding:22px;min-height:auto}.sim-slide h1{font-size:31px}.sim-subtitle{font-size:16px}.sim-footer{grid-template-columns:1fr 1fr}.sim-progress-area{grid-column:1/-1;grid-row:1}.sim-tools{display:flex;justify-content:flex-end}.sim-tools .sim-tool-btn{display:none}.sim-brand-copy strong{font-size:14px}.sim-brand-copy small{font-size:12px}.sim-story-card p{font-size:16px}}
-@media print{body{overflow:visible;background:#fff}.sim-shell{display:block;height:auto;background:#fff}.sim-header,.sim-footer{display:none}.sim-stage{padding:0}.sim-slide{display:block!important;box-shadow:none;border:0;border-radius:0;min-height:10in;height:auto;page-break-after:always;padding:.45in;background:#fff}.sim-slide:last-child{page-break-after:auto}.sim-question-grid textarea,.sim-question-single textarea,.sim-reservation-entry input{border:1px solid #999}.sim-trainer-note,.sim-art-card,.sim-story-card,.sim-closing-card,.sim-verify-callout{break-inside:avoid}}
+@media(max-width:1100px){.sim-guided-shell{grid-template-columns:205px minmax(0,1fr)}.sim-guided-opening{grid-template-columns:1fr;grid-template-areas:"caller" "reason" "sailing" "gdpr" "role" "skills"}.sim-slide h1{font-size:38px}.sim-hero-layout,.sim-two-col,.sim-flow,.sim-question-grid,.sim-outcome-list,.sim-info-grid,.sim-verify-grid,.sim-recipe-shell,.sim-recap-list{grid-template-columns:1fr}.sim-header{grid-template-columns:1fr;justify-items:start}.sim-title{text-align:left}.sim-meta{text-align:left}.sim-story-card{grid-template-columns:1fr}.sim-call-icon{display:none}}
+@media(max-width:780px){body{overflow:auto}.sim-guided-shell{display:block}.sim-journey{padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.sim-journey-brand,.sim-journey-art{display:none}.sim-journey-step{grid-template-columns:1fr;padding:7px;text-align:center}.sim-journey-step:before,.sim-journey-step small{display:none}.sim-journey-step b{margin:0 auto}.sim-journey-step strong{font-size:10px}.sim-shell.guided .sim-slide{padding:22px 18px}.sim-required-reservation>b{position:static;display:inline-block;margin-top:10px}.sim-required-reservation>strong{font-size:26px}.sim-shell{height:auto;min-height:100vh}.sim-stage{padding:14px}.sim-slide{padding:22px;min-height:auto}.sim-slide h1{font-size:31px}.sim-subtitle{font-size:16px}.sim-footer{grid-template-columns:1fr 1fr}.sim-progress-area{grid-column:1/-1;grid-row:1}.sim-tools{display:flex;justify-content:flex-end}.sim-tools .sim-tool-btn{display:none}.sim-brand-copy strong{font-size:14px}.sim-brand-copy small{font-size:12px}.sim-story-card p{font-size:16px}}
+@media print{body{overflow:visible}.sim-guided-shell{display:block}.sim-journey{display:none};background:#fff}.sim-shell{display:block;height:auto;background:#fff}.sim-header,.sim-footer{display:none}.sim-stage{padding:0}.sim-slide{display:block!important;box-shadow:none;border:0;border-radius:0;min-height:10in;height:auto;page-break-after:always;padding:.45in;background:#fff}.sim-slide:last-child{page-break-after:auto}.sim-question-grid textarea,.sim-question-single textarea,.sim-reservation-entry input{border:1px solid #999}.sim-trainer-note,.sim-art-card,.sim-story-card,.sim-closing-card,.sim-verify-callout{break-inside:avoid}}
 `;}
 
 function callSimulationClient(){
@@ -5365,12 +5423,12 @@ function callSimulationClient(){
   const prev=document.getElementById('simPrev'),next=document.getElementById('simNext'),bar=document.getElementById('simProgressBar'),counter=document.getElementById('simCounter');
   function save(){const data={};document.querySelectorAll('[data-save-field]').forEach((el,i)=>{data[i]=el.type==='checkbox'?el.checked:el.value});try{localStorage.setItem(key,JSON.stringify(data))}catch(_){}}
   function load(){try{const data=JSON.parse(localStorage.getItem(key)||'{}');document.querySelectorAll('[data-save-field]').forEach((el,i)=>{if(!(i in data))return;if(el.type==='checkbox')el.checked=!!data[i];else el.value=data[i]||'';});}catch(_){}}
-  function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===index));prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;slides[index]?.scrollTo?.(0,0);}
+  function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===index));prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));document.querySelector('.sim-stage')?.scrollTo?.({top:0,behavior:'smooth'});}
   prev.onclick=()=>{if(index>0){index--;render();}};next.onclick=()=>{if(index<slides.length-1){index++;render();}else{index=0;render();}};
   document.getElementById('simFullscreen')?.addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();});
   document.getElementById('simPrint')?.addEventListener('click',()=>window.print());
   document.getElementById('simReset')?.addEventListener('click',()=>{if(confirm('Clear all responses and checklist progress?')){try{localStorage.removeItem(key)}catch(_){}document.querySelectorAll('[data-save-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value='';});}});
-  document.querySelectorAll('[data-save-field]').forEach(el=>{el.addEventListener('change',save);el.addEventListener('input',save)});
+  document.querySelectorAll('[data-save-field]').forEach(el=>{el.addEventListener('change',save);el.addEventListener('input',save)});document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.addEventListener('click',()=>{const target=slides.findIndex(s=>s.dataset.stage===btn.dataset.stageJump);if(target>=0){index=target;render();}}));
   document.addEventListener('keydown',e=>{if(['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowRight'&&index<slides.length-1){index++;render();}if(e.key==='ArrowLeft'&&index>0){index--;render();}});
   load();render();
 }
@@ -5381,7 +5439,13 @@ function buildCallSimulationDocument(mode="trainee"){
   const slides=buildCallSimulationSlides(d,mode);
   const title=`SEAweb Call Simulation – ${focusTitle(d)}`;
   const storageKey=`seawebCallSimulation-${String(d.id||focusTitle(d)).replace(/[^A-Za-z0-9_-]+/g,"-")}-${mode}`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}</style></head><body data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell"><header class="sim-header"><div class="sim-brand"><img class="sim-brand-lockup" src="${NCL_SIM_LOGO_DATA}" alt="Norwegian Cruise Line – It's Different Out Here" /></div><div class="sim-title">SEAweb Call Simulation</div><div class="sim-meta"><strong>${escapeHtml(mode==="trainer"?"Trainer Presentation":"Trainee Presentation")}</strong>${escapeHtml(d.department)} • ${escapeHtml(focusTitle(d))}</div></header><main class="sim-stage"><div class="sim-deck">${slides.map((slide,i)=>`<section class="sim-slide${i===0?' active':''}" data-slide="${i+1}"><div class="sim-kicker">${escapeHtml(slide.kicker)}</div><h1>${escapeHtml(slide.title)}</h1><p class="sim-subtitle">${escapeHtml(slide.subtitle)}</p>${slide.body}<div class="sim-help">Use the Previous / Next buttons or the left and right arrow keys to move through the call.</div></section>`).join('')}</div></main><footer class="sim-footer"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
+  const journey=[
+    {n:1,title:"The Call Begins",sub:"Caller information and reason for call"},
+    {n:2,title:"Listen & Ask",sub:"Opening, verification and discovery"},
+    {n:3,title:"Service the Call",sub:"Use Seaweb, NCLHelp and scenario skills"},
+    {n:4,title:"Review & Recap",sub:"Complete the call and final recap"}
+  ];
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}</style></head><body data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell guided"><header class="sim-header"><div class="sim-brand"><img class="sim-brand-lockup" src="${NCL_SIM_LOGO_DATA}" alt="Norwegian Cruise Line – It's Different Out Here" /></div><div class="sim-title">SEAweb Call Simulation</div><div class="sim-meta"><strong>${escapeHtml(mode==="trainer"?"Trainer Presentation":"Trainee Presentation")}</strong>${escapeHtml(d.department)} • ${escapeHtml(focusTitle(d))}</div></header><div class="sim-guided-shell"><aside class="sim-journey"><div class="sim-journey-brand"><span>NCL</span><small>CALL JOURNEY</small></div>${journey.map(item=>`<button type="button" class="sim-journey-step${item.n===1?' active':''}" data-stage-jump="${item.n}"><b>${item.n}</b><span><strong>${item.title}</strong><small>${item.sub}</small></span></button>`).join('')}<div class="sim-journey-art"><span>MORE OF<br>WHAT MOVES YOU</span><i></i></div></aside><main class="sim-stage"><div class="sim-deck">${slides.map((slide,i)=>`<section class="sim-slide${i===0?' active':''}" data-slide="${i+1}" data-stage="${slide.stage||3}"><div class="sim-kicker">${escapeHtml(slide.kicker)}</div><h1>${escapeHtml(slide.title)}</h1><p class="sim-subtitle">${escapeHtml(slide.subtitle)}</p>${slide.body}<div class="sim-help">Use Previous / Next or the left and right arrow keys to move through the call.</div></section>`).join('')}</div></main></div><footer class="sim-footer"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
 }
 
 function ensureCallSimulationOverlay(){
@@ -5417,7 +5481,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.48",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.50",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -6241,7 +6305,15 @@ $("printTrainerViewBtn").onclick=()=>printScenarioView("trainer");
 $("printScenarioBtn").onclick=()=>printScenarioView(state.mode);
 
 function saved(){try{return JSON.parse(localStorage.getItem("seawebScenarios")||"[]")}catch{return[]}}
-function setSaved(items){localStorage.setItem("seawebScenarios",JSON.stringify(items));updateStats()}
+function setSaved(items){localStorage.setItem("seawebScenarios",JSON.stringify(items));updateStats();renderDashboardHome()}
+function savedCallSimulations(){try{return JSON.parse(localStorage.getItem("seawebCallSimulationsLibrary")||"[]")}catch{return[]}}
+function setSavedCallSimulations(items){localStorage.setItem("seawebCallSimulationsLibrary",JSON.stringify(items));updateStats();renderDashboardHome();if(document.getElementById("simulations")?.classList.contains("active"))renderSimulationLibrary()}
+function simulationTitleFromScenario(d){
+  const focus=focusTitle(d)||"Call Simulation";
+  const ship=d.sailing?.ship||"Training Scenario";
+  const workflow=d.reservationWorkflow==="modify"?"Service Call":"New Booking";
+  return `${ship} — ${focus} — ${workflow}`;
+}
 $("saveScenarioBtn").onclick=()=>{
   if(!state.currentScenario)generateScenario();
   state.currentScenario.validationStatus="Ready";
@@ -6249,13 +6321,80 @@ $("saveScenarioBtn").onclick=()=>{
   if(idx>=0)items[idx]=state.currentScenario; else items.unshift(state.currentScenario);
   setSaved(items);flash("Scenario saved to this browser.");
 };
+$("saveCallSimulationBtn")?.addEventListener("click",()=>{
+  if(!state.currentScenario)generateScenario();
+  if(!state.currentScenario)return;
+  const scenario=JSON.parse(JSON.stringify(state.currentScenario));
+  const items=savedCallSimulations();
+  const existing=items.findIndex(x=>x.scenarioId===scenario.id);
+  const entry={
+    id:existing>=0?items[existing].id:makeUuid(),
+    scenarioId:scenario.id,
+    title:simulationTitleFromScenario(scenario),
+    department:scenario.department||"",
+    focus:focusTitle(scenario)||"Call Simulation",
+    workflow:scenario.reservationWorkflow||"new",
+    ship:scenario.sailing?.ship||"",
+    sailingTitle:scenario.sailing?.title||"",
+    guests:scenarioGuestNames(scenario).filter(Boolean),
+    scenario,
+    favorite:existing>=0?!!items[existing].favorite:false,
+    createdAt:existing>=0?items[existing].createdAt:new Date().toISOString(),
+    updatedAt:new Date().toISOString()
+  };
+  if(existing>=0)items[existing]=entry;else items.unshift(entry);
+  setSavedCallSimulations(items);
+  flash("Call simulation saved to your Call Simulations library.");
+});
 function updateStats(){
   const items=saved().filter(x=>!x.archived);
+  const simulations=savedCallSimulations();
   $("savedCount").textContent=items.length;
   $("readyCount").textContent=items.length;
-  $("reviewCount").textContent=items.length;
-  $("favoriteCount").textContent=items.filter(x=>x.favorite).length;
+  $("reviewCount").textContent=simulations.length;
+  $("favoriteCount").textContent=items.filter(x=>x.favorite).length+simulations.filter(x=>x.favorite).length;
 }
+function simulationSearchText(x){return JSON.stringify([x.title,x.department,x.focus,x.workflow,x.ship,x.sailingTitle,x.guests]).toLowerCase()}
+function renderSimulationLibrary(){
+  const host=$("simulationLibraryList");if(!host)return;
+  const q=($("simulationSearch")?.value||"").toLowerCase().trim();
+  const dept=$("simulationDepartmentFilter")?.value||"";
+  const items=savedCallSimulations().filter(x=>(!dept||x.department===dept)&&(!q||simulationSearchText(x).includes(q)));
+  host.innerHTML=items.length?items.map(x=>`<article class="simulation-library-card">
+    <div class="simulation-card-art"><span>◉</span><small>${escapeHtml(x.department||"Call Simulation")}</small></div>
+    <div class="simulation-card-main">
+      <div class="simulation-card-meta"><span>${escapeHtml(x.department||"Training")}</span><span>${escapeHtml(x.workflow==="modify"?"Existing Reservation":"New Reservation")}</span></div>
+      <h3>${escapeHtml(x.title||"Saved Call Simulation")}</h3>
+      <p>${escapeHtml(x.ship||"Trainer-selected sailing")}${x.sailingTitle?` • ${escapeHtml(x.sailingTitle)}`:""}</p>
+      <small>${escapeHtml((x.guests||[]).join(" & ")||"Training guests")} • Saved ${new Date(x.updatedAt||x.createdAt).toLocaleString()}</small>
+    </div>
+    <div class="simulation-card-actions">
+      <button class="primary" onclick="launchSavedSimulation('${x.id}')">Launch</button>
+      <button class="secondary" onclick="openSimulationScenario('${x.id}')">Edit Scenario</button>
+      <button class="star" onclick="toggleSimulationFavorite('${x.id}')" title="Favorite">${x.favorite?"★":"☆"}</button>
+      <button class="secondary danger-lite" onclick="deleteSavedSimulation('${x.id}')">Delete</button>
+    </div>
+  </article>`).join(""):`<div class="panel simulation-empty"><strong>No saved call simulations yet.</strong><span>Generate a scenario, then choose <em>Save Call Simulation</em> next to Launch Trainee Presentation.</span><button class="primary" type="button" onclick="go('generator')">Create a Scenario</button></div>`;
+}
+$("simulationSearch")?.addEventListener("input",renderSimulationLibrary);
+$("simulationDepartmentFilter")?.addEventListener("change",renderSimulationLibrary);
+window.launchSavedSimulation=(id)=>{const x=savedCallSimulations().find(v=>v.id===id);if(!x?.scenario)return;state.currentScenario=JSON.parse(JSON.stringify(x.scenario));launchCallSimulation("trainee")};
+window.openSimulationScenario=(id)=>{const x=savedCallSimulations().find(v=>v.id===id);if(!x?.scenario)return;const a=saved();if(!a.some(v=>v.id===x.scenario.id)){a.unshift(JSON.parse(JSON.stringify(x.scenario)));setSaved(a);}openSaved(x.scenario.id)};
+window.toggleSimulationFavorite=(id)=>{const a=savedCallSimulations();const x=a.find(v=>v.id===id);if(x)x.favorite=!x.favorite;setSavedCallSimulations(a)};
+window.deleteSavedSimulation=(id)=>{if(!confirm("Delete this saved call simulation?"))return;setSavedCallSimulations(savedCallSimulations().filter(x=>x.id!==id))};
+
+function renderDashboardHome(){
+  const sims=savedCallSimulations().slice(0,3);
+  const simHost=$("dashboardSimulationList");
+  if(simHost)simHost.innerHTML=sims.length?sims.map(x=>`<button class="dashboard-sim-row" type="button" onclick="launchSavedSimulation('${x.id}')"><span class="dash-thumb">◉</span><span><strong>${escapeHtml(x.title||"Call Simulation")}</strong><small>Call Simulation • ${new Date(x.updatedAt||x.createdAt).toLocaleDateString()}</small></span><em>${escapeHtml(x.department||"Training")}</em><b>›</b></button>`).join(""):`<div class="empty-dashboard-row">No saved call simulations yet. Save one from a generated scenario to see it here.</div>`;
+  const activities=[];
+  saved().slice(0,3).forEach(x=>activities.push({type:"Scenario",title:x.title||focusTitle(x)||"Saved Scenario",date:x.updatedAt||x.createdAt,icon:"▤"}));
+  savedCallSimulations().slice(0,3).forEach(x=>activities.push({type:"Call Simulation",title:x.title||"Saved Call Simulation",date:x.updatedAt||x.createdAt,icon:"◉"}));
+  activities.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+  const actHost=$("dashboardRecentActivity");
+  if(actHost)actHost.innerHTML=activities.slice(0,4).map(a=>`<div class="dashboard-activity-row"><span>${a.icon}</span><div><strong>${escapeHtml(a.type)}</strong><small>${escapeHtml(a.title)}</small></div><time>${a.date?new Date(a.date).toLocaleDateString():""}</time></div>`).join("")||`<div class="empty-dashboard-row">Your recent saved scenarios and simulations will appear here.</div>`;
+}
+
 function renderLibrary(){
   const q=$("librarySearch").value.toLowerCase().trim();
   const deptFilter=$("libraryDepartmentFilter").value;
@@ -6975,4 +7114,4 @@ function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
 
 ["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
-populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
+populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();renderDashboardHome();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
