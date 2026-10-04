@@ -1353,7 +1353,7 @@ This release applies the approved homepage concept across the site and replaces 
 - Added a clean hero image crop and branded resource imagery without reusing the guideline swipe photography.
 
 
-## V1.9.52 – Matched Tool Pages
+## V1.9.53 – Immersive Story Call Simulation
 
 This release carries the Home page visual system across the four primary work areas.
 
