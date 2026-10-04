@@ -1952,3 +1952,94 @@ footer{background:var(--ncl-sand);border-color:rgba(0,72,79,.13);color:#68777a}
   .brand-lockup{width:132px;height:48px}.brand-mode-switch{display:none}.brand-topnav{min-height:60px}.brand-nav .nav{font-size:11px;padding:9px 8px}.brand-hero{min-height:520px;padding:28px 20px}.brand-hero h2{font-size:27px;line-height:1.14}.brand-hero-quote{left:20px;right:20px;width:auto}.brand-dashboard-grid,.brand-bottom-grid{gap:12px}.brand-learning-flow{grid-template-columns:1fr}.brand-resource-card{grid-template-columns:1fr}.brand-resource-image{min-height:120px}.brand-quick-stats{grid-template-columns:1fr 1fr}.brand-quick-stats button:nth-child(2){border-right:0}.brand-quick-stats button:nth-child(-n+2){border-bottom:1px solid rgba(0,72,79,.13)}
 }
 @media print{.brand-topnav{display:none!important}.brand-shell{display:block}.brand-content{padding:0}}
+
+/* =========================================================
+   V1.9.53 • MATCHED TOOL PAGES
+   Brings Search, Generator, Simulations and Library into the
+   same airy, image-led NCL visual system as the Home page.
+   ========================================================= */
+.branded-tool-page{padding-bottom:28px}
+.tool-hero{position:relative;min-height:310px;border-radius:18px;overflow:hidden;margin:0 0 24px;background-image:linear-gradient(90deg,rgba(235,231,223,.95) 0%,rgba(235,231,223,.82) 38%,rgba(0,72,79,.08) 68%,rgba(0,72,79,.12) 100%),url('/hero-ocean.jpg');background-size:cover;background-position:center 48%;box-shadow:0 14px 34px rgba(0,72,79,.08);border:1px solid rgba(0,72,79,.12);display:flex;align-items:center;padding:42px 46px}
+.tool-hero:after{content:'';position:absolute;left:-3%;right:-3%;bottom:-44px;height:82px;background:var(--ncl-sand);border-radius:50% 50% 0 0/62% 62% 0 0;opacity:.98}
+.tool-hero-copy{position:relative;z-index:2;max-width:660px;padding-right:330px;box-sizing:content-box}
+.tool-hero .brand-eyebrow{color:#164d57;margin-bottom:10px}
+.tool-hero h2{margin:0;color:#112f36;font-size:48px;line-height:1.03;letter-spacing:.055em;font-weight:700}
+.tool-hero p{margin:15px 0 0;color:#334f55;font-size:15px;line-height:1.65;max-width:610px}
+.tool-live-badge{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:8px 11px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid rgba(0,72,79,.14);font-size:11px;font-weight:700;color:#31565d;backdrop-filter:blur(8px)}
+.tool-live-badge i{width:8px;height:8px;border-radius:50%;background:#1cab68;box-shadow:0 0 0 4px rgba(28,171,104,.12)}
+.tool-hero-secondary{margin-top:20px;border:1px solid rgba(0,72,79,.28);background:rgba(255,255,255,.8);color:#17383e;border-radius:999px;padding:11px 18px;font-weight:700}
+.tool-hero-secondary:hover{background:#fff}
+.tool-hero-quick{position:absolute;z-index:4;right:34px;top:31px;width:300px;background:rgba(255,255,255,.91);border:1px solid rgba(0,72,79,.13);border-radius:16px;padding:16px;box-shadow:0 16px 34px rgba(0,72,79,.12);backdrop-filter:blur(12px)}
+.tool-quick-kicker{display:block;font-size:9px;font-weight:800;letter-spacing:.16em;color:#7a6a43;margin:0 0 7px;text-transform:uppercase}
+.tool-hero-quick button,.tool-hero-quick .tool-quick-file{width:100%;border:0;border-bottom:1px solid rgba(0,72,79,.10);background:transparent;padding:11px 4px;display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:center;text-align:left;color:#17383e;cursor:pointer}
+.tool-hero-quick button:last-child,.tool-hero-quick .tool-quick-file:last-child{border-bottom:0}
+.tool-hero-quick button:hover,.tool-hero-quick .tool-quick-file:hover{background:rgba(167,202,198,.16);border-radius:9px}
+.tool-hero-quick b,.tool-hero-quick .tool-quick-file>b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#e5f4f3;color:#005d67;font-size:14px}
+.tool-hero-quick button>span,.tool-hero-quick .tool-quick-file>span{display:flex;flex-direction:column;gap:1px;font-size:12px;font-weight:700}
+.tool-hero-quick small{font-size:9px;font-weight:500;color:#778587;line-height:1.35}
+.tool-section-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin:0 0 14px;padding:0 4px}
+.tool-section-heading>div>span{display:block;font-size:9px;letter-spacing:.18em;font-weight:800;color:#0b7180;margin-bottom:4px}
+.tool-section-heading h3{margin:0;color:#17383e;font-size:25px;line-height:1.15}
+.tool-section-heading p{margin:5px 0 0;color:#6e7d80;font-size:12px;line-height:1.5}
+
+/* Search */
+.tool-hero-search{background-position:center 56%}
+.search-tool-page .tab-instructions{margin-bottom:16px}
+.search-tool-page .brand-workspace-card{border:0;border-radius:16px;padding:24px;box-shadow:0 12px 30px rgba(0,72,79,.06);background:rgba(255,255,255,.91);border-top:0}
+.search-tool-page .seaweb-search-panel:before{content:'SEARCH SAILINGS';display:block;color:#006099;font-size:10px;font-weight:800;letter-spacing:.15em;margin-bottom:14px}
+.search-tool-page .search-mode-row{padding-bottom:14px;border-bottom:1px solid rgba(0,72,79,.10)}
+.search-tool-page .anchor-options{gap:12px}.search-tool-page .anchor-card{min-height:54px;border-radius:12px;background:#fffefb}.search-tool-page .anchor-card.active{background:#e8f6f5;border-color:#68ACAA;color:#00484F;box-shadow:none}
+.destination-shortcuts{margin:22px 0;padding:22px;background:#fff;border:1px solid rgba(0,72,79,.12);border-radius:16px;box-shadow:0 10px 26px rgba(0,72,79,.04)}
+.destination-shortcut-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.destination-shortcut-grid button{padding:0;overflow:hidden;background:#fff;border:1px solid rgba(0,72,79,.12);border-radius:12px;text-align:left;color:#17383e;box-shadow:0 6px 15px rgba(0,72,79,.035)}
+.destination-shortcut-grid button:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(0,72,79,.08)}
+.destination-art{display:block;height:82px;background-image:linear-gradient(135deg,rgba(10,132,189,.12),rgba(0,72,79,.1)),url('/resource-ocean.jpg');background-size:cover}
+.destination-art.caribbean{background-position:15% 48%;filter:saturate(1.18)}.destination-art.europe{background-position:40% 36%;filter:hue-rotate(-12deg)}.destination-art.alaska{background-position:70% 25%;filter:saturate(.72) contrast(1.05)}.destination-art.bermuda{background-position:25% 70%;filter:hue-rotate(8deg) saturate(1.25)}.destination-art.hawaii{background-position:85% 58%;filter:saturate(1.35)}
+.destination-shortcut-grid strong{display:block;padding:10px 11px 2px;font-size:12px}.destination-shortcut-grid small{display:block;padding:0 11px 12px;color:#7d8a8d;font-size:9px;line-height:1.35;min-height:36px}
+.search-tool-page .branded-results-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.search-tool-page .result-card{border:0;border-radius:16px;box-shadow:0 10px 24px rgba(0,72,79,.055);overflow:hidden;position:relative}.search-tool-page .result-card:before{content:'';position:absolute;left:0;right:0;top:0;height:4px;background:linear-gradient(90deg,#A7CAC6,#0A84BD,#E6CD88)}
+.search-tool-page .itinerary-date-chooser{background:#fff;border:1px solid rgba(0,72,79,.13);border-radius:16px;box-shadow:0 12px 28px rgba(0,72,79,.05);padding:22px;margin-top:20px}
+
+/* Generator */
+.tool-hero-generator{background-position:center 44%;background-image:linear-gradient(90deg,rgba(235,231,223,.96) 0%,rgba(235,231,223,.86) 43%,rgba(0,72,79,.08) 72%),url('/hero-ocean.jpg')}
+.generator-tool-page .generator-workspace{grid-template-columns:1fr;gap:20px}.generator-tool-page .generator-setup-panel{border:0;background:transparent;padding:0;box-shadow:none}.generator-tool-page .output-panel{position:static;border-radius:16px}
+.generator-tool-page .generator-wizard{background:#fff;border:1px solid rgba(0,72,79,.12);border-radius:18px;box-shadow:0 14px 32px rgba(0,72,79,.055);overflow:hidden}
+.generator-tool-page .wizard-topline{padding:16px 22px;background:linear-gradient(90deg,#fbfaf7,#edf7f7);border-bottom:1px solid rgba(0,72,79,.10)}
+.generator-tool-page .wizard-progress{padding:18px 26px 16px;background:#fff;border-bottom:1px solid rgba(0,72,79,.10)}
+.generator-tool-page .wizard-step-button{background:transparent}.generator-tool-page .wizard-step-number{box-shadow:0 0 0 5px #f0f7f7}
+.generator-tool-page .wizard-step-button.active .wizard-step-number{background:#006099;color:#fff;box-shadow:0 0 0 5px rgba(10,132,189,.11)}
+.generator-tool-page .wizard-step-panel{padding:28px}.generator-tool-page .wizard-step-intro{margin-bottom:22px}.generator-tool-page .wizard-step-intro h3{font-size:29px;color:#17383e}.generator-tool-page .wizard-step-kicker{color:#006099;letter-spacing:.14em}
+.generator-tool-page .wizard-detail-card,.generator-tool-page .reservation-visual-card,.generator-tool-page .visual-detail-card,.generator-tool-page .step3-visual-section{border-radius:15px;border-color:rgba(0,72,79,.12);box-shadow:0 7px 18px rgba(0,72,79,.04)}
+.generator-tool-page .focus-category-tab.active{background:#006099!important}.generator-tool-page .visual-choice-btn.active{border-color:#68ACAA;background:#eef8f6;box-shadow:0 0 0 3px rgba(104,172,170,.12)}
+.generator-heading{margin-bottom:14px}
+
+/* Call Simulations */
+.tool-hero-simulations{background-position:center 38%;background-image:linear-gradient(90deg,rgba(0,72,79,.90) 0%,rgba(0,96,153,.65) 43%,rgba(0,72,79,.08) 74%),url('/resource-ocean.jpg')}
+.tool-hero-simulations .brand-eyebrow,.tool-hero-simulations h2,.tool-hero-simulations p{color:#fff}.tool-hero-simulations .brand-cta{background:#fff;color:#00484F}
+.simulations-tool-page .simulation-library-toolbar{border:0;border-radius:15px;box-shadow:0 10px 26px rgba(0,72,79,.05);padding:18px 20px;background:#fff}
+.simulations-tool-page .library-filter-grid{grid-template-columns:220px 1fr;gap:12px}
+.simulations-tool-page .simulation-library-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.simulations-tool-page .simulation-library-card{display:flex;flex-direction:column;border:0;border-radius:16px;overflow:hidden;padding:0;box-shadow:0 12px 26px rgba(0,72,79,.065);background:#fff;min-width:0}
+.simulations-tool-page .simulation-card-art{min-height:112px;padding:18px;background:linear-gradient(135deg,#0A84BD,#00484F);display:flex;flex-direction:column;justify-content:flex-end;color:#fff}
+.simulations-tool-page .simulation-card-art span{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.18);display:grid;place-items:center;margin-bottom:auto}.simulations-tool-page .simulation-card-art small{font-size:10px;letter-spacing:.09em;text-transform:uppercase}
+.simulations-tool-page .simulation-card-main{padding:17px;flex:1}.simulations-tool-page .simulation-card-main h3{font-size:17px;color:#17383e;margin:10px 0 7px}.simulations-tool-page .simulation-card-main p{font-size:12px;line-height:1.45;color:#607176}.simulations-tool-page .simulation-card-main>small{font-size:9px;line-height:1.45;color:#869295}
+.simulations-tool-page .simulation-card-meta{display:flex;gap:6px;flex-wrap:wrap}.simulations-tool-page .simulation-card-meta span{font-size:9px;border-radius:999px;background:#edf6f6;color:#005e67;padding:5px 8px}
+.simulations-tool-page .simulation-card-actions{padding:0 17px 17px;display:grid;grid-template-columns:1fr 1fr auto;gap:8px}.simulations-tool-page .simulation-card-actions .danger-lite{grid-column:1/-1}.simulations-tool-page .simulation-empty{grid-column:1/-1}
+
+/* Saved Scenarios */
+.tool-hero-library{background-position:center 52%;background-image:linear-gradient(90deg,rgba(0,72,79,.88) 0%,rgba(0,72,79,.68) 41%,rgba(0,72,79,.10) 75%),url('/hero-ocean.jpg')}
+.tool-hero-library .brand-eyebrow,.tool-hero-library h2,.tool-hero-library p{color:#fff}.tool-hero-library .brand-cta{background:#fff;color:#00484F}
+.library-tool-page>.panel{border:0;border-radius:15px;box-shadow:0 10px 26px rgba(0,72,79,.05);background:#fff}
+.library-tool-page>.panel .library-filter-grid{grid-template-columns:220px 1fr}
+.library-tool-page #libraryList{gap:10px}.library-tool-page #libraryList .result-card{padding:15px 18px;border:0;border-radius:14px;box-shadow:0 8px 20px rgba(0,72,79,.045);background:#fff;position:relative;overflow:hidden}.library-tool-page #libraryList .result-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#A7CAC6}.library-tool-page #libraryList .result-card:hover{box-shadow:0 12px 24px rgba(0,72,79,.08)}.library-tool-page #libraryList .result-card h3{font-size:16px;color:#17383e;margin:6px 0}.library-tool-page #libraryList .meta{margin-top:0}.library-tool-page #libraryList .library-actions{margin-top:11px}.library-tool-page #libraryList .library-actions button{padding:7px 10px;font-size:11px}
+.library-tool-page.library-favorites-only #libraryList .result-card:not(.favorite-visible){display:none}
+.tool-quick-file{font:inherit}
+
+@media(max-width:1200px){
+  .tool-hero{padding:36px 34px}.tool-hero h2{font-size:40px}.tool-hero-copy{padding-right:300px}.tool-hero-quick{right:24px;width:280px}.destination-shortcut-grid{grid-template-columns:repeat(3,1fr)}.simulations-tool-page .simulation-library-list{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:900px){
+  .tool-hero{min-height:500px;padding:30px 24px;align-items:flex-start;background-image:linear-gradient(180deg,rgba(235,231,223,.96) 0%,rgba(235,231,223,.86) 54%,rgba(0,72,79,.10) 80%),url('/hero-ocean.jpg')}.tool-hero-simulations,.tool-hero-library{background-image:linear-gradient(180deg,rgba(0,72,79,.90) 0%,rgba(0,72,79,.72) 58%,rgba(0,72,79,.14) 82%),url('/hero-ocean.jpg')}.tool-hero-copy{padding-right:0;max-width:none}.tool-hero h2{font-size:34px}.tool-hero-quick{left:24px;right:24px;top:auto;bottom:56px;width:auto}.destination-shortcut-grid{grid-template-columns:repeat(2,1fr)}.search-tool-page .branded-results-grid,.simulations-tool-page .simulation-library-list{grid-template-columns:1fr}.simulations-tool-page .library-filter-grid,.library-tool-page>.panel .library-filter-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .tool-hero{min-height:560px;padding:25px 18px}.tool-hero h2{font-size:28px;letter-spacing:.035em}.tool-hero p{font-size:13px}.tool-hero-quick{left:16px;right:16px;bottom:48px}.tool-section-heading{align-items:flex-start;flex-direction:column}.destination-shortcut-grid{grid-template-columns:1fr}.generator-tool-page .wizard-step-panel{padding:20px 14px}.generator-tool-page .wizard-progress{padding:14px 10px}.simulations-tool-page .simulation-card-actions{grid-template-columns:1fr}.simulations-tool-page .simulation-card-actions .danger-lite{grid-column:auto}
+}

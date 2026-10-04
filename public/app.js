@@ -5426,6 +5426,85 @@ function callSimulationCss(){return `
 @media(max-width:1100px){.sim-guided-shell{grid-template-columns:205px minmax(0,1fr)}.sim-guided-opening{grid-template-columns:1fr;grid-template-areas:"caller" "reason" "sailing" "gdpr" "role" "skills"}.sim-slide h1{font-size:38px}.sim-hero-layout,.sim-two-col,.sim-flow,.sim-question-grid,.sim-outcome-list,.sim-info-grid,.sim-verify-grid,.sim-recipe-shell,.sim-recap-list{grid-template-columns:1fr}.sim-header{grid-template-columns:1fr;justify-items:start}.sim-title{text-align:left}.sim-meta{text-align:left}.sim-story-card{grid-template-columns:1fr}.sim-call-icon{display:none}}
 @media(max-width:780px){body{overflow:auto}.sim-guided-shell{display:block}.sim-journey{padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:5px}.sim-journey-brand,.sim-journey-art{display:none}.sim-journey-step{grid-template-columns:1fr;padding:7px;text-align:center}.sim-journey-step:before,.sim-journey-step small{display:none}.sim-journey-step b{margin:0 auto}.sim-journey-step strong{font-size:10px}.sim-shell.guided .sim-slide{padding:22px 18px}.sim-required-reservation>b{position:static;display:inline-block;margin-top:10px}.sim-required-reservation>strong{font-size:26px}.sim-shell{height:auto;min-height:100vh}.sim-stage{padding:14px}.sim-slide{padding:22px;min-height:auto}.sim-slide h1{font-size:31px}.sim-subtitle{font-size:16px}.sim-footer{grid-template-columns:1fr 1fr}.sim-progress-area{grid-column:1/-1;grid-row:1}.sim-tools{display:flex;justify-content:flex-end}.sim-tools .sim-tool-btn{display:none}.sim-brand-copy strong{font-size:14px}.sim-brand-copy small{font-size:12px}.sim-story-card p{font-size:16px}}
 @media print{body{overflow:visible}.sim-guided-shell{display:block}.sim-journey{display:none};background:#fff}.sim-shell{display:block;height:auto;background:#fff}.sim-header,.sim-footer{display:none}.sim-stage{padding:0}.sim-slide{display:block!important;box-shadow:none;border:0;border-radius:0;min-height:10in;height:auto;page-break-after:always;padding:.45in;background:#fff}.sim-slide:last-child{page-break-after:auto}.sim-question-grid textarea,.sim-question-single textarea,.sim-reservation-entry input{border:1px solid #999}.sim-trainer-note,.sim-art-card,.sim-story-card,.sim-closing-card,.sim-verify-callout{break-inside:avoid}}
+/* immersive story presentation overrides */
+body{background:#EBE7DF}
+.sim-shell.immersive{height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:#EBE7DF;color:#0b2f63}
+.sim-topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:24px;padding:14px 28px;background:#fff;border-bottom:1px solid #d8e1ea;position:sticky;top:0;z-index:30}
+.sim-topbar-brand{display:flex;align-items:center}
+.sim-topbar-nav{display:flex;align-items:center;justify-content:center;gap:28px;flex-wrap:wrap}
+.sim-topbar-nav a{font-size:14px;font-weight:600;color:#103b78;text-decoration:none}
+.sim-topbar-meta{display:flex;align-items:center;gap:8px;font-size:14px;color:#0b2f63;justify-self:end}
+.sim-topbar-icon{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eaf7fb;color:#0A84BD;font-size:12px}
+.sim-story-main{overflow:auto;padding:0;background:linear-gradient(180deg,#ffffff 0 68px,#0585c5 68px 345px,#EBE7DF 345px 100%)}
+.sim-shell.immersive .sim-deck{max-width:1500px;margin:0 auto}
+.sim-shell.immersive .sim-slide{display:none;padding:0;background:transparent;border:0;box-shadow:none;min-height:auto}
+.sim-shell.immersive .sim-slide.active{display:block}
+.sim-story-hero{padding:30px 24px 110px;position:relative;min-height:calc(100vh - 150px);background:
+ radial-gradient(circle at 10% 28%, rgba(255,255,255,.18), transparent 18%),
+ radial-gradient(circle at 85% 18%, rgba(255,215,110,.45), transparent 8%),
+ linear-gradient(160deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0) 50%, rgba(248,241,224,.18) 50.1%, rgba(248,241,224,.18) 54%, transparent 54.2%),
+ linear-gradient(180deg,#35a2db 0%,#0A84BD 42%,#63c2d9 72%,#2cb0cb 100%);
+ overflow:hidden}
+.sim-story-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,47,99,.18),rgba(0,0,0,0) 40%,rgba(0,0,0,.1));pointer-events:none}
+.sim-story-hero:after{content:"";position:absolute;right:0;top:95px;width:280px;height:280px;background:radial-gradient(circle at 70% 30%, rgba(255,225,125,.95) 0 15%, rgba(255,225,125,0) 16%), linear-gradient(135deg,rgba(255,255,255,.28),rgba(255,255,255,0));opacity:.65;border-top-left-radius:60px 110px;pointer-events:none}
+.sim-story-banner,.sim-story-panel,.sim-story-help{position:relative;z-index:1}
+.sim-story-banner{color:#fff;max-width:980px;padding:10px 8px 24px}
+.sim-story-banner .sim-kicker{color:#d7effb;font-size:15px;letter-spacing:.24em;margin-bottom:12px}
+.sim-story-banner h1{font-family:Poppins,Arial,sans-serif;font-size:68px;line-height:1.02;font-weight:800;color:#fff;margin:0 0 10px}
+.sim-story-banner .sim-subtitle{font-size:17px;line-height:1.5;color:#f6fbff;max-width:920px;margin:0}
+.sim-story-panel{background:rgba(255,255,255,.98);border-radius:28px;box-shadow:0 18px 50px rgba(10,47,99,.15);border:1px solid rgba(255,255,255,.7);padding:22px 22px 18px}
+.sim-story-header{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:4px 8px 18px;border-bottom:1px solid #dbe6ef;margin-bottom:18px}
+.sim-story-header-copy h2{font-size:28px;line-height:1.15;margin:0;color:#0b2f63}
+.sim-step-inline{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.sim-step-label{font-size:16px;font-weight:600;color:#324a66}
+.sim-stage-dots{display:flex;gap:10px}
+.sim-stage-dot,.sim-stage-arrow{border:0;background:transparent;color:#0b2f63;cursor:pointer}
+.sim-stage-dot{width:42px;height:42px;border-radius:50%;background:#eef4f8;color:#183b6b;font-weight:800;font-size:20px;display:grid;place-items:center}
+.sim-stage-dot.active{background:#1386d5;color:#fff;box-shadow:0 6px 14px rgba(19,134,213,.28)}
+.sim-stage-arrow{font-size:28px;line-height:1;padding:0 6px}
+.sim-story-content{padding:2px 8px 8px}
+.sim-story-content .sim-guided-opening{display:grid;grid-template-columns:1.5fr .85fr;grid-template-areas:'caller reason' 'sailing gdpr' 'role skills';gap:14px}
+.sim-story-content .sim-guided-card{border-radius:18px;padding:20px;border:1px solid #d9e6ee;background:#fff;box-shadow:none}
+.sim-story-content .sim-guided-card.caller{border-left:6px solid #1386d5;background:linear-gradient(135deg,#ffffff 0%,#f7fbff 100%)}
+.sim-story-content .sim-guided-card.reason,.sim-story-content .sim-guided-card.sailing,.sim-story-content .sim-guided-card.role{background:linear-gradient(135deg,#f4fbfd 0%,#ffffff 100%)}
+.sim-story-content .sim-guided-card.skills{background:linear-gradient(135deg,#fff8e8 0%,#ffffff 100%);border-color:#ead8a1}
+.sim-story-content .sim-guided-card.gdpr{background:linear-gradient(135deg,#fff0ed 0%,#ffffff 100%);border-color:#ffb6ab}
+.sim-story-content .sim-guided-card.discovery{background:linear-gradient(135deg,#eef8f7 0%,#ffffff 100%);border-color:#b7d8d4}
+.sim-story-content .sim-guided-label{font-size:12px;letter-spacing:.18em;color:#0A84BD}
+.sim-story-content .sim-guided-card strong{font-size:18px}
+.sim-story-content .sim-guided-card p,.sim-story-content .sim-guided-card li{font-size:13px;line-height:1.55}
+.sim-story-content .sim-guided-card .sim-guided-required span{font-size:13px}
+.sim-story-content .sim-guided-card .sim-guided-required b{background:#d94132}
+.sim-story-content .sim-two-col{display:grid;grid-template-columns:1.3fr .9fr;gap:18px}
+.sim-story-content .sim-conversation,.sim-story-content .sim-verify-callout,.sim-story-content .sim-story-card,.sim-story-content .sim-closing-card,.sim-story-content .sim-side-checklist,.sim-story-content .sim-research-callout,.sim-story-content .sim-question-grid label,.sim-story-content .sim-question-single label,.sim-story-content .sim-art-card,.sim-story-content .sim-pause,.sim-story-content .sim-trainer-note,.sim-story-content .sim-call-reason{border-radius:18px}
+.sim-story-content .sim-bubble.specialist{background:#eef8fc;border-color:#cbe5f1}
+.sim-story-content .sim-bubble.caller{background:#fff8ea;border-color:#ead8a1}
+.sim-story-content .sim-verify-callout{background:linear-gradient(135deg,#fff0ed,#fff);border-color:#ffb6ab}
+.sim-story-content .sim-question-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sim-story-content .sim-question-grid label,.sim-story-content .sim-question-single label{background:#fff;border:1px solid #dbe6ef;padding:16px}
+.sim-story-content .sim-question-grid textarea,.sim-story-content .sim-question-single textarea{min-height:110px}
+.sim-story-content .sim-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sim-story-content .sim-info-card,.sim-story-content .sim-guest-card,.sim-story-content .sim-verify-card,.sim-story-content .sim-development,.sim-story-content .sim-flow>div{border-radius:18px;border:1px solid #dbe6ef;background:#fff;padding:16px}
+.sim-story-content .sim-quote{margin-top:14px}
+.sim-story-content .sim-flow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sim-story-content .sim-flow>div{display:flex;gap:12px;align-items:flex-start}
+.sim-story-content .sim-flow>div b{width:32px;height:32px;border-radius:999px;background:#0A84BD;color:#fff;display:grid;place-items:center;flex:0 0 32px}
+.sim-story-content .sim-outcome-list{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+.sim-story-content .sim-recipe-shell{grid-template-columns:260px 1fr}
+.sim-story-content .sim-recipe-note{background:linear-gradient(135deg,#EBE7DF,#fff);border-color:#e4dbc7}
+.sim-story-content .sim-recipe-list li:before{background:#8EBFC2}
+.sim-story-content .sim-recap-banner{background:linear-gradient(90deg,#8EBFC2,#E6CD88 120%)}
+.sim-story-help{display:flex;align-items:center;gap:16px;color:#fff;padding:18px 6px 0;font-size:16px}
+.sim-footer.story{position:sticky;bottom:0;z-index:40;background:#fff;border-top:1px solid #d8e1ea;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:14px 22px}
+.sim-footer.story .sim-progress-area{max-width:420px;justify-self:center;width:100%}
+.sim-footer.story .sim-tools{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.sim-footer.story .sim-nav-btn,.sim-footer.story .sim-tool-btn{min-height:48px;border-radius:14px}
+.sim-footer.story .sim-nav-btn{padding:12px 18px;font-size:16px;font-weight:700}
+.sim-footer.story .sim-nav-btn.primary{background:#0b2f63}
+.sim-footer.story .sim-progress{height:8px;border-radius:999px;background:#dbe6ef}
+.sim-footer.story .sim-progress-bar{height:100%;background:linear-gradient(90deg,#0A84BD,#E6CD88);border-radius:999px}
+@media(max-width:1180px){.sim-topbar{grid-template-columns:1fr;justify-items:start}.sim-topbar-nav{justify-content:flex-start;gap:18px}.sim-story-banner h1{font-size:52px}.sim-story-content .sim-guided-opening,.sim-story-content .sim-two-col,.sim-story-content .sim-flow,.sim-story-content .sim-outcome-list,.sim-story-content .sim-recipe-shell{grid-template-columns:1fr}.sim-story-header{flex-direction:column;align-items:flex-start}.sim-step-inline{justify-content:flex-start}.sim-footer.story{grid-template-columns:1fr}.sim-footer.story .sim-progress-area{max-width:none;order:1}.sim-footer.story .sim-tools{justify-content:space-between;flex-wrap:wrap}.sim-story-hero{padding-bottom:150px}}
+@media(max-width:780px){body{overflow:auto}.sim-shell.immersive{height:auto;min-height:100vh}.sim-story-main{overflow:visible}.sim-story-banner h1{font-size:40px}.sim-story-content .sim-question-grid,.sim-story-content .sim-info-grid{grid-template-columns:1fr}.sim-story-content .sim-guided-opening{grid-template-columns:1fr;grid-template-areas:"caller" "reason" "sailing" "gdpr" "role" "skills"}.sim-footer.story{position:static}.sim-topbar{padding:12px 16px}.sim-topbar-nav{display:none}.sim-story-hero{padding:18px 14px 32px}.sim-story-panel{padding:16px}.sim-stage-dot{width:34px;height:34px;font-size:16px}.sim-stage-arrow{font-size:22px}}
 `;}
 
 function callSimulationClient(){
@@ -5435,12 +5514,13 @@ function callSimulationClient(){
   const prev=document.getElementById('simPrev'),next=document.getElementById('simNext'),bar=document.getElementById('simProgressBar'),counter=document.getElementById('simCounter');
   function save(){const data={};document.querySelectorAll('[data-save-field]').forEach((el,i)=>{data[i]=el.type==='checkbox'?el.checked:el.value});try{localStorage.setItem(key,JSON.stringify(data))}catch(_){}}
   function load(){try{const data=JSON.parse(localStorage.getItem(key)||'{}');document.querySelectorAll('[data-save-field]').forEach((el,i)=>{if(!(i in data))return;if(el.type==='checkbox')el.checked=!!data[i];else el.value=data[i]||'';});}catch(_){}}
-  function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===index));prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));document.querySelector('.sim-stage')?.scrollTo?.({top:0,behavior:'smooth'});}
+  function render(){slides.forEach((s,i)=>s.classList.toggle('active',i===index));prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));const viewport=document.querySelector('.sim-story-main')||document.querySelector('.sim-stage');viewport?.scrollTo?.({top:0,behavior:'smooth'});}
   prev.onclick=()=>{if(index>0){index--;render();}};next.onclick=()=>{if(index<slides.length-1){index++;render();}else{index=0;render();}};
   document.getElementById('simFullscreen')?.addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();});
   document.getElementById('simPrint')?.addEventListener('click',()=>window.print());
   document.getElementById('simReset')?.addEventListener('click',()=>{if(confirm('Clear all responses and checklist progress?')){try{localStorage.removeItem(key)}catch(_){}document.querySelectorAll('[data-save-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value='';});}});
   document.querySelectorAll('[data-save-field]').forEach(el=>{el.addEventListener('change',save);el.addEventListener('input',save)});document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.addEventListener('click',()=>{const target=slides.findIndex(s=>s.dataset.stage===btn.dataset.stageJump);if(target>=0){index=target;render();}}));
+  document.querySelectorAll('[data-stage-direction]').forEach(btn=>btn.addEventListener('click',()=>{const current=Number(slides[index]?.dataset.stage||1);const target=String(Math.max(1,Math.min(4,current+Number(btn.dataset.stageDirection||0))));const idx=slides.findIndex(s=>s.dataset.stage===target);if(idx>=0){index=idx;render();}}));
   document.addEventListener('keydown',e=>{if(['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowRight'&&index<slides.length-1){index++;render();}if(e.key==='ArrowLeft'&&index>0){index--;render();}});
   load();render();
 }
@@ -5457,7 +5537,34 @@ function buildCallSimulationDocument(mode="trainee"){
     {n:3,title:"Service the Call",sub:"Use Seaweb, NCLHelp and scenario skills"},
     {n:4,title:"Review & Recap",sub:"Complete the call and final recap"}
   ];
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}</style></head><body data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell guided"><header class="sim-header"><div class="sim-brand"><img class="sim-brand-lockup" src="${NCL_SIM_LOGO_DATA}" alt="Norwegian Cruise Line – It's Different Out Here" /></div><div class="sim-title">SEAweb Call Simulation</div><div class="sim-meta"><strong>${escapeHtml(mode==="trainer"?"Trainer Presentation":"Trainee Presentation")}</strong>${escapeHtml(d.department)} • ${escapeHtml(focusTitle(d))}</div></header><div class="sim-guided-shell"><aside class="sim-journey"><div class="sim-journey-brand"><span>NCL</span><small>CALL JOURNEY</small></div>${journey.map(item=>`<button type="button" class="sim-journey-step${item.n===1?' active':''}" data-stage-jump="${item.n}"><b>${item.n}</b><span><strong>${item.title}</strong><small>${item.sub}</small></span></button>`).join('')}<div class="sim-journey-art"><span>MORE OF<br>WHAT MOVES YOU</span><i></i></div></aside><main class="sim-stage"><div class="sim-deck">${slides.map((slide,i)=>`<section class="sim-slide${i===0?' active':''}" data-slide="${i+1}" data-stage="${slide.stage||3}"><div class="sim-kicker">${escapeHtml(slide.kicker)}</div><h1>${escapeHtml(slide.title)}</h1><p class="sim-subtitle">${escapeHtml(slide.subtitle)}</p>${slide.body}<div class="sim-help">Use Previous / Next or the left and right arrow keys to move through the call.</div></section>`).join('')}</div></main></div><footer class="sim-footer"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
+  const topNav=['Home','Real Sailing Search','Scenario Generator','Call Simulations','Saved Simulations','Training Resources'];
+  const slidesHtml=slides.map((slide,i)=>{
+    const stage=slide.stage||3;
+    const dots=journey.map(item=>`<button type="button" class="sim-stage-dot${item.n===stage?' active':''}" data-stage-jump="${item.n}" aria-label="${escapeAttr(item.title)}">${item.n}</button>`).join('');
+    return `<section class="sim-slide${i===0?' active':''}" data-slide="${i+1}" data-stage="${stage}">
+      <div class="sim-story-hero">
+        <div class="sim-story-banner">
+          <div class="sim-kicker">CALL JOURNEY</div>
+          <h1>${escapeHtml(slide.title)}</h1>
+          <p class="sim-subtitle">${escapeHtml(slide.subtitle)}</p>
+        </div>
+        <div class="sim-story-panel">
+          <div class="sim-story-header">
+            <div class="sim-story-header-copy"><h2>${escapeHtml(slide.title)}</h2></div>
+            <div class="sim-step-inline">
+              <span class="sim-step-label">Step ${stage} of 4</span>
+              <button type="button" class="sim-stage-arrow" data-stage-direction="-1" aria-label="Previous stage">←</button>
+              <div class="sim-stage-dots">${dots}</div>
+              <button type="button" class="sim-stage-arrow" data-stage-direction="1" aria-label="Next stage">→</button>
+            </div>
+          </div>
+          <div class="sim-story-content">${slide.body}</div>
+        </div>
+        <div class="sim-story-help">Use the Next button to continue through the call.</div>
+      </div>
+    </section>`;
+  }).join('');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}</style></head><body data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell immersive"><header class="sim-topbar"><div class="sim-topbar-brand"><img class="sim-brand-lockup" src="${NCL_SIM_LOGO_DATA}" alt="Norwegian Cruise Line – It's Different Out Here" /></div><nav class="sim-topbar-nav">${topNav.map(label=>`<a href="#" onclick="return false">${escapeHtml(label)}</a>`).join('')}</nav><div class="sim-topbar-meta"><span class="sim-topbar-icon">◔</span><strong>${escapeHtml(mode==="trainer"?"Trainer View":"Trainee View")}</strong><span class="sim-topbar-caret">▾</span></div></header><main class="sim-story-main"><div class="sim-deck">${slidesHtml}</div></main><footer class="sim-footer story"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
 }
 
 function ensureCallSimulationOverlay(){
@@ -5493,7 +5600,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.51",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.53",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -6407,10 +6514,12 @@ function renderDashboardHome(){
   if(actHost)actHost.innerHTML=activities.slice(0,4).map(a=>`<div class="dashboard-activity-row"><span>${a.icon}</span><div><strong>${escapeHtml(a.type)}</strong><small>${escapeHtml(a.title)}</small></div><time>${a.date?new Date(a.date).toLocaleDateString():""}</time></div>`).join("")||`<div class="empty-dashboard-row">Your recent saved scenarios and simulations will appear here.</div>`;
 }
 
+let libraryFavoritesOnly=false;
 function renderLibrary(){
   const q=$("librarySearch").value.toLowerCase().trim();
   const deptFilter=$("libraryDepartmentFilter").value;
   let items=saved().filter(x=>{
+    if(libraryFavoritesOnly && !x.favorite)return false;
     if(deptFilter && x.department!==deptFilter)return false;
     return !q||JSON.stringify([x.title,x.type,x.focuses,x.department,x.reservationWorkflow,x.newCallerType,x.modificationType,x.airProgram,x.airTripType,x.difficulty,x.sailing?.ship,x.sailing?.title]).toLowerCase().includes(q);
   });
@@ -7127,3 +7236,46 @@ function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
 ["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
 populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();renderDashboardHome();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
+
+
+/* V1.9.53 matched tool-page interactions */
+document.querySelectorAll('[data-scroll-target]').forEach(btn=>btn.addEventListener('click',()=>{
+  const el=$(btn.dataset.scrollTarget);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+}));
+
+document.querySelectorAll('[data-destination-preset]').forEach(btn=>btn.addEventListener('click',()=>{
+  const radio=document.querySelector('input[name="searchAnchor"][value="destination"]');
+  if(radio){radio.checked=true;updateAnchorUI();}
+  chooseAnchorValue(btn.dataset.destinationPreset||'');
+  $('sailingSearchWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'});
+}));
+
+document.querySelectorAll('[data-generator-quick]').forEach(btn=>btn.addEventListener('click',()=>{
+  const action=btn.dataset.generatorQuick;
+  const workflow=$('reservationWorkflow');
+  if(workflow){workflow.value=action==='new' || action==='b2b' ? 'new':'modify';}
+  if(action==='service' && $('department'))$('department').value='Guest Services';
+  updateDepartmentUI?.();
+  updateWorkflowUI?.(false);
+  if(generatorWizardState?.ready)showWizardScenarioSetup(1);
+  $('generatorWizard')?.scrollIntoView({behavior:'smooth',block:'start'});
+  const message=action==='new'?'New reservation setup ready.'
+    :action==='modify'?'Existing reservation setup ready.'
+    :action==='b2b'?'Start with a new reservation, then choose the Back-to-Back sailing focus in Scenario Type.'
+    :'Guest Services servicing setup ready. Choose the servicing focus you want to practice.';
+  if(typeof flash==='function')flash(message);
+}));
+
+document.querySelectorAll('[data-simulation-department]').forEach(btn=>btn.addEventListener('click',()=>{
+  const select=$('simulationDepartmentFilter');
+  if(select){select.value=btn.dataset.simulationDepartment||'';renderSimulationLibrary();}
+  document.querySelector('.simulation-library-toolbar')?.scrollIntoView({behavior:'smooth',block:'start'});
+}));
+
+document.querySelectorAll('[data-library-action]').forEach(btn=>btn.addEventListener('click',()=>{
+  libraryFavoritesOnly=btn.dataset.libraryAction==='favorites';
+  renderLibrary();
+  $('libraryList')?.scrollIntoView({behavior:'smooth',block:'start'});
+  if(typeof flash==='function')flash(libraryFavoritesOnly?'Showing favorite scenarios.':'Showing all saved scenarios.');
+}));
