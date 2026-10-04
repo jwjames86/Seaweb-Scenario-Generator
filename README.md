@@ -1397,3 +1397,15 @@ This release carries the Home page visual system across the four primary work ar
 - The **Next** and **Previous** buttons now switch between those four pages, and inactive pages are forcibly hidden in both CSS and JavaScript.
 - The bottom navigation stays visible while the current step can scroll independently when needed.
 - Existing-reservation Guest Services calls keep **GDPR Verification** inside Listen & Ask, with **Reservation Number — REQUIRED** emphasized before servicing.
+
+
+## V1.9.55 – Scenario Quick Start Refresh
+
+- Redesigned the Scenario Generator quick-start area into four distinct NCL-styled path cards below the hero.
+- Moved **Preview as Trainee** into its own header action so it no longer touches or overlaps the quick-start choices.
+- Quick Start buttons now visibly select and configure a workflow instead of only scrolling the page.
+- **New Reservation** loads Guest Services + Basic Reservation.
+- **Existing Reservation** loads an existing-reservation servicing setup.
+- **Back-to-Back Sailing** now has its own Guest Services focus and opens an existing-reservation follow-up setup with back-to-back instructions.
+- **Service Scenario** loads Guest Services + Special Requests.
+- Selected quick-start cards receive a visible active state before the wizard opens.
