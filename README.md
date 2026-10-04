@@ -1409,3 +1409,16 @@ This release carries the Home page visual system across the four primary work ar
 - **Back-to-Back Sailing** now has its own Guest Services focus and opens an existing-reservation follow-up setup with back-to-back instructions.
 - **Service Scenario** loads Guest Services + Special Requests.
 - Selected quick-start cards receive a visible active state before the wizard opens.
+
+
+## V1.9.56 – Calm Trainer Workflow Refinement
+
+- Added a persistent **Scenario Snapshot** to Steps 2 and 3 so trainers can see department, workflow, caller, reason for call, guest count, sailing and training objective without going backward.
+- Added a clearer **Training Objective** card to Step 1 that updates from the selected scenario focus and servicing request.
+- Added optional **Smart Suggestions** in Step 3 for related setup such as credits/coupons, special requests, ADA needs, Free at Sea / price programs, air / transfers and Norwegian Care.
+- Added a **Scenario Readiness** check to Step 4. The generator now calls out only genuinely missing required information before generation.
+- Added a **What the Trainee Will Experience** summary to Step 4 so trainers review the call path, reason for call, GDPR requirement, skills and expected outcome—not just form fields.
+- Added reusable browser-local **Scenario Templates** with Save Current as Template and Load actions.
+- Added **Generate Variation** to reuse the same training structure with new fictional guest names.
+- Renamed **Scenario Approach** to **Scenario Style** with clearer choices: Use My Details, Generate Variation and Randomized Practice.
+- Refined the wizard styling around the NCL Sand foundation, approved Aqua / Blue / Teal / Yellow accents, and limited Salmon for required / attention states.
