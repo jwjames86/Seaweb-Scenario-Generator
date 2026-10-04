@@ -1,0 +1,22 @@
+<!doctype html><html><head><style>
+.sim-slide{display:none} .sim-slide.active{display:block} .sim-footer{position:fixed;bottom:0}
+</style></head><body data-storage-key="x">
+<main class="sim-story-main"><section class="sim-slide active" data-stage="1" style="display:block"><h1>ONE</h1></section><section class="sim-slide" data-stage="2" hidden style="display:none"><h1>TWO</h1></section><section class="sim-slide" data-stage="3" hidden style="display:none"><h1>THREE</h1></section><section class="sim-slide" data-stage="4" hidden style="display:none"><h1>FOUR</h1></section></main>
+<footer class="sim-footer"><button id="simPrev">Prev</button><div id="simProgressBar"></div><span id="simCounter"></span><button id="simFullscreen"></button><button id="simPrint"></button><button id="simReset"></button><button id="simNext">Next</button></footer>
+<script>(function callSimulationClient(){
+  const slides=[...document.querySelectorAll('.sim-slide')];
+  let index=0;
+  const key=document.body.dataset.storageKey||'seaweb-call-simulation';
+  const prev=document.getElementById('simPrev'),next=document.getElementById('simNext'),bar=document.getElementById('simProgressBar'),counter=document.getElementById('simCounter');
+  function save(){const data={};document.querySelectorAll('[data-save-field]').forEach((el,i)=>{data[i]=el.type==='checkbox'?el.checked:el.value});try{localStorage.setItem(key,JSON.stringify(data))}catch(_){}}
+  function load(){try{const data=JSON.parse(localStorage.getItem(key)||'{}');document.querySelectorAll('[data-save-field]').forEach((el,i)=>{if(!(i in data))return;if(el.type==='checkbox')el.checked=!!data[i];else el.value=data[i]||'';});}catch(_){}}
+  function render(){slides.forEach((s,i)=>{const active=i===index;s.classList.toggle('active',active);s.hidden=!active;s.style.display=active?'block':'none';});prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));const viewport=document.querySelector('.sim-story-main')||document.querySelector('.sim-stage');viewport?.scrollTo?.({top:0,behavior:'smooth'});}
+  prev.onclick=()=>{if(index>0){index--;render();}};next.onclick=()=>{if(index<slides.length-1){index++;render();}else{index=0;render();}};
+  document.getElementById('simFullscreen')?.addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();});
+  document.getElementById('simPrint')?.addEventListener('click',()=>window.print());
+  document.getElementById('simReset')?.addEventListener('click',()=>{if(confirm('Clear all responses and checklist progress?')){try{localStorage.removeItem(key)}catch(_){}document.querySelectorAll('[data-save-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value='';});}});
+  document.querySelectorAll('[data-save-field]').forEach(el=>{el.addEventListener('change',save);el.addEventListener('input',save)});document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.addEventListener('click',()=>{const target=slides.findIndex(s=>s.dataset.stage===btn.dataset.stageJump);if(target>=0){index=target;render();}}));
+  document.querySelectorAll('[data-stage-direction]').forEach(btn=>btn.addEventListener('click',()=>{const current=Number(slides[index]?.dataset.stage||1);const target=String(Math.max(1,Math.min(4,current+Number(btn.dataset.stageDirection||0))));const idx=slides.findIndex(s=>s.dataset.stage===target);if(idx>=0){index=idx;render();}}));
+  document.addEventListener('keydown',e=>{if(['TEXTAREA','INPUT','SELECT'].includes(document.activeElement?.tagName))return;if(e.key==='ArrowRight'&&index<slides.length-1){index++;render();}if(e.key==='ArrowLeft'&&index>0){index--;render();}});
+  load();render();
+})();</script></body></html>

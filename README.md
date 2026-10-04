@@ -1381,3 +1381,19 @@ This release carries the Home page visual system across the four primary work ar
 ### Navigation
 - Existing top navigation remains consistent across all pages.
 - Every tab continues to open at the top of the page when selected.
+
+
+## V1.9.54 – Unified Tool Pages + Call Journey Pagination Fix
+
+### Unified Generator tabs
+- Refreshed **Real Sailing Search**, **Scenario Generator**, **Call Simulations**, and **Saved Scenarios** to more closely match the Home page’s image-led NCL visual system.
+- Added stronger home-style hero treatments, quote cards, NCL palette accents, rounded white workspaces, and more consistent spacing / typography.
+- Updated page messaging to the approved preview direction, including **Find Real Sailings. Real Opportunities.**, **Practice Real Conversations. Build Real Confidence.**, **Real Calls. Real Skills. Real Growth.**, and **Your Scenarios. Your Progress.**
+- Refined the Scenario Generator’s visible step labels to **Choose a Foundation**, **Set the Guest Profile**, **Add Scenario Details**, and **Generate & Practice** while preserving the existing workflow and data logic.
+
+### Call Simulation presentation fix
+- Fixed a malformed print-only CSS rule that caused every presentation slide to render on one continuous page.
+- Rebuilt the trainee / trainer Call Journey into exactly **four separate journey pages**: The Call Begins, Listen & Ask, Service the Call, and Review & Recap.
+- The **Next** and **Previous** buttons now switch between those four pages, and inactive pages are forcibly hidden in both CSS and JavaScript.
+- The bottom navigation stays visible while the current step can scroll independently when needed.
+- Existing-reservation Guest Services calls keep **GDPR Verification** inside Listen & Ask, with **Reservation Number — REQUIRED** emphasized before servicing.
