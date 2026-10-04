@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.54" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.55" />
 </head>
 <body>
   <header class="brand-topnav">
@@ -258,16 +258,33 @@
             <div class="brand-eyebrow">NORWEGIAN CRUISE LINE</div>
             <h2>PRACTICE REAL CONVERSATIONS.<br>BUILD REAL CONFIDENCE.</h2>
             <p>Create custom call scenarios using real sailing details, guest situations and business objectives.</p>
-            <button id="previewTraineeBtn" class="tool-hero-secondary trainer-only" type="button">Preview as Trainee →</button>
           </div>
           <aside class="tool-hero-quote"><span></span><blockquote>“Every conversation is a new journey.”</blockquote><i></i></aside>
-          <aside class="tool-hero-quick generator-quick-card">
-            <span class="tool-quick-kicker">QUICK START</span>
-            <button type="button" data-generator-quick="new"><b>＋</b><span>New Reservation<small>Create a new booking scenario</small></span></button>
-            <button type="button" data-generator-quick="modify"><b>↻</b><span>Existing Reservation<small>Build a servicing or modification call</small></span></button>
-            <button type="button" data-generator-quick="b2b"><b>⇄</b><span>Back-to-Back Sailing<small>Practice linking a second sailing</small></span></button>
-            <button type="button" data-generator-quick="service"><b>☎</b><span>Service Scenario<small>Practice a Guest Services follow-up</small></span></button>
-          </aside>
+        </section>
+
+        <section class="generator-launchpad trainer-only" aria-label="Scenario quick start">
+          <div class="generator-launchpad-head">
+            <div>
+              <span class="generator-launchpad-eyebrow">QUICK START</span>
+              <h3>Choose where you want to begin.</h3>
+              <p>Each option preconfigures the generator and opens the correct workflow.</p>
+            </div>
+            <button id="previewTraineeBtn" class="generator-preview-btn" type="button"><span>◉</span> Preview as Trainee <b>→</b></button>
+          </div>
+          <div class="generator-path-grid">
+            <button type="button" class="generator-path-card new" data-generator-quick="new">
+              <span class="generator-path-icon">＋</span><span class="generator-path-copy"><small>CREATE</small><strong>New Reservation</strong><em>Start a new Guest Services booking scenario.</em></span><span class="generator-path-arrow">→</span>
+            </button>
+            <button type="button" class="generator-path-card existing" data-generator-quick="modify">
+              <span class="generator-path-icon">↻</span><span class="generator-path-copy"><small>SERVICE</small><strong>Existing Reservation</strong><em>Open an existing-reservation servicing workflow.</em></span><span class="generator-path-arrow">→</span>
+            </button>
+            <button type="button" class="generator-path-card b2b" data-generator-quick="b2b">
+              <span class="generator-path-icon">⇄</span><span class="generator-path-copy"><small>LINK</small><strong>Back-to-Back Sailing</strong><em>Prepare a related-sailing practice setup.</em></span><span class="generator-path-arrow">→</span>
+            </button>
+            <button type="button" class="generator-path-card service" data-generator-quick="service">
+              <span class="generator-path-icon">☎</span><span class="generator-path-copy"><small>FOLLOW-UP</small><strong>Service Scenario</strong><em>Practice a Guest Services follow-up call.</em></span><span class="generator-path-arrow">→</span>
+            </button>
+          </div>
         </section>
         <div class="tool-section-heading generator-heading">
           <div><span>BUILD YOUR SCENARIO</span><h3>Turn a training objective into a realistic call.</h3><p>The wizard keeps the setup focused while preserving all of the detailed training options.</p></div>
@@ -996,6 +1013,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.54"></script>
+  <script src="/app.js?v=1.9.55"></script>
 </body>
 </html>

@@ -259,6 +259,7 @@ const scenarioCatalog = {
       {name:"NCL Air & Ground Transfers",payment:"Initial Deposit",cardRequired:true,cardProfile:"alternateMain",commenting:true,difficulty:"Advanced",kind:"new",objective:"Create an NCL Air reservation with ground-transfer requirements, select the appropriate Air Program, review applicable air terms, document special requests, process payment when required, and send the correct confirmation."}
     ],
     11: [
+      {name:"Back-to-Back Sailing",payment:"No Payment / Service Only",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Service the reservation created in the previous exercise. Complete GDPR verification, confirm whether the guest wants the sailing before or after the existing cruise, review the additional itinerary, create the related reservation, link the sailings correctly, document the relationship, send confirmation, and recap the outcome."},
       {name:"Cancel & Reinstate",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"followup",objective:"Complete GDPR verification, evaluate final-payment status, cancel with refund guidance, then practice reinstatement while checking fare, category, stateroom, and promotion changes."},
       {name:"Reinstate Cancelled Reservation – Roleplay",payment:"Refund / Reinstate",cardRequired:false,commenting:true,difficulty:"Advanced",kind:"roleplay",objective:"Two-person servicing roleplay using a reservation cancelled yesterday. Complete GDPR with Reservation Number required, verify cancellation occurred within the last 24 hours, confirm the previous stateroom and pricing are still available, reinstate when eligible, Store Changes, add comments, send confirmation, recap, then switch roles."},
       {name:"Add Guest & Upgrade Stateroom – Roleplay",payment:"No Payment / Service Only",cardRequired:true,cardProfile:"alternateSesame",commenting:true,difficulty:"Advanced",kind:"add_guest_upgrade_roleplay",objective:"Two-person servicing roleplay using today's Solo Guest / Studio Booking reservation. Travel Agent Kyle James calls to add Taylor using Latitudes #272279126. Complete GDPR with Reservation Number required, upgrade the Studio to a category for two guests near elevators/stairs when possible, quote new pricing, preserve Free at Sea, Pre-Paid Service Charges and Norwegian Care for both guests, set Twin Beds, add Taylor's mushroom allergy while retaining Tom's Kosher Meals, check for additional deposit, Store Changes, add Compass comments, send guest and agent confirmations, recap, then switch roles."},
@@ -358,7 +359,7 @@ function setMode(mode){
 }
 $("trainerModeBtn").onclick=()=>setMode("trainer");
 $("traineeModeBtn").onclick=()=>setMode("trainee");
-$("previewTraineeBtn").onclick=()=>{setMode("trainee");go("generator")};
+$("previewTraineeBtn").onclick=()=>{setMode("trainee");go("generator");requestAnimationFrame(()=>{$("generatorWizard")?.scrollIntoView({behavior:"smooth",block:"start"});});};
 
 function allFocusRecords(dept=$("department")?.value||"Guest Services"){
   const days=Object.keys(scenarioCatalog[dept]||{}).map(Number).sort((a,b)=>a-b);
@@ -849,7 +850,7 @@ function focusActualCategory(meta){
   if(/air|transfer/.test(n))return 'air';
   if(/special request|ada|infant|guests 3-8|dietary/.test(n))return 'special';
   if(kind==='followup'||/cancel|reinstate|price drop|hotel|amenit|dining|entertainment|spa|servic|change|upgrade/.test(n))return 'servicing';
-  if(/multiple reservations & authorized|cruisetour|land pkg|gty|guarantee|roleplay|ta booking|agency|flexnet/.test(n))return 'advanced';
+  if(/multiple reservations & authorized|back-to-back|back to back|cruisetour|land pkg|gty|guarantee|roleplay|ta booking|agency|flexnet/.test(n))return 'advanced';
   return 'new';
 }
 
@@ -5604,7 +5605,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.54",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.55",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -7242,7 +7243,7 @@ function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();renderDashboardHome();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
 
 
-/* V1.9.53 matched tool-page interactions */
+/* V1.9.55 quick-start interactions */
 document.querySelectorAll('[data-scroll-target]').forEach(btn=>btn.addEventListener('click',()=>{
   const el=$(btn.dataset.scrollTarget);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
@@ -7255,19 +7256,48 @@ document.querySelectorAll('[data-destination-preset]').forEach(btn=>btn.addEvent
   $('sailingSearchWorkspace')?.scrollIntoView({behavior:'smooth',block:'start'});
 }));
 
+function selectGeneratorQuickFocus(name,day){
+  updateScenarioFocus(name,String(day));
+  const exact=[...document.querySelectorAll('#focusPickerOptions .focus-choice-input')].find(i=>i.value===name && i.dataset.day===String(day));
+  if(exact){document.querySelectorAll('#focusPickerOptions .focus-choice-input').forEach(i=>i.checked=false);exact.checked=true;syncScenarioFocusSelection();}
+}
+
+function activateGeneratorQuickCard(action){
+  document.querySelectorAll('[data-generator-quick]').forEach(card=>card.classList.toggle('is-selected',card.dataset.generatorQuick===action));
+}
+
 document.querySelectorAll('[data-generator-quick]').forEach(btn=>btn.addEventListener('click',()=>{
   const action=btn.dataset.generatorQuick;
+  const department=$('department');
   const workflow=$('reservationWorkflow');
-  if(workflow){workflow.value=action==='new' || action==='b2b' ? 'new':'modify';}
-  if(action==='service' && $('department'))$('department').value='Guest Services';
+  if(department)department.value='Guest Services';
+  if(workflow)workflow.value=action==='new'?'new':'modify';
   updateDepartmentUI?.();
   updateWorkflowUI?.(false);
+
+  if(action==='new'){
+    selectGeneratorQuickFocus('Basic Reservation',6);
+  }else if(action==='modify'){
+    selectGeneratorQuickFocus('NorwegianCare',7);
+  }else if(action==='b2b'){
+    selectGeneratorQuickFocus('Back-to-Back Sailing',11);
+    if($('modificationType'))$('modificationType').value='general';
+    if($('modificationRequest'))$('modificationRequest').value='Use the reservation created in the previous exercise. Confirm whether the guest wants the sailing before or after the existing cruise, review the additional itinerary, create the related reservation, link the sailings correctly, and document the back-to-back relationship.';
+    updateModificationTypeUI?.(false);
+  }else if(action==='service'){
+    selectGeneratorQuickFocus('Special Requests',8);
+  }
+
+  activateGeneratorQuickCard(action);
+  renderReservationDetailsVisual?.();
+  renderAdditionalOptionsVisual?.();
+  renderWizardReviewSummary?.();
   if(generatorWizardState?.ready)showWizardScenarioSetup(1);
-  $('generatorWizard')?.scrollIntoView({behavior:'smooth',block:'start'});
-  const message=action==='new'?'New reservation setup ready.'
-    :action==='modify'?'Existing reservation setup ready.'
-    :action==='b2b'?'Start with a new reservation, then choose the Back-to-Back sailing focus in Scenario Type.'
-    :'Guest Services servicing setup ready. Choose the servicing focus you want to practice.';
+  requestAnimationFrame(()=>{$('generatorWizard')?.scrollIntoView({behavior:'smooth',block:'start'});});
+  const message=action==='new'?'New Reservation loaded: Guest Services + Basic Reservation.'
+    :action==='modify'?'Existing Reservation loaded: Guest Services servicing workflow.'
+    :action==='b2b'?'Back-to-Back Sailing loaded with an existing-reservation follow-up workflow.'
+    :'Service Scenario loaded with Guest Services + Special Requests.';
   if(typeof flash==='function')flash(message);
 }));
 

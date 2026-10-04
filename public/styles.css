@@ -2130,3 +2130,34 @@ footer{background:var(--ncl-sand);border-color:rgba(0,72,79,.13);color:#68777a}
 @media(max-width:600px){
   .branded-tool-page>.tool-hero{min-height:690px;padding:25px 18px 260px}.branded-tool-page .tool-hero h2{font-size:29px}.branded-tool-page .tool-hero p{font-size:13px}.branded-tool-page .tool-hero-quote{left:18px;right:18px;width:auto;bottom:250px}.branded-tool-page .tool-hero-quick{left:16px;right:16px;bottom:36px;grid-template-columns:1fr}.branded-tool-page .tool-hero-quick button,.branded-tool-page .tool-hero-quick .tool-quick-file{border-right:0;border-bottom:1px solid rgba(0,72,79,.09)}.generator-tool-page .wizard-step-panel{padding:20px 14px}
 }
+
+/* V1.9.55 • Scenario Generator quick-start refresh */
+.generator-tool-page>.tool-hero{min-height:330px;padding-bottom:54px;margin-bottom:18px}
+.generator-tool-page .tool-hero-copy{padding-right:360px}
+.generator-launchpad{margin:0 0 28px;padding:22px 24px 24px;background:#fff;border:1px solid rgba(0,72,79,.13);border-radius:18px;box-shadow:0 12px 30px rgba(0,72,79,.07)}
+.generator-launchpad-head{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:18px}
+.generator-launchpad-head>div{min-width:0}
+.generator-launchpad-eyebrow{display:block;color:#0b7180;font-size:10px;font-weight:800;letter-spacing:.2em;margin-bottom:5px}
+.generator-launchpad h3{margin:0;color:#17383e;font-size:23px;line-height:1.2}
+.generator-launchpad p{margin:5px 0 0;color:#6a777a;font-size:12px;line-height:1.5}
+.generator-preview-btn{flex:0 0 auto;border:1px solid rgba(0,72,79,.24);background:#f7fbfb;color:#17383e;border-radius:999px;padding:12px 17px;display:flex;align-items:center;gap:9px;font:inherit;font-size:12px;font-weight:800;cursor:pointer;transition:.18s ease;box-shadow:0 4px 12px rgba(0,72,79,.06)}
+.generator-preview-btn span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:#e5f4f3;color:#006099;font-size:11px}
+.generator-preview-btn b{font-size:14px;color:#006099}
+.generator-preview-btn:hover{background:#fff;border-color:#8ebfc2;transform:translateY(-1px);box-shadow:0 8px 18px rgba(0,72,79,.10)}
+.generator-path-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.generator-path-card{appearance:none;position:relative;min-width:0;border:1px solid #d9e4e6;background:#fbfcfb;border-radius:15px;padding:16px 15px;display:grid;grid-template-columns:42px minmax(0,1fr) 22px;gap:12px;align-items:center;text-align:left;color:#17383e;cursor:pointer;transition:.18s ease;overflow:hidden}
+.generator-path-card:before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:#8ebfc2;opacity:.0;transition:.18s ease}
+.generator-path-card:hover{transform:translateY(-2px);border-color:#a7cac6;box-shadow:0 10px 22px rgba(0,72,79,.08);background:#fff}
+.generator-path-card:hover:before,.generator-path-card.is-selected:before{opacity:1}
+.generator-path-card.is-selected{border-color:#8ebfc2;background:linear-gradient(135deg,#f3fbfa,#fff);box-shadow:0 0 0 3px rgba(142,191,194,.14)}
+.generator-path-card.new:before{background:#0A84BD}.generator-path-card.existing:before{background:#00484F}.generator-path-card.b2b:before{background:#E6CD88}.generator-path-card.service:before{background:#FF938A}
+.generator-path-icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#eaf7f6;color:#006099;font-weight:800;font-size:18px}
+.generator-path-card.existing .generator-path-icon{background:#e9f3f0;color:#00484F}.generator-path-card.b2b .generator-path-icon{background:#fff6dc;color:#8b6a0f}.generator-path-card.service .generator-path-icon{background:#fff0ed;color:#aa4b40}
+.generator-path-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.generator-path-copy small{font-size:8px;font-weight:800;letter-spacing:.14em;color:#7c8b8d}
+.generator-path-copy strong{font-size:13px;line-height:1.25;color:#17383e}
+.generator-path-copy em{font-style:normal;font-size:9px;line-height:1.4;color:#748083}
+.generator-path-arrow{font-size:17px;color:#006099;justify-self:end}
+.generator-path-card.is-selected .generator-path-copy strong{color:#005d67}
+@media(max-width:1120px){.generator-path-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.generator-tool-page .tool-hero-copy{padding-right:300px}}
+@media(max-width:760px){.generator-tool-page>.tool-hero{min-height:500px;padding-bottom:40px}.generator-tool-page .tool-hero-copy{padding-right:0}.generator-launchpad{padding:18px}.generator-launchpad-head{align-items:flex-start;flex-direction:column}.generator-preview-btn{align-self:flex-start}.generator-path-grid{grid-template-columns:1fr}.generator-path-card{padding:14px}}
