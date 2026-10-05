@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.55" />
+  <link rel="stylesheet" href="/styles.css?v=1.9.57" />
 </head>
 <body>
   <header class="brand-topnav">
@@ -422,12 +422,13 @@
                 <div id="selectedFocusChips" class="selected-focus-chips"></div>
                 <span class="field-hint">Select one or more skills. The generator merges their requirements into one scenario.</span>
               </div>
-              <label>Scenario Approach
+              <label>Scenario Style
                 <select id="scenarioApproach">
-                  <option value="variation">Generate Variation</option>
-                  <option value="current">Current Training Focus</option>
-                  <option value="new">New Scenario Based on Skill</option>
+                  <option value="current">Use My Details</option>
+                  <option value="variation" selected>Generate Variation</option>
+                  <option value="new">Randomized Practice</option>
                 </select>
+                <span class="field-hint">Choose how closely the generated exercise should follow the details you enter.</span>
               </label>
               <label>Difficulty
                 <select id="difficulty">
@@ -443,6 +444,10 @@
               <label id="agencyField">Agency / Booking Identifier
                 <input id="agency" value="5" autocomplete="off" />
                 <span id="agencyHint" class="field-hint">Agency 5 = Direct Guest (US) • Agency 7 = Direct Guest (Canada) • Travel Agent booking = enter the Travel Agent's Agency ID or phone number.</span>
+              </label>
+              <label id="travelAgentNameField" class="hidden-field">Travel Agent Name
+                <input id="travelAgentName" placeholder="Enter the name of the Travel Agent who is calling" autocomplete="off" />
+                <span class="field-hint">Used in the scenario story and call simulation when the caller is a Travel Agent.</span>
               </label>
               <label id="guest1Field"><span id="guest1LabelText">Primary Guest</span>
                 <input id="guest1" value="Maxim De Winter" />
@@ -1013,6 +1018,6 @@
   </dialog>
 
   <footer>Seaweb Scenario Generator • Training Prototype • Public NCL.com data is separate from internal Seaweb/trainer-entered data.</footer>
-  <script src="/app.js?v=1.9.55"></script>
+  <script src="/app.js?v=1.9.57"></script>
 </body>
 </html>

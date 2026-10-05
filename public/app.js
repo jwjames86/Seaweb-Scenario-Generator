@@ -536,8 +536,37 @@ function dynamicReservationSnapshot(){
   return data;
 }
 
+const stateroomCategoryGroups={
+  'Studio / Solo':['Studio'],
+  'Inside':['Inside','Family Inside'],
+  'Oceanview':['Oceanview','Family Oceanview','Large Oceanview with Round Window','Oceanview with Round Window','Obstructed Oceanview'],
+  'Balcony':['Balcony','Aft-Facing Balcony','Family Balcony'],
+  'Club Balcony Suite':['Club Balcony Suite','Forward-Facing Club Balcony Suite','Forward-Facing Club Balcony Suite with Large Balcony','Family Club Balcony Suite'],
+  'Suite / The Haven':["The Haven Premier Owner's Suite with Large Balcony","The Haven Deluxe Owner's Suite with Large Balcony","The Haven Aft-Facing Owner's Suite with Master Bedroom & Large Balcony","The Haven Owner's Suite with Large Balcony","The Haven 2-Bedroom Family Villa with Large Balcony","The Haven Aft-Facing Penthouse with Master Bedroom & Large Balcony","The Haven Penthouse with Balcony",'Aft-Facing Suite with Large Balcony','Family Suite with Master Bedroom & Large Balcony','Family Suite with Master Bedroom & Balcony','Forward-Facing Suite with Master Bedroom & Large Balcony','Forward-Facing Suite with Large Balcony'],
+  'ADA / Accessible':['ADA / Accessible'],
+  'Guarantee (GTY)':['Guarantee Inside','Guarantee Oceanview','Guarantee Balcony','Guarantee Club Balcony Suite']
+};
+const stateroomBaseOrder=['Studio / Solo','Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','ADA / Accessible','Guarantee (GTY)'];
+function categoryBaseForValue(value='Balcony'){
+  const v=String(value||'').trim();
+  return stateroomBaseOrder.find(base=>(stateroomCategoryGroups[base]||[]).includes(v)) || (stateroomCategoryGroups[v]?v:'Balcony');
+}
+function defaultCategoryForBase(base='Balcony'){
+  return (stateroomCategoryGroups[base]||['Balcony'])[0];
+}
 function reservationCategoryOptions(selected='Balcony'){
-  return ['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible','Random'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
+  const sel=String(selected||'Balcony');
+  return stateroomBaseOrder.map(base=>`<optgroup label="${escapeAttr(base)}">${(stateroomCategoryGroups[base]||[]).map(v=>`<option ${v===sel?'selected':''}>${escapeHtml(v)}</option>`).join('')}</optgroup>`).join('');
+}
+function ensureReservationCategorySelects(){
+  ['category','reservation2Category'].forEach(id=>{const el=$(id);if(!el)return;const current=el.value||'Balcony';el.innerHTML=reservationCategoryOptions(current);if([...el.options].some(o=>o.value===current))el.value=current;});
+}
+function stateroomCategoryVisualMarkup(targetId,currentValue='Balcony'){
+  const base=categoryBaseForValue(currentValue);
+  const baseIcons={'Studio / Solo':'♟','Inside':'▯','Oceanview':'☀','Balcony':'▰','Club Balcony Suite':'♛','Suite / The Haven':'◆','ADA / Accessible':'♿','Guarantee (GTY)':'◇'};
+  const baseButtons=stateroomBaseOrder.map(b=>`<button type="button" class="stateroom-base-btn ${b===base?'active':''}" data-category-base="${escapeAttr(b)}" data-category-target="${escapeAttr(targetId)}"><span>${baseIcons[b]||'▣'}</span><strong>${escapeHtml(b)}</strong></button>`).join('');
+  const details=(stateroomCategoryGroups[base]||[]).map(v=>`<button type="button" class="stateroom-detail-btn ${v===currentValue?'active':''}" data-category-detail="${escapeAttr(v)}" data-category-target="${escapeAttr(targetId)}">${escapeHtml(v)}</button>`).join('');
+  return `<div class="stateroom-category-builder"><span class="visual-pref-label">Stateroom Category</span><div class="stateroom-base-grid">${baseButtons}</div><div class="stateroom-detail-block"><div><strong>Category Detail</strong><small>${escapeHtml(base)} selected</small></div><div class="stateroom-detail-grid">${details}</div></div></div>`;
 }
 function reservationLocationOptions(selected='Any'){
   return ['Any','Forward','Midship','Aft','Near stairs/elevators','Highest deck available'].map(v=>`<option ${v===selected?'selected':''}>${escapeHtml(v)}</option>`).join('');
@@ -600,6 +629,7 @@ function updateMultipleReservationUI(initialExtraData={}){
   $('reservation2Guest2Field')?.classList.toggle('guest-count-hidden',count2<2);
   renderExtraGuestFields('reservation2ExtraGuests','reservation2',count2);
   if(active)renderAdditionalReservationPanels(initialExtraData); else if($('additionalReservationsContainer'))$('additionalReservationsContainer').innerHTML='';
+  ensureReservationCategorySelects();
   refreshGuestDependentConfigs();
 }
 
@@ -745,9 +775,11 @@ function syncAgencyCallerLogic(){
   const agency=$("agency");
   const newCallerField=$("newCallerTypeField");
   const newCaller=$("newCallerType");
+  const travelAgentNameField=$("travelAgentNameField");
   if(!agency)return;
 
   newCallerField?.classList.toggle("workflow-hidden",outbound||workflow!=="new");
+  travelAgentNameField?.classList.toggle("hidden-field",outbound||workflow!=="new"||(newCaller?.value||"direct_us")!=="travel_agent");
 
   if(outbound){
     agency.readOnly=true;
@@ -1012,7 +1044,7 @@ function detailedFocusConfigHtml(d){
   const chunks=[];
   if(Array.isArray(d.specialRequests)&&d.specialRequests.length){chunks.push(`<div class="focus-config-output"><h4>Special Requests</h4><ul>${d.specialRequests.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Special Request')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
   if(Array.isArray(d.adaNeeds)&&d.adaNeeds.length){chunks.push(`<div class="focus-config-output"><h4>ADA / Accessibility Needs</h4><ul>${d.adaNeeds.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(x.type||'Accessibility Need')}${x.detail?` — ${escapeHtml(x.detail)}`:''}</li>`).join('')}</ul></div>`);}
-  const priceLabels=priceProgramLabels(d.pricePrograms);if(priceLabels.length){chunks.push(`<div class="focus-config-output"><h4>Price Programs & Promotions</h4><ul>${priceLabels.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`);}
+  const priceLabels=priceProgramLabels(d.pricePrograms);if(priceLabels.length){chunks.push(`<div class="focus-config-output"><h4>Price Programs & Promotions</h4><div class="scenario-auto-program-note"><strong>Seaweb reminder:</strong> If a price program is already checked/applied, leave it selected. Do not remove an auto-applied program.</div><ul>${priceLabels.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul></div>`);}
   if(Array.isArray(d.airGuestSelections)&&d.airGuestSelections.some(x=>x.airProgram!=='none'||x.transfers!=='No NCL Transfers')){chunks.push(`<div class="focus-config-output"><h4>Air & Transfers by Guest</h4><ul>${d.airGuestSelections.map(x=>`<li><strong>${escapeHtml(x.guest||'Guest')}:</strong> ${escapeHtml(airGuestTypes.find(a=>a.value===x.airProgram)?.label||'No NCL Air')}${x.airProgram!=='none'?` • ${x.tripType==='one_way'?'One Way':'Round Trip'}`:''}${x.gateway?` • ${escapeHtml(x.gateway)}`:''} • ${escapeHtml(x.transfers||'No NCL Transfers')}</li>`).join('')}</ul></div>`);}
   return chunks.length?`<section class="scenario-section visual-section detailed-focus-config-section"><div class="section-label">TRAINER-SELECTED DETAILS</div>${scenarioIconHeading('⚙️','Scenario-Specific Setup')}<div class="focus-config-output-grid">${chunks.join('')}</div></section>`:'';
 }
@@ -1058,6 +1090,8 @@ function syncScenarioFocusSelection(){
   applyFocusDefaults();
   renderFocusCategoryTabs();
   refreshFocusConfigurationPanels();
+  renderWizardObjectiveCard();
+  renderWizardReviewSummary();
 }
 
 function openFocusPicker(){$("focusPickerMenu").classList.add('open');$("focusPickerBtn").setAttribute('aria-expanded','true')}
@@ -2537,6 +2571,7 @@ function scenarioData(){
     focusDays,
     reservationWorkflow:$("reservationWorkflow")?.value||"new",
     newCallerType:$("department").value==="Guest Services"&&$("reservationWorkflow").value==="new"?$("newCallerType").value:"",
+    travelAgentName:$("travelAgentName")?.value.trim()||"",
     existingReservationNumber:$("existingReservationNumber")?.value.trim()||"",
     modificationType:$("modificationType")?.value||"general",
     modificationTarget:$("modificationTarget")?.value.trim()||"",
@@ -2822,7 +2857,8 @@ function customerStoryHtml(d,meta,sailText,guestNames){
     const reservationSummary=d.reservations.map((r,i)=>`Reservation ${i+1}: <strong>${escapeHtml(reservationGuestLabel(r,i))}</strong>`).join(' • ');
     const relationship=d.reservationRelationship||"Same Sailing / Linked";
     if(d.department==="Guest Services" && d.newCallerType==="travel_agent"){
-      return `<p>A travel advisor is calling Norwegian Cruise Line to create <strong>${count} related reservations</strong> for ${escapeHtml(sailText)}. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+      const agent=d.travelAgentName?`<strong>Travel Agent ${escapeHtml(d.travelAgentName)}</strong>`:'A Travel Agent';
+      return `<p>${agent} is calling Norwegian Cruise Line to create <strong>${count} related reservations</strong> for ${escapeHtml(sailText)}. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
     return `<p>The caller is planning ${escapeHtml(sailText)} and needs <strong>${count} related reservations</strong>. ${reservationSummary}. The requested room relationship is <strong>${escapeHtml(relationship)}</strong>. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
@@ -2898,7 +2934,8 @@ function customerStoryHtml(d,meta,sailText,guestNames){
       return `<p>${names} are calling Norwegian Cruise Line directly from Canada to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
     if(caller.type==="travel_agent"){
-      return `<p>A travel advisor is calling Norwegian Cruise Line on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
+      const agent=d.travelAgentName?`<strong>Travel Agent ${escapeHtml(d.travelAgentName)}</strong>`:'A Travel Agent';
+      return `<p>${agent} is calling Norwegian Cruise Line on behalf of ${names} to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
     }
     return `<p>${names} are calling Norwegian Cruise Line directly to create a new reservation for ${escapeHtml(sailText)}. ${escapeHtml(focusStoryDetail(d,meta))}</p>`;
   }
@@ -3382,6 +3419,7 @@ function resetScenarioForm(){
   $("department").value="Guest Services";
   $("reservationWorkflow").value="new";
   $("newCallerType").value="direct_us";
+  if($("travelAgentName"))$("travelAgentName").value="";
   $("trainingDay").value="6";
   $("scenarioApproach").value="variation";
   $("difficulty").value="Beginner";
@@ -3714,7 +3752,8 @@ function offersAddonsVisualHtml(d){
   if((/fcc|cruisenext|cruise first|coupon/.test(n)||d.payment==='FCC / CruiseNext') && !(d.coupons||[]).length)items.push('Applicable FCC / CruiseNext / CruiseFirst / discount coupon workflow');
   if(/special request|ada|dietary/.test(n))items.push('Applicable special, accessibility, or dietary requests');
   if(!items.length)return '';
-  return `<section class="scenario-section visual-section">${scenarioIconHeading('🎁','Offers & Add-Ons')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul><p class="scenario-reminder">Use Compass and the approved internal resources for the applicable offer conversations and current eligibility.</p></section>`;
+  const priceProgramReminder=/price programs|promotion|free at sea|\bfas\b/.test(n)?`<div class="scenario-auto-program-note"><strong>Price Program reminder:</strong> If a program is already checked/applied in Seaweb, leave it selected. Do not remove an auto-applied program.</div>`:'';
+  return `<section class="scenario-section visual-section">${scenarioIconHeading('🎁','Offers & Add-Ons')}<ul class="visual-check-list">${[...new Set(items)].map(x=>`<li>✅ ${escapeHtml(x)}</li>`).join('')}</ul>${priceProgramReminder}<p class="scenario-reminder">Use Compass and the approved internal resources for the applicable offer conversations and current eligibility.</p></section>`;
 }
 
 function modificationDetailsVisualHtml(d){
@@ -4120,7 +4159,7 @@ function generateScenario(){
     "Refund / Reinstate":"Follow the cancellation/refund or reinstatement workflow. Verify the original form of payment and applicable refund timing."
   }[d.payment]||"Complete the payment/booking action shown in Seaweb.";
   const approachText={current:"Use the selected curriculum focus and preserve its core workflow.",variation:"Trainer-generated variation that preserves the required workflow while varying guests, sailing, stateroom, or preferences.",new:"New practice case built around the selected learning objectives."}[d.approach];
-  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`Travel Agent • Agency ID / Phone: ${d.agency||"Not entered"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency}`):guestServicesAgencyDisplay(d.agency));
+  const agencyDisplay=d.department==="Outbound Sales"?`${d.market} | Agency ${d.agency}`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`${d.travelAgentName?`Travel Agent ${d.travelAgentName} • `:'Travel Agent • '}Agency ID / Phone: ${d.agency||"Not entered"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency}`):guestServicesAgencyDisplay(d.agency));
 
   const html=`
     <div class="scenario-meta-row"><span class="chip">${escapeHtml(d.department)}</span><span class="chip">${escapeHtml(d.department==="Outbound Sales"&&d.reservationWorkflow==="modify"?"Sales Follow-Up / Existing Quote":d.reservationWorkflow==="modify"?"Modify Existing Reservation":"Create New Reservation")}</span><span class="chip">${escapeHtml(d.difficulty)}</span><span class="chip">${d.focuses.length} focus${d.focuses.length===1?'':'es'}</span></div>
@@ -5146,7 +5185,7 @@ function presentationCallerLabel(d){
   if(d.followUpRoleplay)return followUpPrimaryGuestName(d);
   if(isMultipleAuthorizedAny(d))return "Maria Lopez";
   if(isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))return "Kyle James — Travel Agent";
-  if(d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent")return `Travel Agent${d.agency?` • ${d.agency}`:""}`;
+  if(d.department==="Guest Services"&&d.reservationWorkflow==="new"&&d.newCallerType==="travel_agent")return d.travelAgentName?`${d.travelAgentName} — Travel Agent`:`Travel Agent${d.agency?` • ${d.agency}`:""}`;
   if(d.reservationWorkflow==="modify")return d.guest1||"Existing reservation caller";
   return scenarioGuestNames(d).filter(Boolean)[0]||"Guest";
 }
@@ -5204,7 +5243,7 @@ function presentationOutcomeItems(d){
   else items.push("The reservation is created with the correct sailing, guests, stateroom, and selected options.");
   if((d.specialRequests||[]).length)items.push("Special requests are attached to the correct guest(s).");
   if((d.adaNeeds||[]).length)items.push("Accessibility needs are documented and handled using the correct Seaweb / NCLHelp workflow.");
-  if(priceProgramLabels(d.pricePrograms).length)items.push("The selected price programs and promotions are applied exactly as requested.");
+  if(priceProgramLabels(d.pricePrograms).length){items.push("The selected price programs and promotions are applied exactly as requested.");items.push("Any price program already checked in Seaweb remains selected and is not removed.");}
   if((d.coupons||[]).length)items.push("Credits and coupons are applied from the correct guest profile and in the correct sequence.");
   if((d.airGuestSelections||[]).some(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers"))items.push("Air and transfer selections match each individual guest's request.");
   if(d.payment!=="No Payment / Service Only")items.push(`The ${d.payment||"required payment"} is completed or explained correctly.`);
@@ -5354,7 +5393,7 @@ function buildCallSimulationSlides(d,mode="trainee"){
   const trainer=mode==="trainer";
   const caller=presentationCallerLabel(d);
   const focus=d.followUpRoleplay?followUpReasonLabel(d):focusTitle(d);
-  const source=d.department==="Outbound Sales"?`${d.market||"Outbound"} • Direct Guest`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`Travel Agent • ${d.agency||"Agency to verify"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency||"—"}`):guestServicesAgencyDisplay(d.agency));
+  const source=d.department==="Outbound Sales"?`${d.market||"Outbound"} • Direct Guest`:(d.reservationWorkflow==="new"?(d.newCallerType==="travel_agent"?`${d.travelAgentName?`Travel Agent ${d.travelAgentName}`:'Travel Agent'} • ${d.agency||"Agency to verify"}`:`${newReservationCallerLabel(d)} • Agency ${d.agency||"—"}`):guestServicesAgencyDisplay(d.agency));
   const profileCards=guests.map((g,i)=>`<div class="sim-guest-card"><span>Guest ${i+1}</span><strong>${escapeHtml(g.name)}</strong><small>${escapeHtml(g.status)}</small>${g.status==="Past Guest"?`<b>Latitudes # ${escapeHtml(g.latitudes)}</b>`:""}</div>`).join("");
   const devCards=developments.map((x,i)=>`<div class="sim-development"><span class="sim-development-num">${i+1}</span><div><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.text)}</p></div></div>`).join("");
   const taskList=tasks.map(x=>`<li><input type="checkbox" data-save-field><span>${escapeHtml(x)}</span></li>`).join("");
@@ -5605,7 +5644,7 @@ function interactiveScenarioFilename(mode="trainee"){
 
 async function currentGeneratorStylesForInteractiveShare(){
   try{
-    const response=await fetch("/styles.css?v=1.9.55",{cache:"no-store"});
+    const response=await fetch("/styles.css?v=1.9.57",{cache:"no-store"});
     if(response.ok)return await response.text();
   }catch(_){}
   return "";
@@ -6565,6 +6604,7 @@ window.openSaved=(id)=>{
   $("newCallerType").value=x.newCallerType||(
     String(x.agency)==="7"?"direct_ca":(["5",""].includes(String(x.agency||""))?"direct_us":"travel_agent")
   );
+  if($("travelAgentName"))$("travelAgentName").value=x.travelAgentName||"";
   $("existingReservationNumber").value=x.existingReservationNumber||"";
   $("modificationType").value=x.modificationType||"general";
   $("modificationTarget").value=x.modificationTarget||"";
@@ -6702,6 +6742,145 @@ function reservationReviewText(){
   return bits.join(' • ');
 }
 
+
+function wizardReasonForCall(){
+  const workflow=$("reservationWorkflow")?.value||"new";
+  if(workflow==="modify"){
+    const select=$("modificationType");
+    const label=select?.selectedOptions?.[0]?.textContent?.trim()||"Service Existing Reservation";
+    const detail=$("modificationRequest")?.value?.trim();
+    return detail?`${label}: ${detail}`:label;
+  }
+  const focuses=selectedFocusNames();
+  if(!focuses.length)return "Choose a scenario focus";
+  return focuses.join(" + ");
+}
+
+function wizardTrainingObjective(){
+  const workflow=$("reservationWorkflow")?.value||"new";
+  if(workflow==="modify"){
+    const request=$("modificationRequest")?.value?.trim();
+    if(request)return request;
+  }
+  const objectives=selectedFocusMetas().map(m=>m.objective).filter(Boolean);
+  return objectives.length?objectives.join(" "):"Choose a Scenario Focus to see the training objective.";
+}
+
+function wizardScenarioSnapshotHtml(){
+  const workflow=$("reservationWorkflow")?.value||"new";
+  const department=$("department")?.value||"Guest Services";
+  const caller=workflow==="modify"
+    ? (department==="Outbound Sales"?"Direct Guest":guestServicesAgencyDisplay($("agency")?.value||""))
+    : (department==="Guest Services"&&$("newCallerType")?.value==="travel_agent"&&$("travelAgentName")?.value.trim()?`Travel Agent ${$("travelAgentName").value.trim()}`:newReservationCallerLabel({department,newCallerType:$("newCallerType")?.value||"direct_us"}));
+  const guestCount=workflow==="new"?(formGuestNames().filter(Boolean).length||+$("guestCount")?.value||1):"Existing booking";
+  const sailing=state.selectedSailing?.ship?`${state.selectedSailing.ship}${state.selectedSailing.sailingDate?` • ${formatSailingDate(state.selectedSailing.sailingDate)}`:""}`:"No real sailing selected";
+  return `<section class="wizard-snapshot-card">
+    <div class="wizard-snapshot-head"><span>SCENARIO SNAPSHOT</span><strong>${escapeHtml(selectedFocusNames().join(' + ')||'Training Scenario')}</strong></div>
+    <dl>
+      <div><dt>Department</dt><dd>${escapeHtml(department)}</dd></div>
+      <div><dt>Workflow</dt><dd>${escapeHtml(workflow==='modify'?'Existing Reservation':'New Reservation')}</dd></div>
+      <div><dt>Caller</dt><dd>${escapeHtml(caller)}</dd></div>
+      <div><dt>Reason for Call</dt><dd>${escapeHtml(wizardReasonForCall())}</dd></div>
+      <div><dt>Guests</dt><dd>${escapeHtml(String(guestCount))}</dd></div>
+      <div><dt>Sailing</dt><dd>${escapeHtml(sailing)}</dd></div>
+    </dl>
+    <div class="wizard-snapshot-objective"><span>TRAINING OBJECTIVE</span><p>${escapeHtml(wizardTrainingObjective())}</p></div>
+  </section>`;
+}
+
+function refreshWizardSnapshotCards(){
+  document.querySelectorAll('.wizard-snapshot-card').forEach(card=>{card.outerHTML=wizardScenarioSnapshotHtml();});
+}
+
+function renderWizardObjectiveCard(){
+  const host=$("wizardObjectiveCard");
+  if(!host)return;
+  host.innerHTML=`<div class="wizard-objective-icon">◎</div><div><span>TRAINING OBJECTIVE</span><strong>${escapeHtml(wizardReasonForCall())}</strong><p>${escapeHtml(wizardTrainingObjective())}</p></div>`;
+}
+
+function wizardReadiness(){
+  const missing=[];
+  const workflow=$("reservationWorkflow")?.value||"new";
+  if(!selectedFocusRecords().length)missing.push("Choose at least one Scenario Focus");
+  if(workflow==="new"){
+    if(!($("guest1")?.value||"").trim())missing.push("Enter the primary guest name");
+  }else{
+    if(!($("existingReservationNumber")?.value||"").trim())missing.push("Enter the training reservation number");
+    if($("department")?.value==="Guest Services" && !($("gdprCallerType")?.value||"").trim())missing.push("Choose the GDPR caller type");
+    if(!($("modificationRequest")?.value||"").trim())missing.push("Describe the requested change / reason for call");
+  }
+  if(paymentActionNeedsCard()){
+    if(!($("trainingCardNumber")?.value||"").trim())missing.push("Select or enter a training payment card");
+  }
+  return {ready:missing.length===0,missing};
+}
+
+function wizardTraineeExperienceHtml(){
+  const workflow=$("reservationWorkflow")?.value||"new";
+  const department=$("department")?.value||"Guest Services";
+  const gdpr=department==="Guest Services"&&workflow==="modify";
+  const focuses=selectedFocusNames();
+  const caller=workflow==="modify"?(($("gdprCallerType")?.selectedOptions?.[0]?.textContent||"Existing Reservation Caller")):newReservationCallerLabel({department,newCallerType:$("newCallerType")?.value||"direct_us"});
+  const outcome=workflow==="modify"?"Service the request, document the change and recap the outcome":"Build the reservation, explain the applicable booking action and complete the call flow";
+  return `<section class="wizard-experience-card"><div class="wizard-experience-head"><span>WHAT THE TRAINEE WILL EXPERIENCE</span><strong>${escapeHtml(wizardReasonForCall())}</strong></div><div class="wizard-experience-grid">
+    <div><span>Caller</span><strong>${escapeHtml(caller)}</strong></div>
+    <div><span>Call Path</span><strong>${escapeHtml(department)} • ${workflow==='modify'?'Service Call':'Sales Call'}</strong></div>
+    <div><span>GDPR</span><strong>${gdpr?'Required before servicing':'Not required for this call type'}</strong></div>
+    <div><span>Primary Skills</span><strong>${escapeHtml(focuses.join(' + ')||'Not selected')}</strong></div>
+    <div class="wide"><span>Expected Outcome</span><strong>${escapeHtml(outcome)}</strong></div>
+  </div></section>`;
+}
+
+function wizardSmartRecommendations(){
+  const names=selectedFocusNames().join(' | ').toLowerCase();
+  const recs=[];
+  const programs=priceProgramLabels(collectPricePrograms());
+  const air=collectAirGuestSelections();
+  if(/fcc|cruisenext|coupon/.test(names) && !collectCoupons().length)recs.push({key:'coupon',title:'Add the credit / coupon details',text:'Assign the FCC, CruiseNext Credit, CruiseFirst Credit or Discount Coupon to the correct guest.'});
+  if(/special request/.test(names) && !collectSpecialRequests().length)recs.push({key:'special',title:'Add a guest-specific request',text:'Specify the exact request and which guest it belongs to.'});
+  if(/ada|accessible/.test(names) && !collectAdaNeeds().length)recs.push({key:'ada',title:'Add the accessibility need',text:'Choose the ADA / accessibility requirement and assign it to the correct guest.'});
+  if(/price programs|fas|free at sea/.test(names) && !programs.length)recs.push({key:'all4cho',title:'Choose the Price Program',text:'ALL4CHO can be selected as a bundle or the components can be chosen individually.'});
+  if(/air|transfer/.test(names) && !air.some(x=>x.airProgram!=="none"||x.transfers!=="No NCL Transfers"))recs.push({key:'air',title:'Configure Air & Transfers',text:'Set the air and transfer choice for each guest rather than applying one choice to the whole reservation.'});
+  if(/norwegiancare|norwegian care|travel protection/.test(names) && !$("travelToggle")?.checked)recs.push({key:'care',title:'Add Norwegian Care',text:'Include the travel protection discussion in the trainee call flow.'});
+  return recs;
+}
+
+function wizardRecommendationsHtml(){
+  const recs=wizardSmartRecommendations();
+  if(!recs.length)return `<section class="wizard-recommendations is-complete"><div><span>SMART SUGGESTIONS</span><strong>Your selected details are working well together.</strong><p>No additional setup suggestions right now.</p></div></section>`;
+  return `<section class="wizard-recommendations"><div class="wizard-recommendations-copy"><span>SMART SUGGESTIONS</span><strong>Make this scenario feel more complete</strong><p>These are optional. Add only what supports the skill you want to practice.</p></div><div class="wizard-recommendation-list">${recs.map(r=>`<button type="button" data-wizard-recommendation="${r.key}"><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.text)}</small><span>Add →</span></button>`).join('')}</div></section>`;
+}
+
+function savedScenarioTemplates(){try{return JSON.parse(localStorage.getItem("seawebScenarioTemplates")||"[]")}catch{return[]}}
+function setSavedScenarioTemplates(items){localStorage.setItem("seawebScenarioTemplates",JSON.stringify(items));renderWizardTemplateControls()}
+function captureWizardTemplate(){
+  return {id:makeUuid(),name:"",createdAt:new Date().toISOString(),department:$("department")?.value||"Guest Services",workflow:$("reservationWorkflow")?.value||"new",callerType:$("newCallerType")?.value||"direct_us",difficulty:$("difficulty")?.value||"Beginner",approach:$("scenarioApproach")?.value||"variation",focuses:selectedFocusNames(),payment:$("paymentAction")?.value||"",pricePrograms:collectPricePrograms(),commenting:!!$("commentToggle")?.checked,confirmation:!!$("confirmToggle")?.checked,travel:!!$("travelToggle")?.checked};
+}
+function saveCurrentWizardTemplate(){
+  const base=captureWizardTemplate();
+  const proposed=selectedFocusNames().join(' + ')||'Scenario Template';
+  const name=(prompt('Template name:',proposed)||'').trim();
+  if(!name)return;
+  base.name=name;
+  const items=savedScenarioTemplates();items.unshift(base);setSavedScenarioTemplates(items);flash(`Template saved: ${name}`);
+}
+function applyWizardTemplateById(id){
+  const t=savedScenarioTemplates().find(x=>x.id===id);if(!t)return;
+  $("department").value=t.department||"Guest Services";$("reservationWorkflow").value=t.workflow||"new";$("newCallerType").value=t.callerType||"direct_us";$("difficulty").value=t.difficulty||"Beginner";$("scenarioApproach").value=t.approach||"variation";
+  updateDepartmentUI?.();updateWorkflowUI?.(false);updateScenarioFocus(null,null,t.focuses||[]);
+  if(t.payment)$("paymentAction").value=t.payment;
+  setPricePrograms(t.pricePrograms||{});
+  if($("commentToggle"))$("commentToggle").checked=!!t.commenting;if($("confirmToggle"))$("confirmToggle").checked=!!t.confirmation;if($("travelToggle"))$("travelToggle").checked=!!t.travel;
+  renderWizardObjectiveCard();renderReservationDetailsVisual();renderAdditionalOptionsVisual();renderWizardReviewSummary();showGeneratorWizardStep(1);flash(`Template loaded: ${t.name}`);
+}
+function renderWizardTemplateControls(){
+  const host=$("wizardTemplateControls");if(!host)return;
+  const items=savedScenarioTemplates();
+  host.innerHTML=`<div><span>REUSABLE SETUPS</span><strong>Templates</strong><small>Save a structure you use often, then load it for another class.</small></div><div class="wizard-template-actions"><select id="wizardTemplateSelect"><option value="">${items.length?'Choose a saved template…':'No saved templates yet'}</option>${items.map(x=>`<option value="${escapeAttr(x.id)}">${escapeHtml(x.name)}</option>`).join('')}</select><button type="button" class="secondary" id="loadWizardTemplateBtn" ${items.length?'':'disabled'}>Load</button><button type="button" class="secondary" id="saveWizardTemplateBtn">Save Current as Template</button></div>`;
+  $("saveWizardTemplateBtn")?.addEventListener('click',saveCurrentWizardTemplate);
+  $("loadWizardTemplateBtn")?.addEventListener('click',()=>{const id=$("wizardTemplateSelect")?.value;if(id)applyWizardTemplateById(id)});
+}
+
 function renderWizardReviewSummary(){
   const host=$("wizardReviewSummary");
   if(!host)return;
@@ -6711,25 +6890,34 @@ function renderWizardReviewSummary(){
   const caller=workflow==='modify'
     ? guestServicesAgencyDisplay($("agency")?.value||'')
     : newReservationCallerLabel({department:$("department")?.value||'Guest Services',newCallerType:$("newCallerType")?.value||'direct_us'});
+  const readiness=wizardReadiness();
   host.innerHTML=`
     <div class="wizard-review-cards">
       <section class="wizard-review-card">
-        <div class="wizard-review-card-head"><span class="wizard-review-icon">▦</span><strong>Scenario Type</strong><button type="button" data-edit-step="1">Edit ✎</button></div>
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">▦</span><strong>Scenario Type</strong><button type="button" data-edit-step="1">Edit →</button></div>
         <h4>${escapeHtml(focuses.join(' + ')||'No scenario focus selected')}</h4>
-        <p>${escapeHtml($("department")?.value||'')} • ${escapeHtml(workflow==='modify'?'Modify Existing Reservation':'Create New Reservation')} • ${escapeHtml($("difficulty")?.value||'')}</p>
+        <p>${escapeHtml($("department")?.value||'')} • ${escapeHtml(workflow==='modify'?'Existing Reservation':'New Reservation')} • ${escapeHtml($("difficulty")?.value||'')}</p>
       </section>
       <section class="wizard-review-card">
-        <div class="wizard-review-card-head"><span class="wizard-review-icon">♟</span><strong>Reservation Details</strong><button type="button" data-edit-step="2">Edit ✎</button></div>
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">♟</span><strong>Reservation Details</strong><button type="button" data-edit-step="2">Edit →</button></div>
         <h4>${escapeHtml(caller)}</h4>
         <p>${escapeHtml(reservationReviewText())}</p>
       </section>
       <section class="wizard-review-card">
-        <div class="wizard-review-card-head"><span class="wizard-review-icon">⚙</span><strong>Additional Options</strong><button type="button" data-edit-step="3">Edit ✎</button></div>
+        <div class="wizard-review-card-head"><span class="wizard-review-icon">⚙</span><strong>Additional Options</strong><button type="button" data-edit-step="3">Edit →</button></div>
         <h4>${tasks.length?`${tasks.length} option${tasks.length===1?'':'s'} selected`:'No additional options selected'}</h4>
-        <p>${escapeHtml(tasks.join(' • ')||'You can go back and add optional training elements.')}</p>
+        <p>${escapeHtml(tasks.join(' • ')||'No optional training elements selected.')}</p>
       </section>
-    </div>`;
+    </div>
+    ${wizardTraineeExperienceHtml()}
+    <section class="wizard-readiness-card ${readiness.ready?'ready':'needs-attention'}">
+      <div class="wizard-readiness-icon">${readiness.ready?'✓':'!'}</div>
+      <div><span>SCENARIO READINESS</span><strong>${readiness.ready?'Ready to Generate':`${readiness.missing.length} detail${readiness.missing.length===1?'':'s'} still needed`}</strong><p>${readiness.ready?'The scenario has the required information to create a realistic trainee exercise.':'Complete the items below before generating.'}</p>${readiness.ready?'':`<ul>${readiness.missing.map(x=>`<li>${escapeHtml(x)}</li>`).join('')}</ul>`}</div>
+    </section>`;
   host.querySelectorAll('[data-edit-step]').forEach(btn=>btn.addEventListener('click',()=>showGeneratorWizardStep(btn.dataset.editStep)));
+  const generateBtn=$("generateBtn");if(generateBtn)generateBtn.disabled=!readiness.ready;
+  renderWizardObjectiveCard();
+  refreshWizardSnapshotCards();
 }
 
 function showGeneratorWizardStep(step){
@@ -6743,6 +6931,7 @@ function showGeneratorWizardStep(step){
     const num=btn.querySelector('.wizard-step-number');
     if(num)num.textContent=stepNum<normalized?'✓':String(stepNum);
   });
+  if(normalized===1){renderWizardTemplateControls();renderWizardObjectiveCard();}
   if(normalized===2)renderReservationDetailsVisual();
   if(normalized===3)renderAdditionalOptionsVisual();
   if(normalized===4)renderWizardReviewSummary();
@@ -6854,7 +7043,6 @@ function reservationVisualCardMarkup(number,globalStartIndex,profileData,multi){
   const data=reservationFormData(number);
   const ids=reservationHiddenIds(number);
   const guestOptions=Array.from({length:8},(_,i)=>({value:String(i+1),label:String(i+1)}));
-  const categoryOptions=['Inside','Oceanview','Balcony','Club Balcony Suite','Suite / The Haven','Studio / Solo','ADA / Accessible'];
   const locationOptions=['Any','Forward','Midship','Aft'];
   const sideOptions=['Any','Port','Starboard'];
   let guestCards='';
@@ -6871,10 +7059,10 @@ function reservationVisualCardMarkup(number,globalStartIndex,profileData,multi){
       </div>
     </div>
     <div class="visual-guest-grid">${guestCards}</div>
-    <div class="visual-preference-grid">
-      <div class="visual-pref-block"><span class="visual-pref-label">Stateroom Category</span>${visualChoiceButtons(ids.category,categoryOptions,data.category||'Balcony','tile')}</div>
-      <div class="visual-pref-block"><span class="visual-pref-label">Location Preference</span>${visualChoiceButtons(ids.location,locationOptions,data.location||'Any','tile')}</div>
-      <div class="visual-pref-block"><span class="visual-pref-label">Side Preference</span>${visualChoiceButtons(ids.side,sideOptions,data.side||'Any','tile')}</div>
+    ${stateroomCategoryVisualMarkup(ids.category,data.category||'Balcony')}
+    <div class="visual-preference-grid location-side-grid">
+      <div class="visual-pref-block"><span class="visual-pref-label">Location Preference <em>optional</em></span>${visualChoiceButtons(ids.location,locationOptions,data.location||'Any','tile')}</div>
+      <div class="visual-pref-block"><span class="visual-pref-label">Side Preference <em>optional</em></span>${visualChoiceButtons(ids.side,sideOptions,data.side||'Any','tile')}</div>
     </div>
     <label class="visual-standalone-field pricing-inline"><span>${multi?`Reservation ${number} Advertised Pricing (optional)`:'Advertised Pricing (optional)'}</span><input id="visualPricing${number}" data-source-id="${ids.pricing}" value="${escapeAttr(data.pricing||'')}" placeholder="$1,559 pp / $3,118 total" /></label>
   </section>`;
@@ -6883,10 +7071,40 @@ function reservationVisualCardMarkup(number,globalStartIndex,profileData,multi){
 function renderReservationDetailsVisual(){
   const host=$('reservationDetailsVisual');
   if(!host)return;
+  ensureReservationCategorySelects();
   const workflow=$('reservationWorkflow')?.value||'new';
   if(workflow!=='new'){
-    host.innerHTML='<div class="visual-modify-note"><strong>Modification scenario</strong><span>This workflow continues to use the standard modification setup below.</span></div>';
     host.classList.add('is-modify');
+    const modLabel=$("modificationType")?.selectedOptions?.[0]?.textContent?.trim()||"Existing Reservation Update";
+    const callerType=$("gdprCallerType")?.value||'';
+    const callerOptions=[...($("gdprCallerType")?.options||[])].map(o=>`<option value="${escapeAttr(o.value)}" ${o.value===callerType?'selected':''}>${escapeHtml(o.textContent)}</option>`).join('');
+    const modOptions=[...($("modificationType")?.options||[])].map(o=>`<option value="${escapeAttr(o.value)}" ${o.value===$("modificationType")?.value?'selected':''}>${escapeHtml(o.textContent)}</option>`).join('');
+    const directGroupOptions=[...($("directGroupMarket")?.options||[])].map(o=>`<option value="${escapeAttr(o.value)}" ${o.value===$("directGroupMarket")?.value?'selected':''}>${escapeHtml(o.textContent)}</option>`).join('');
+    const addedGuestStatus=$("modificationGuestStatus")?.value||'new';
+    host.innerHTML=`<div class="reservation-details-visual-shell modification-visual-shell"><div class="reservation-details-main">
+      <section class="visual-detail-card modification-hero-card"><div class="visual-section-icon caller"></div><div class="visual-detail-copy"><h4>Existing Reservation Service Call</h4><p>Define the caller, verification path and exact reason for the call before the trainee begins.</p></div><div class="visual-detail-controls"><div class="visual-modification-reason"><span>REASON FOR CALL</span><strong>${escapeHtml(modLabel)}</strong><p>${escapeHtml($("modificationRequest")?.value?.trim()||"Describe exactly what the caller wants changed on the reservation.")}</p></div></div></section>
+      <section class="visual-detail-card modification-source-card"><div class="visual-section-icon rooms"></div><div class="visual-detail-copy"><h4>Reservation & Verification</h4><p>${$("department")?.value==='Guest Services'?'Reservation Number and the correct GDPR path are required before servicing.':'Enter the existing reservation details needed for this follow-up.'}</p></div><div class="visual-detail-controls modification-visual-fields">
+        <label class="visual-standalone-field"><span>Training Reservation Number</span><input id="visualExistingReservationNumber" value="${escapeAttr($("existingReservationNumber")?.value||'')}" placeholder="Enter the prior training reservation #" /></label>
+        ${$("department")?.value==='Guest Services'?`<label class="visual-standalone-field"><span>GDPR Caller / Reservation Type</span><select id="visualGdprCallerType">${callerOptions}</select></label>`:''}
+        ${callerType==='direct_group'?`<label class="visual-standalone-field"><span>Direct Group Type</span><select id="visualDirectGroupMarket">${directGroupOptions}</select></label>`:''}
+        <label class="visual-standalone-field"><span>Reason for Call</span><select id="visualModificationType">${modOptions}</select></label>
+        <label class="visual-standalone-field"><span>Guest / Item Being Changed</span><input id="visualModificationTarget" value="${escapeAttr($("modificationTarget")?.value||'')}" placeholder="Guest, stateroom, dining request..." /></label>
+        ${$("modificationType")?.value==='add_guest'?`<label class="visual-standalone-field"><span>Guest Being Added</span><select id="visualModificationGuestStatus"><option value="new" ${addedGuestStatus==='new'?'selected':''}>New Guest</option><option value="past" ${addedGuestStatus==='past'?'selected':''}>Past Guest</option></select></label>${addedGuestStatus==='past'?`<label class="visual-standalone-field"><span>Latitudes Number</span><input id="visualModificationLatitudes" value="${escapeAttr($("modificationLatitudes")?.value||'')}" inputmode="numeric" maxlength="12" placeholder="Training Latitudes number" /></label>`:''}`:''}
+        <label class="visual-standalone-field wide"><span>Requested Change / Scenario Detail</span><textarea id="visualModificationRequest" rows="4" placeholder="Describe exactly what the guest wants changed on the existing reservation.">${escapeHtml($("modificationRequest")?.value||'')}</textarea></label>
+        ${$("department")?.value==='Guest Services'?`<div class="visual-gdpr-reminder wide"><strong>Reservation Number — REQUIRED</strong><span>Complete the appropriate GDPR verification before discussing or servicing the reservation.</span></div>`:''}
+      </div></section>
+      <section class="visual-detail-card visual-sailing-card"><div class="visual-section-icon sailing"></div><div class="visual-detail-copy"><h4>Sailing Details</h4><p>Use the sailing from the existing training reservation or select a real sailing when needed.</p></div><div class="visual-detail-controls visual-sailing-controls"><div class="visual-sailing-summary">${currentSelectedSailingSummaryHtml()}</div><button type="button" class="secondary visual-change-sailing-btn">Find / Change Sailing</button></div></section>
+    </div><aside class="reservation-details-sidebar">${wizardScenarioSnapshotHtml()}<div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div></aside></div>`;
+    const bind=(visualId,sourceId,event='input',after)=>$(visualId)?.addEventListener(event,e=>{const source=$(sourceId);if(source){source.value=e.target.value;source.dispatchEvent(new Event(event,{bubbles:true}));}after?.();renderWizardObjectiveCard();renderWizardReviewSummary();});
+    bind('visualExistingReservationNumber','existingReservationNumber');
+    bind('visualGdprCallerType','gdprCallerType','change',()=>{updateGdprPreview?.();setTimeout(renderReservationDetailsVisual,0);});
+    bind('visualDirectGroupMarket','directGroupMarket','change',()=>updateGdprPreview?.());
+    bind('visualModificationType','modificationType','change',()=>{updateModificationTypeUI?.(false);setTimeout(renderReservationDetailsVisual,0);});
+    bind('visualModificationTarget','modificationTarget');
+    bind('visualModificationGuestStatus','modificationGuestStatus','change',()=>{updateModificationTypeUI?.(false);setTimeout(renderReservationDetailsVisual,0);});
+    bind('visualModificationLatitudes','modificationLatitudes');
+    bind('visualModificationRequest','modificationRequest');
+    host.querySelector('.visual-change-sailing-btn')?.addEventListener('click',()=>go('search'));
     return;
   }
   host.classList.remove('is-modify');
@@ -6912,7 +7130,7 @@ function renderReservationDetailsVisual(){
         <div class="visual-detail-copy"><h4>Caller & Booking Source</h4><p>Who is calling and which booking source should be used?</p></div>
         <div class="visual-detail-controls">
           ${callerControl}
-          ${outbound?`<div class="visual-market-summary"><span>Outbound Market / Currency</span><strong>${escapeHtml(selectedMarketLabel()||'Selected outbound market')}</strong><small>Agency ${escapeHtml($('agency')?.value||'')}</small></div>`:`<label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" /></label>`}
+          ${outbound?`<div class="visual-market-summary"><span>Outbound Market / Currency</span><strong>${escapeHtml(selectedMarketLabel()||'Selected outbound market')}</strong><small>Agency ${escapeHtml($('agency')?.value||'')}</small></div>`:(callerCurrent==='travel_agent'?`<div class="visual-agent-fields"><label class="visual-standalone-field"><span>Travel Agent Name</span><input id="visualTravelAgentName" value="${escapeAttr($('travelAgentName')?.value||'')}" placeholder="Name of the Travel Agent who is calling" /></label><label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" placeholder="Agency ID or phone number" /></label></div>`:`<label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" /></label>`)}
           <div class="visual-inline-hint">${escapeHtml($('agencyHint')?.textContent||'')}</div>
         </div>
       </section>
@@ -6930,6 +7148,7 @@ function renderReservationDetailsVisual(){
       </section>
     </div>
     <aside class="reservation-details-sidebar">
+      ${wizardScenarioSnapshotHtml()}
       <div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Select a real sailing when needed')}</span></div></div>
       <div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div>
     </aside>
@@ -6938,8 +7157,19 @@ function renderReservationDetailsVisual(){
   const visualPayment=$('visualPaymentAction');
   if(visualPayment){visualPayment.value=$('paymentAction')?.value||visualPayment.value; visualPayment.addEventListener('change',()=>{$('paymentAction').value=visualPayment.value;renderWizardReviewSummary();});}
   $('visualAgencyField')?.addEventListener('input',e=>{$('agency').value=e.target.value;syncAgencyCallerLogic();renderWizardReviewSummary();});
+  $('visualTravelAgentName')?.addEventListener('input',e=>{if($('travelAgentName'))$('travelAgentName').value=e.target.value;renderWizardReviewSummary();});
   $('visualConfirmationEmail')?.addEventListener('input',e=>{$('confirmationEmail').value=e.target.value;renderWizardReviewSummary();});
   host.querySelectorAll('[data-source-id]').forEach(input=>input.addEventListener('input',e=>{const src=$(e.target.dataset.sourceId); if(src){src.value=e.target.value; if(src.id==='guest1'||src.id==='guest2'||src.id.startsWith('reservation')) refreshGuestDependentConfigs(); renderWizardReviewSummary();}}));
+  host.querySelectorAll('[data-category-base]').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=$(btn.dataset.categoryTarget);if(!target)return;
+    target.value=defaultCategoryForBase(btn.dataset.categoryBase);
+    renderReservationDetailsVisual();renderWizardReviewSummary();
+  }));
+  host.querySelectorAll('[data-category-detail]').forEach(btn=>btn.addEventListener('click',()=>{
+    const target=$(btn.dataset.categoryTarget);if(!target)return;
+    target.value=btn.dataset.categoryDetail;
+    renderReservationDetailsVisual();renderWizardReviewSummary();
+  }));
   host.querySelectorAll('.visual-choice-btn').forEach(btn=>btn.addEventListener('click',()=>{
     const target=$(btn.dataset.target); if(!target)return;
     target.value=btn.dataset.value;
@@ -7085,16 +7315,30 @@ function renderAdditionalOptionsVisual(){
   const programs=collectPricePrograms();
   const coupons=collectCoupons();
   host.innerHTML=`<div class="step3-visual-shell"><div class="step3-main">
-    <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">%</div><div><h4>Price Programs</h4><p>Select the program(s) to include. ALL4CHO includes Unlimited Open Bar, Specialty Dining, Internet, and Shore Excursions.</p></div></div><div class="step3-option-grid price-program-options">${priceProgramVisualTile('programAll4cho','ALL4CHO','ALL4CHO','All four Free at Sea components')}${priceProgramVisualTile('programOpenBar','Unlimited Open Bar','≈')}${priceProgramVisualTile('programDining','Specialty Dining','🍽')}${priceProgramVisualTile('programInternet','Internet','⌁')}${priceProgramVisualTile('programShoreEx','Shore Excursions','⚓')}${priceProgramVisualTile('programPsc','PPSRVCHG','▣','Prepaid Service Charges')}${priceProgramVisualTile('programKosher','Kosher Meals','✡')}${priceProgramVisualTile('programFlexnet','FlexNet','▤','Travel Agent promotion')}${priceProgramVisualTile('programAmexcpp','AMEXCPP','▥','Travel Agent promotion')}</div><label class="step3-other-field"><span>Other Price Program / TA Promotion <em>optional</em></span><input id="visualProgramOther" value="${escapeAttr(programs.other||'')}" placeholder="Enter another program or promotion" /></label></section>
+    ${wizardRecommendationsHtml()}
+    <section class="step3-visual-section price-programs-redesign"><div class="step3-section-copy price-programs-head"><div class="step3-section-icon">%</div><div><h4>Price Programs</h4><p>Review what Seaweb already includes, then select only the additional programs you want the trainee to apply.</p></div><div class="price-program-rule"><strong>If a program is already checked in Seaweb, do not remove it.</strong><span>Auto-applied items stay selected throughout the booking.</span></div></div>
+      <div class="price-program-auto"><div class="price-program-group-title"><span>✓</span><div><strong>Already Included in Pricing</strong><small>Auto-Applied • Trainees should not remove or uncheck these items.</small></div></div><div class="auto-program-grid"><div class="auto-program-card"><b>✓</b><div><strong>Early Booking Fare</strong><small>EASYFARE</small></div><span>🔒</span></div><div class="auto-program-card"><b>✓</b><div><strong>NCL Reduced Rate Percentage Off</strong><small>Promotion code varies</small></div><span>🔒</span></div></div></div>
+      <div class="price-program-optional"><div class="price-program-group-title optional"><span>+</span><div><strong>Additional Programs the Trainee May Apply</strong><small>These are not assumed to be included. Select only what belongs in this scenario.</small></div></div><div class="step3-option-grid price-program-options">${priceProgramVisualTile('programPsc','Prepaid Service Charges','▣','PPSRVCHG')}${priceProgramVisualTile('programAll4cho','Free at Sea','ALL4CHO','ALL4CHO package')}${priceProgramVisualTile('programFlexnet','FlexNet','▤','Travel Agent promotion')}${priceProgramVisualTile('programAmexcpp','AMEXCPP','▥','Travel Agent promotion')}${priceProgramVisualTile('programKosher','Kosher Meals','✦','Optional meal request')}${priceProgramVisualTile('programOpenBar','Unlimited Open Bar','≈','Optional Free at Sea component')}${priceProgramVisualTile('programDining','Specialty Dining','🍽','Optional Free at Sea component')}${priceProgramVisualTile('programInternet','Internet','⌁','Optional Free at Sea component')}${priceProgramVisualTile('programShoreEx','Shore Excursions','⚓','Optional Free at Sea component')}</div><label class="step3-other-field"><span>Other Price Program / TA Promotion <em>optional</em></span><input id="visualProgramOther" value="${escapeAttr(programs.other||'')}" placeholder="Enter another program or promotion" /></label></div>
+    </section>
     <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✈</div><div><h4>Air &amp; Transfers</h4><p>Configure air and transfer choices independently for each guest. Guests can have different air products or no air at all.</p></div></div><div id="visualAirGuests" class="step3-air-guests"></div></section>
     <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">★</div><div><h4>Special Requests &amp; Accessibility</h4><p>Add exact requests and assign them to the correct guest.</p></div></div><div class="step3-add-buttons"><button type="button" class="step3-add-tile" data-add-special="Food Allergy"><span>⊘</span><strong>Allergy</strong></button><button type="button" class="step3-add-tile" data-add-special="Kosher Meals"><span>🍽</span><strong>Dining</strong></button><button type="button" class="step3-add-tile" data-add-special="Celebration / Cake"><span>★</span><strong>Celebration</strong></button><button type="button" class="step3-add-tile" data-add-ada="Wheelchair User / Limited Mobility"><span>♿</span><strong>Accessibility</strong></button><button type="button" class="step3-add-tile" data-add-special="Other Special Request"><span>•••</span><strong>Other</strong></button></div><div id="visualSpecialEntries" class="step3-entry-list"></div></section>
     <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">◇</div><div><h4>Coupons / Future Cruise Credits</h4><p>Mix and match credits and coupons by guest. Each selected item can come from a different guest profile.</p></div></div><div class="step3-coupon-type-grid">${couponTypes.map(type=>`<button type="button" class="step3-add-tile coupon-type" data-add-coupon="${escapeAttr(type)}"><span>${type.includes('FCC')?'FCC':type.includes('CruiseNext')?'CN':type.includes('CruiseFirst')?'CF':'%'}</span><strong>${escapeHtml(type)}</strong></button>`).join('')}</div><div id="visualCouponEntries" class="step3-entry-list"></div></section>
     <section class="step3-visual-section"><div class="step3-section-copy"><div class="step3-section-icon">✓</div><div><h4>Other Call Requirements</h4><p>Turn on the remaining scenario tasks you want trainees to complete.</p></div></div><div class="step3-option-grid task-options">${visualToggleTile('commentToggle','Commenting Tool','💬','Reservation comments')}${visualToggleTile('confirmToggle','Guest Confirmation','✉','Send confirmation')}${visualToggleTile('travelToggle','Travel Protection','◈','Norwegian Care discussion')}</div></section>
     ${trainingCardVisualSection()}
     <section class="step3-visual-section assignment-section"><div class="step3-section-copy"><div class="step3-section-icon">👥</div><div><h4>Assign to Guests / Reservations</h4><p>Review where each guest-specific option is assigned before continuing.</p></div></div><div id="visualAssignmentSummary" class="step3-assignment-summary"></div></section>
-  </div><aside class="reservation-details-sidebar step3-sidebar"><div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Additional options for this scenario')}</span></div></div><div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div></aside></div>`;
+  </div><aside class="reservation-details-sidebar step3-sidebar">${wizardScenarioSnapshotHtml()}<div class="reservation-sidebar-card ship-card"><div class="ship-hero"></div><div class="ship-copy"><strong>${escapeHtml(state.selectedSailing?.ship||'Seaweb Scenario')}</strong><span>${escapeHtml(state.selectedSailing?.title||'Additional options for this scenario')}</span></div></div><div class="reservation-sidebar-card itinerary-card">${currentSelectedSailingSummaryHtml()}</div></aside></div>`;
 
   renderVisualAirGuests();renderVisualSpecialEntries();renderVisualCouponEntries();renderStep3AssignmentSummary();
+  host.querySelectorAll('[data-wizard-recommendation]').forEach(btn=>btn.addEventListener('click',()=>{
+    const key=btn.dataset.wizardRecommendation;
+    if(key==='coupon'){const guest=guestOptionRecords().find((_,i)=>collectPastGuestFlags()[i])?.value||guestOptionRecords()[0]?.value||'';if($('couponToggle'))$('couponToggle').checked=true;addCouponRow({type:'Future Cruise Credit (FCC)',guest,latitudes:latitudeForGuestName(guest)});}
+    if(key==='special')addSpecialRequestRow({type:'Other Special Request',guest:guestOptionRecords()[0]?.value||''});
+    if(key==='ada')addAdaNeedRow({type:'Wheelchair User / Limited Mobility',guest:guestOptionRecords()[0]?.value||''});
+    if(key==='all4cho'){if($('programAll4cho'))$('programAll4cho').checked=true;syncLegacyPriceProgramToggles();}
+    if(key==='care'){if($('travelToggle'))$('travelToggle').checked=true;}
+    if(key==='air'){const row=document.querySelector('#airGuestRows .air-guest-row');if(row){row.querySelector('.air-guest-program').value='bundled';syncLegacyAirFromGuestRows();}}
+    renderAdditionalOptionsVisual();renderWizardReviewSummary();
+  }));
 
   host.querySelectorAll('[data-price-program]').forEach(btn=>btn.addEventListener('click',()=>{
     const id=btn.dataset.priceProgram;const input=$(id);if(!input)return;
@@ -7149,8 +7393,10 @@ function setupGeneratorWizard(){
   setupStrip.innerHTML='<div class="wizard-mini-heading"><strong>Scenario Setup</strong><small>Choose the department, workflow, caller type, and difficulty.</small></div>';
   setupStrip.appendChild(setupGrid);
   step1.appendChild(setupStrip);
+  const templateControls=document.createElement('section');templateControls.id='wizardTemplateControls';templateControls.className='wizard-template-controls';step1.appendChild(templateControls);renderWizardTemplateControls();
   const focusField=document.querySelector('.focus-picker-field');
   if(focusField)step1.appendChild(focusField);
+  const objectiveCard=document.createElement('section');objectiveCard.id='wizardObjectiveCard';objectiveCard.className='wizard-objective-card';step1.appendChild(objectiveCard);renderWizardObjectiveCard();
   if($('trainingDay'))step1.appendChild($('trainingDay'));
 
   const reservationVisual=document.createElement('div');
@@ -7158,7 +7404,7 @@ function setupGeneratorWizard(){
   step2.appendChild(reservationVisual);
   const hiddenBindings=document.createElement('div');
   hiddenBindings.className='wizard-hidden-bindings';
-  [$("marketAgencyField"),$("agencyField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
+  [$("marketAgencyField"),$("agencyField"),$("travelAgentNameField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
   step2.appendChild(hiddenBindings);
   renderReservationDetailsVisual();
 
@@ -7178,10 +7424,14 @@ function setupGeneratorWizard(){
   const notesCard=wizardSection(step4,{icon:'✎',title:'Trainer Notes',subtitle:'Optional internal notes or coaching reminders.'},[wizardFieldNode($("trainerNotes"))]);
   const reviewAction=document.createElement('div');
   reviewAction.className='wizard-generate-row';
+  const secondaryActions=document.createElement('div');secondaryActions.className='wizard-review-secondary-actions';secondaryActions.innerHTML='<button type="button" class="secondary" id="saveTemplateReviewBtn">Save as Template</button><button type="button" class="secondary" id="generateVariationBtn">Generate Variation</button>';
+  reviewAction.appendChild(secondaryActions);
   const generateBtn=$("generateBtn");
   generateBtn.textContent='Generate Scenario →';
   reviewAction.appendChild(generateBtn);
   step4.appendChild(reviewAction);
+  $("saveTemplateReviewBtn")?.addEventListener('click',saveCurrentWizardTemplate);
+  $("generateVariationBtn")?.addEventListener('click',()=>{const ready=wizardReadiness();if(!ready.ready){alert('Complete the required scenario details before generating a variation.');return;}if($("scenarioApproach"))$("scenarioApproach").value='variation';$("generateNamesBtn")?.click();setTimeout(()=>$("generateBtn")?.click(),30);});
 
   const oldActions=document.querySelector('#generator .generator-setup-panel > .actions');
   if(oldActions)oldActions.classList.add('wizard-orphan-actions');
@@ -7239,11 +7489,11 @@ function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
 
-["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
+["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency","travelAgentName"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
 populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();renderDashboardHome();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
 
 
-/* V1.9.55 quick-start interactions */
+/* V1.9.57 quick-start interactions */
 document.querySelectorAll('[data-scroll-target]').forEach(btn=>btn.addEventListener('click',()=>{
   const el=$(btn.dataset.scrollTarget);
   if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
