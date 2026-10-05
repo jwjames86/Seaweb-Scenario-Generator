@@ -1,7 +1,7 @@
 {
   "name": "seaweb-scenario-generator",
   "private": true,
-  "version": "1.9.56",
+  "version": "1.9.57",
   "description": "NCL Seaweb training scenario generator",
   "scripts": {
     "dev": "wrangler dev",

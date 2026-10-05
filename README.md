@@ -1422,3 +1422,12 @@ This release carries the Home page visual system across the four primary work ar
 - Added **Generate Variation** to reuse the same training structure with new fictional guest names.
 - Renamed **Scenario Approach** to **Scenario Style** with clearer choices: Use My Details, Generate Variation and Randomized Practice.
 - Refined the wizard styling around the NCL Sand foundation, approved Aqua / Blue / Teal / Yellow accents, and limited Salmon for required / attention states.
+
+
+## V1.9.57 – Reservation Details + Price Programs Refinement
+- Added Travel Agent Name to new-reservation Travel Agent scenarios and carries it into stories, snapshots and presentations.
+- Expanded stateroom selection using Seaweb-style base categories and detailed category choices, including Aft-Facing Balcony, Club Balcony Suite options and The Haven / Suite categories.
+- Redesigned Price Programs into locked auto-applied items and optional trainee-applied programs.
+- Removed Rack Rate from the auto-applied display and removed the fixed DISC50 code from NCL Reduced Rate Percentage Off.
+- Kosher Meals is optional and is never shown as automatically applied.
+- Added trainee reminders that programs already checked in Seaweb must not be removed or unchecked.
