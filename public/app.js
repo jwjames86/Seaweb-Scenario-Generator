@@ -2572,6 +2572,8 @@ function scenarioData(){
     reservationWorkflow:$("reservationWorkflow")?.value||"new",
     newCallerType:$("department").value==="Guest Services"&&$("reservationWorkflow").value==="new"?$("newCallerType").value:"",
     travelAgentName:$("travelAgentName")?.value.trim()||"",
+    callerDisplayName:$("callerDisplayName")?.value.trim()||"",
+    agentDisplayName:$("agentDisplayName")?.value.trim()||"",
     existingReservationNumber:$("existingReservationNumber")?.value.trim()||"",
     modificationType:$("modificationType")?.value||"general",
     modificationTarget:$("modificationTarget")?.value.trim()||"",
@@ -3420,6 +3422,8 @@ function resetScenarioForm(){
   $("reservationWorkflow").value="new";
   $("newCallerType").value="direct_us";
   if($("travelAgentName"))$("travelAgentName").value="";
+  if($("callerDisplayName"))$("callerDisplayName").value="";
+  if($("agentDisplayName"))$("agentDisplayName").value="";
   $("trainingDay").value="6";
   $("scenarioApproach").value="variation";
   $("difficulty").value="Beginner";
@@ -4106,7 +4110,7 @@ function createFollowUpRoleplay(){
   const config={callerSelection,callerType:resolvedCaller,agency,changes,customChanges,includeCard:$("followUpIncludeCard").checked,keepBenefits:$("followUpKeepBenefits").checked};
   const sourceCard=current.card||currentTrainingCard();
   const now=new Date().toISOString();
-  const d={...current,id:makeUuid(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
+  const d={...current,id:makeUuid(),department:"Guest Services",title:`Follow-Up Roleplay – ${base.sourceTitle||current.title||"Scenario"}`,type:"Follow-Up Servicing Roleplay",reservationWorkflow:"modify",newCallerType:"",callerDisplayName:current.callerDisplayName||"",agentDisplayName:current.agentDisplayName||"",existingReservationNumber:"",modificationType:"general",modificationTarget:"",modificationRequest:[...changes.map(k=>FOLLOW_UP_CHANGE_LIBRARY[k]?.label).filter(Boolean),customChanges].filter(Boolean).join(" • "),gdprCallerType:resolvedCaller,agency:agency||base.agency||"",market:resolvedCaller==="travel_agent"?"Travel Agent":"Direct Guest",payment:"No Payment / Service Only",email:base.confirmationEmail||current.email||"training123@ncl.com",commenting:true,confirmation:true,roleplayMode:true,followUpRoleplay:true,followUpConfig:config,sourceScenarioId:current.followUpRoleplay?current.sourceScenarioId:current.id,sourceScenarioSnapshot:base,cardRequired:!!config.includeCard,card:config.includeCard?(sourceCard||null):null,curriculumKind:"followup_roleplay",curriculumKinds:[...(current.curriculumKinds||[]),"followup_roleplay"],curriculumObjective:"Service the existing reservation through a callback roleplay using trainer-selected reservation changes.",curriculumObjectives:[...(current.curriculumObjectives||[]),"Follow-up servicing roleplay with trainer-selected changes."],createdAt:now,updatedAt:now,favorite:false,archived:false};
   d.html=buildFollowUpRoleplayHtml(d);state.currentScenario=d;$("scenarioOutput").innerHTML=d.html;closeFollowUpRoleplayBuilder();$("scenarioStatus").textContent="Ready for Trainee";$("scenarioStatus").className="status-badge ready";updateRoleplayScenarioButton();updateFollowUpRoleplayButton();flash("Follow-up servicing roleplay created.");
 }
 
@@ -5182,6 +5186,7 @@ function presentationSailText(d){
 }
 
 function presentationCallerLabel(d){
+  if((d.callerDisplayName||'').trim())return d.callerDisplayName.trim();
   if(d.followUpRoleplay)return followUpPrimaryGuestName(d);
   if(isMultipleAuthorizedAny(d))return "Maria Lopez";
   if(isSoloStudioScenario(d)||isAddGuestUpgradeRoleplay(d))return "Kyle James — Travel Agent";
@@ -5558,7 +5563,7 @@ function callSimulationClient(){
   const prev=document.getElementById('simPrev'),next=document.getElementById('simNext'),bar=document.getElementById('simProgressBar'),counter=document.getElementById('simCounter');
   function save(){const data={};document.querySelectorAll('[data-save-field]').forEach((el,i)=>{data[i]=el.type==='checkbox'?el.checked:el.value});try{localStorage.setItem(key,JSON.stringify(data))}catch(_){}}
   function load(){try{const data=JSON.parse(localStorage.getItem(key)||'{}');document.querySelectorAll('[data-save-field]').forEach((el,i)=>{if(!(i in data))return;if(el.type==='checkbox')el.checked=!!data[i];else el.value=data[i]||'';});}catch(_){}}
-  function render(){slides.forEach((s,i)=>{const active=i===index;s.classList.toggle('active',active);s.hidden=!active;s.style.display=active?'block':'none';});prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));const viewport=document.querySelector('.sim-story-main')||document.querySelector('.sim-stage');viewport?.scrollTo?.({top:0,behavior:'smooth'});}
+  function render(){slides.forEach((s,i)=>{const active=i===index;s.classList.toggle('active',active);s.hidden=!active;s.style.display=active?'block':'none';});prev.disabled=index===0;next.textContent=index===slides.length-1?'Finish':'Next →';bar.style.width=`${((index+1)/slides.length)*100}%`;counter.textContent=`${index+1} of ${slides.length}`;const stage=slides[index]?.dataset.stage||'1';document.querySelectorAll('[data-stage-jump]').forEach(btn=>btn.classList.toggle('active',btn.dataset.stageJump===stage));const viewport=document.querySelector('.sim-story-main')||document.querySelector('.sim-book-main')||document.querySelector('.sim-stage');viewport?.scrollTo?.({top:0,behavior:'smooth'});}
   prev.onclick=()=>{if(index>0){index--;render();}};next.onclick=()=>{if(index<slides.length-1){index++;render();}else{index=0;render();}};
   document.getElementById('simFullscreen')?.addEventListener('click',()=>{const el=document.documentElement;if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.();});
   document.getElementById('simPrint')?.addEventListener('click',()=>window.print());
@@ -5569,7 +5574,191 @@ function callSimulationClient(){
   load();render();
 }
 
+
+
+function storybookPrimaryCaller(d){
+  if((d.callerDisplayName||'').trim())return d.callerDisplayName.trim();
+  if(d.followUpRoleplay)return followUpPrimaryGuestName(d)||presentationCallerLabel(d).split(/[—•]/)[0].trim();
+  const guest=scenarioGuestNames(d).filter(Boolean)[0];
+  return guest||presentationCallerLabel(d).split(/[—•]/)[0].trim()||'Guest';
+}
+
+function inferGenderFromName(name,fallback='neutral'){
+  const first=String(name||'').trim().split(/\s+/)[0].toLowerCase().replace(/[^a-z'-]/g,'');
+  if(!first)return fallback;
+  const femaleNames=new Set(['rebecca','sofia','mia','emily','olivia','ava','isabella','emma','nicole','jessica','sarah','ashley','amanda','linda','patricia','barbara','victoria','anna','maria','rachel','melissa','laura','monica','samantha','karen','michelle','jennifer','stephanie','alicia','christina','vanessa','catherine','katie','susan','heather','allison','courtney','madison','abigail','chloe','grace','lily','zoe','hannah','julia','rebekah','rebeca']);
+  const maleNames=new Set(['maxim','william','david','jorge','daniel','michael','john','jose','christopher','andrew','andres','robert','james','luis','carlos','juan','matthew','anthony','kevin','ryan','nick','nicholas','thomas','benjamin','samuel','jacob','ethan','oliver','jack','henry','george','peter','paul','joshua','adrian','gabriel','alexander','alex']);
+  if(femaleNames.has(first))return 'female';
+  if(maleNames.has(first))return 'male';
+  return fallback;
+}
+
+function storybookCallerProfile(d){
+  const name=storybookPrimaryCaller(d);
+  const gender=inferGenderFromName(name,d.newCallerType==='travel_agent'&&d.travelAgentName?inferGenderFromName(d.travelAgentName,'neutral'):'neutral');
+  return {name,gender,role:d.newCallerType==='travel_agent'&&d.reservationWorkflow==='new'?'Travel Agent Caller':'Caller'};
+}
+
+function storybookAgentProfile(d){
+  const callerGender=storybookCallerProfile(d).gender;
+  const customName=(d.agentDisplayName||'').trim();
+  let name=customName||'Alex';
+  let gender=customName?inferGenderFromName(customName,'neutral'):'neutral';
+  if(!customName){
+    if(callerGender==='male'){name='Sofia';gender='female';}
+    else if(callerGender==='female'){name='Daniel';gender='male';}
+    else if(d.department==='Outbound Sales'){name='Mia';gender='female';}
+  }
+  return {name,gender,title:d.department==='Outbound Sales'?'Outbound Cruise Specialist':'Cruise Specialist'};
+}
+
+function storybookPortrait(role,profile={}){
+  const agent=role==='agent';
+  const gender=profile.gender||'neutral';
+  const bgId=`bg-${role}-${gender}`;
+  const hair=gender==='female'?'#53324b':gender==='male'?'#24364f':'#5f3427';
+  const jacket=agent?'#0b4d78':(gender==='female'?'#fff0e8':'#fff4e5');
+  const accent=agent?'#e6cd88':'#0A84BD';
+  const shirt=agent?'#ffffff':'#f7fafc';
+  const badge=agent?'<rect x="133" y="151" width="28" height="16" rx="4" fill="#ffffff" opacity="0.98"/><text x="147" y="163" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="700" fill="#0b4d78">NCL</text>':'';
+  const headset=agent?'<path d="M64 122c0-28 24-48 56-48s56 20 56 48" fill="none" stroke="#233047" stroke-width="8" stroke-linecap="round"/><rect x="55" y="120" width="14" height="28" rx="6" fill="#233047"/><rect x="171" y="120" width="14" height="28" rx="6" fill="#233047"/><path d="M171 144c0 16-15 22-26 22" fill="none" stroke="#233047" stroke-width="6" stroke-linecap="round"/><circle cx="141" cy="166" r="6" fill="#233047"/>' : '';
+  const hairPath=gender==='female'
+    ? `<path d="M74 94c0-34 21-56 49-56h10c27 0 48 20 48 50 0 22-8 35-15 46-4-10-10-17-16-23-8 10-19 16-31 16-12 0-23-6-30-17-5 8-10 15-15 24-6-10-11-22-11-40z" fill="${hair}"/><path d="M86 125c4 22 18 42 34 42 16 0 31-19 35-41 3 10 3 27 3 34 0 15-11 25-24 30l-3 9h18c21 0 40 7 56 20v28H35v-28c15-13 35-20 56-20h16l-3-9c-13-6-24-16-24-30 0-7 0-24 6-35z" fill="${jacket}"/>`
+    : gender==='male'
+      ? `<path d="M82 89c0-31 22-51 48-51h6c28 0 48 20 48 47 0 8-2 14-5 21-11-10-27-18-48-18-20 0-37 8-49 20-1-6 0-13 0-19z" fill="${hair}"/><path d="M91 112c7 15 19 24 29 24 11 0 24-9 31-24v18c0 12-7 20-15 25l-3 11h13c19 0 37 6 52 17v44H42v-44c15-12 34-17 53-17h12l-2-11c-10-6-16-15-16-26z" fill="${jacket}"/>`
+      : `<path d="M82 86c0-30 20-48 38-48h7c26 0 44 19 44 47 0 6-1 10-3 16-5-13-15-25-31-30-16-6-42 1-55 17z" fill="${hair}"/><path d="M92 113c8 13 20 21 28 21 10 0 24-9 31-22v18c0 12-7 20-15 25l-3 11h13c19 0 37 6 52 17v44H42v-44c15-12 34-17 53-17h12l-2-11c-10-6-16-15-16-26z" fill="${jacket}"/>`;
+  return `<svg class="sim-character-portrait-svg" viewBox="0 0 240 240" role="img" aria-hidden="true"><defs><linearGradient id="${bgId}" x1="0" x2="1"><stop offset="0" stop-color="#f9f6ef"/><stop offset="1" stop-color="#dcedf7"/></linearGradient></defs><rect x="0" y="0" width="240" height="240" rx="120" fill="url(#${bgId})"/><circle cx="120" cy="94" r="34" fill="#f7c9a9"/>${hairPath}<path d="M106 166h28l-14 20z" fill="${shirt}"/>${badge}<circle cx="107" cy="95" r="4" fill="#3b2d26"/><circle cx="136" cy="95" r="4" fill="#3b2d26"/><path d="M111 111c6 5 13 5 19 0" fill="none" stroke="#cb7b5a" stroke-width="4" stroke-linecap="round"/>${headset}<circle cx="186" cy="54" r="18" fill="${accent}" opacity="0.95"/><path d="M179 54h14" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M186 47v14" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>`;
+}
+
+function storybookDiscoveryQuestions(d){
+  const items=[];
+  if(d.reservationWorkflow==='modify')items.push('May I have your reservation number to begin verification?');
+  items.push('What would you like help with today?');
+  if(d.reservationWorkflow==='new')items.push('What ship, sailing date, or itinerary interests you most?');
+  if((d.focuses||[]).includes('Special Requests')||(d.specialRequests||[]).length)items.push('Are there any special requests or accessibility needs I should note?');
+  if((d.focuses||[]).includes('Air & Transfers')||d.airEnabled)items.push('Will you need airfare or transfers with Norwegian Cruise Line?');
+  items.push('Is there anything else I should make sure we cover on this call?');
+  return items.slice(0,4);
+}
+
+function storybookTrainerPanel(stage,d){
+  const gdprRequired=d.department==='Guest Services'&&d.reservationWorkflow==='modify';
+  const cues={
+    1:['Confirm the trainee can identify the caller, call reason, and department path.','Make sure they restate the reason for the call naturally before moving into questions.'],
+    2:[gdprRequired?'Coach the trainee to request the reservation number first — it is mandatory for Guest Services existing reservations.':'Coach the trainee to move from introduction into discovery without sounding scripted.','Listen for active listening and clean follow-up questions.'],
+    3:['Check that SEAweb actions line up with the scenario skills selected.','Watch for correct use of payment handling, notes, and promotions when applicable.'],
+    4:['Expect a complete recap, confirmation details, and a clear close.','Use the reflection fields to capture coaching notes or answer-key reminders.']
+  };
+  const items=(cues[stage]||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  const notes=d.trainerNotes?`<div class="sim-trainer-note"><span>Trainer Notes</span><p>${escapeHtml(d.trainerNotes)}</p></div>`:'';
+  return `<div class="sim-book-panel trainer"><span class="sim-panel-eyebrow">Trainer Lens</span><ul class="sim-book-list">${items}</ul>${notes}</div>`;
+}
+
+function storybookStageSpread(stage,d,mode='trainee'){
+  const callerProfile=storybookCallerProfile(d);
+  const agentProfile=storybookAgentProfile(d);
+  const caller=escapeHtml(callerProfile.name);
+  const agent=escapeHtml(agentProfile.name);
+  const agentTitle=escapeHtml(agentProfile.title);
+  const party=scenarioGuestNames(d).filter(Boolean);
+  const partyText=escapeHtml(party.length?party.join(' and '):callerProfile.name);
+  const route=escapeHtml(d.sailing?sailingTitleWithDuration(d.sailing):(focusTitle(d)||'Trainer-selected sailing'));
+  const sailDate=escapeHtml(d.sailing?.sailingDate?formatSailingDate(d.sailing.sailingDate):'Date to verify');
+  const ship=escapeHtml(d.sailing?.ship||'Norwegian Cruise Line');
+  const port=escapeHtml(d.sailing?.departure||'Departure to verify');
+  const gdprRequired=d.department==='Guest Services'&&d.reservationWorkflow==='modify';
+  const request=d.followUpRoleplay?`${caller} wants to ${escapeHtml(followUpRequestSentence(d))}.`:(d.reservationWorkflow==='modify'?`${caller} is calling about an existing reservation and needs assistance.`:`${partyText} is calling to create a new reservation.`);
+  const reason=escapeHtml(d.followUpRoleplay?followUpReasonLabel(d):(focusTitle(d)||'Reservation Support'));
+  const skills=(d.focuses||[]).slice(0,6).map(x=>`<span class="sim-book-chip">${escapeHtml(x)}</span>`).join('')||'<span class="sim-book-chip">Scenario Skills</span>';
+  const guests=presentationGuestRows(d).map((g,i)=>`<div class="sim-book-mini-card"><span>Guest ${i+1}</span><strong>${escapeHtml(g.name)}</strong><small>${escapeHtml(g.status)}${g.status==='Past Guest'?` • Latitudes # ${escapeHtml(g.latitudes)}`:''}</small></div>`).join('');
+  const source=d.department==='Outbound Sales'?'Direct Guest • Outbound Sales':(d.reservationWorkflow==='new'?(d.newCallerType==='travel_agent'?`${escapeHtml(d.travelAgentName||'Travel Agent')} • ${escapeHtml(d.agency||'Agency to verify')}`:`${escapeHtml(newReservationCallerLabel(d))} • Agency ${escapeHtml(d.agency||'—')}`):escapeHtml(guestServicesAgencyDisplay(d.agency)));
+  const tasks=presentationBuildTasks(d).slice(0,8).map(x=>`<li><input type="checkbox" data-save-field><span>${escapeHtml(x)}</span></li>`).join('');
+  const developments=presentationDevelopments(d).slice(0,5).map(x=>`<div class="sim-book-note-card"><strong>${escapeHtml(x.title)}</strong><p>${escapeHtml(x.text)}</p></div>`).join('');
+  const outcomes=presentationOutcomeItems(d).slice(0,7).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  const discovery=storybookDiscoveryQuestions(d).map(x=>`<li>${escapeHtml(x)}</li>`).join('');
+  const reservationCards=presentationReservationCards(d);
+  const paymentCard=presentationPaymentHtml(d);
+  const recap=presentationRecapHtml(d);
+  const closing=presentationClosingHtml(d);
+  const trainerPanel=mode==='trainer'?storybookTrainerPanel(stage,d):'';
+
+  if(stage===1){
+    return {
+      left:`<div class="sim-book-page-inner"><span class="sim-book-kicker">Chapter 1</span><h2 class="sim-book-title">The Call Begins</h2><p class="sim-book-subtitle">A new story starts with a warm welcome and a clear reason for the call.</p><div class="sim-character-showcase"><div class="sim-character-avatar caller">${storybookPortrait('caller',callerProfile)}</div><div><span class="sim-character-role">${escapeHtml(callerProfile.role)}</span><h3>${caller}</h3><p>${request}</p><div class="sim-dialogue-bubble caller">“${escapeHtml(d.reservationWorkflow==='modify'?'I need help with my existing reservation.':'I want to plan a cruise and make sure everything is set up correctly.')}”</div></div></div><div class="sim-book-panel soft"><span class="sim-panel-eyebrow">Call Scenario</span>${presentationStoryHtml(d)}</div><div class="sim-page-note">One caller. One agent. Read the setup first, then move through the conversation chapter by chapter.</div></div>`,
+      right:`<div class="sim-book-page-inner"><div class="sim-character-showcase reverse"><div class="sim-character-avatar agent">${storybookPortrait('agent',agentProfile)}</div><div><span class="sim-character-role">Agent</span><h3>${agent}</h3><p>${agentTitle}</p><div class="sim-dialogue-bubble agent">“Thank you for calling Norwegian Cruise Line. My name is ${agent}. With whom do I have the pleasure of speaking?”</div></div></div><div class="sim-book-facts"><div class="sim-book-fact"><span>Reason for Call</span><strong>${reason}</strong></div><div class="sim-book-fact"><span>Ship & Sailing</span><strong>${ship}</strong><small>${route}</small><small>${sailDate} • ${port}</small></div><div class="sim-book-fact"><span>Your Role</span><strong>${agentTitle}</strong><small>Listen carefully and guide the call naturally.</small></div></div><div class="sim-book-panel"><span class="sim-panel-eyebrow">Skills Included</span><div class="sim-book-chip-row">${skills}</div></div>${trainerPanel}${presentationArtCard('intro',d)}</div>`
+    };
+  }
+
+  if(stage===2){
+    return {
+      left:`<div class="sim-book-page-inner"><span class="sim-book-kicker">Chapter 2</span><h2 class="sim-book-title">Listen & Ask</h2><p class="sim-book-subtitle">Understand the caller before you start working in SEAweb.</p><div class="sim-story-dialogue"><div class="sim-dialogue-line agent"><strong>${agent}</strong><p>Thank you for calling Norwegian Cruise Line. My name is ${agent}. With whom do I have the pleasure of speaking?</p></div><div class="sim-dialogue-line caller"><strong>${caller}</strong><p>My name is ${caller}.</p></div><div class="sim-dialogue-line agent"><strong>${agent}</strong><p>Thank you, ${caller}. How may I assist you today?</p></div><div class="sim-dialogue-line caller"><strong>${caller}</strong><p>${escapeHtml(d.followUpRoleplay?`I want to ${followUpRequestSentence(d)}.`:(d.reservationWorkflow==='modify'?'I am calling about my existing reservation.':'I would like to book a new cruise vacation.'))}</p></div></div>${gdprRequired?`<div class="sim-book-alert"><span>GDPR Required</span><strong>Reservation Number is mandatory before you service the reservation.</strong><p>Complete verification before discussing or changing reservation details.</p></div>`:`<div class="sim-book-alert success"><span>Sales Call</span><strong>Step 2 identifies this as a new reservation sales conversation.</strong><p>Proceed with discovery and continue following the approved sales path.</p></div>`}<div class="sim-book-panel"><span class="sim-panel-eyebrow">Helpful Discovery Questions</span><ul class="sim-book-list">${discovery}</ul></div></div>`,
+      right:`<div class="sim-book-page-inner">${gdprRequired?`<div class="sim-book-panel critical"><span class="sim-panel-eyebrow">Verify Before You Service</span><div class="sim-book-required"><div><span>Reservation Number</span><b>REQUIRED</b></div><p>This must be obtained first. Then continue with the correct GDPR path.</p></div>${presentationVerificationHtml(d)}</div>`:''}<div class="sim-book-panel"><span class="sim-panel-eyebrow">Approved Call Flow</span>${presentationRecipeHtml(d)}</div>${trainerPanel}<div class="sim-character-inline"><div class="sim-character-avatar small agent">${storybookPortrait('agent',agentProfile)}</div><div><strong>${agentTitle}</strong><p>Ask only what you still need. Do not make the caller repeat what they already told you.</p></div></div></div>`
+    };
+  }
+
+  if(stage===3){
+    return {
+      left:`<div class="sim-book-page-inner"><span class="sim-book-kicker">Chapter 3</span><h2 class="sim-book-title">Service the Call</h2><p class="sim-book-subtitle">Turn the conversation into accurate booking work.</p><div class="sim-book-grid two"><div class="sim-book-fact"><span>Booking Source</span><strong>${source}</strong></div><div class="sim-book-fact"><span>Reservation Workflow</span><strong>${escapeHtml(d.department==='Outbound Sales'&&d.reservationWorkflow==='modify'?'Sales Follow-Up / Existing Quote':d.reservationWorkflow==='modify'?'Service Existing Reservation':'Create New Reservation')}</strong></div><div class="sim-book-fact"><span>Sailing</span><strong>${ship}</strong><small>${route}</small></div><div class="sim-book-fact"><span>Payment / Action</span><strong>${escapeHtml(d.payment||'Verify')}</strong></div></div><div class="sim-book-panel"><span class="sim-panel-eyebrow">Guest & Reservation Snapshot</span><div class="sim-book-mini-grid">${guests}</div><div class="sim-reservation-card-wrap">${reservationCards}</div></div></div>`,
+      right:`<div class="sim-book-page-inner"><div class="sim-book-panel"><span class="sim-panel-eyebrow">SEAweb Work</span><ul class="sim-book-checklist">${tasks}</ul></div>${developments?`<div class="sim-book-panel"><span class="sim-panel-eyebrow">The Call Develops</span><div class="sim-book-note-grid">${developments}</div></div>`:''}${paymentCard?`<div class="sim-book-panel"><span class="sim-panel-eyebrow">Training Payment Card</span>${paymentCard}</div>`:''}${trainerPanel}<div class="sim-page-note">Use NCLHelp whenever you need to verify policy, eligibility, or process steps.</div></div>`
+    };
+  }
+
+  return {
+    left:`<div class="sim-book-page-inner"><span class="sim-book-kicker">Chapter 4</span><h2 class="sim-book-title">Review & Recap</h2><p class="sim-book-subtitle">End the story with confidence, clarity, and a strong recap.</p><div class="sim-book-panel"><span class="sim-panel-eyebrow">Call Recap</span>${recap}</div><div class="sim-book-panel"><span class="sim-panel-eyebrow">Branded Closing</span>${closing}</div></div>`,
+    right:`<div class="sim-book-page-inner"><div class="sim-book-panel"><span class="sim-panel-eyebrow">What Should Be True When the Call Ends?</span><ul class="sim-book-list check">${outcomes}</ul><label class="sim-book-entry"><span>Training Reservation Number${d.multipleReservations?'s':''}</span><input data-save-field placeholder="Enter completed training reservation number${d.multipleReservations?'s':''}..." /></label></div><div class="sim-book-panel"><span class="sim-panel-eyebrow">Reflection</span><label class="sim-book-textarea"><span>${mode==='trainer'?'Coaching notes / answer key reminders':'How did you make sure the caller understood the outcome?'}</span><textarea data-save-field placeholder="Type your response..."></textarea></label><label class="sim-book-textarea"><span>${mode==='trainer'?'What feedback would you give the trainee?':'What was the most important detail you had to catch?'}</span><textarea data-save-field placeholder="Type your response..."></textarea></label></div>${trainerPanel}<div class="sim-character-inline end"><div class="sim-character-avatar small caller">${storybookPortrait('caller',callerProfile)}</div><div class="sim-dialogue-bubble caller">“Thank you so much — that made the process easy to understand.”</div></div></div>`
+  };
+}
+
+function callSimulationStorybookCss(){return `
+body.storybook-body{background:linear-gradient(180deg,#f7f2e8 0%,#ebe7df 100%);color:#17304d;overflow:hidden}
+.sim-shell.storybook{height:100vh;display:grid;grid-template-rows:auto 1fr auto;background:radial-gradient(circle at top right,rgba(230,205,136,.35),transparent 32%),linear-gradient(180deg,#f8f4ec 0%,#ebe7df 100%)}
+.sim-topbar.storybook{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:14px 24px;background:rgba(255,255,255,.84);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,72,79,.14)}
+.sim-topbar.storybook .sim-topbar-brand img{height:42px;object-fit:contain}
+.sim-topbar.storybook .sim-topbar-nav{display:flex;gap:26px;justify-content:center;flex-wrap:wrap}.sim-topbar.storybook .sim-topbar-nav a{color:#0b3f66;text-decoration:none;font-weight:700;font-size:14px}.sim-topbar.storybook .sim-topbar-nav a.active{color:#00484F;border-bottom:2px solid #A7CAC6;padding-bottom:4px}
+.sim-topbar.storybook .sim-topbar-meta{justify-self:end;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #c8d8df;border-radius:999px;background:#fff;color:#00484F;font-weight:700}
+.sim-book-main{overflow:auto;padding:24px 28px 120px}.sim-book-deck{max-width:1460px;margin:0 auto}
+.sim-book-slide{display:none}.sim-book-slide.active{display:block}
+.sim-book-spread{display:grid;grid-template-columns:74px minmax(0,1fr) minmax(0,1fr);min-height:calc(100vh - 190px);background:linear-gradient(180deg,#faf6ee 0%,#f7f1e4 100%);border:1px solid #d7c9aa;border-radius:34px;overflow:hidden;box-shadow:0 24px 56px rgba(15,47,99,.14)}
+.sim-book-spine{background:linear-gradient(180deg,#0b3f66 0%,#00484F 100%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:24px 12px}.sim-book-spine-top{display:flex;flex-direction:column;align-items:center;gap:14px}.sim-book-spine-num{width:42px;height:42px;border-radius:50%;background:#E6CD88;color:#7a5610;font-size:18px;font-weight:800;display:grid;place-items:center}.sim-book-spine-title{writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.18em;text-transform:uppercase;font-weight:800;font-size:12px;opacity:.95}.sim-book-spine-brand{font-size:10px;letter-spacing:.16em;text-transform:uppercase;opacity:.85;text-align:center}
+.sim-book-page{position:relative;padding:30px 30px 24px;background:linear-gradient(180deg,rgba(255,255,255,.84),rgba(250,246,238,.98))}.sim-book-page.left{border-right:1px solid rgba(204,188,153,.7)}.sim-book-page:before{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.25),transparent 18%,transparent 82%,rgba(255,255,255,.18));pointer-events:none}.sim-page-number{position:absolute;top:18px;right:20px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#89a0b3;font-weight:800}
+.sim-book-page-inner{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;min-height:100%}
+.sim-book-kicker{font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:800;color:#0A84BD}.sim-book-title{margin:0;font-size:44px;line-height:1.02;color:#0b2f63;font-family:'Besley',Georgia,serif}.sim-book-subtitle{margin:-6px 0 0;color:#405166;font-size:16px;line-height:1.55}
+.sim-character-showcase{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:center}.sim-character-showcase.reverse{grid-template-columns:1fr 120px}.sim-character-showcase.reverse .sim-character-avatar{order:2}.sim-character-showcase h3{margin:0;font-size:24px;color:#0b2f63}.sim-character-showcase p{margin:4px 0 0;color:#46566a;line-height:1.55}.sim-character-role{display:inline-block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#0A84BD;margin-bottom:4px}
+.sim-character-avatar{width:120px;height:120px;border-radius:28px;background:linear-gradient(135deg,#fff 0%,#eef4f7 100%);display:grid;place-items:center;border:1px solid #d7e0e7;box-shadow:0 10px 24px rgba(0,72,79,.10);overflow:hidden}.sim-character-avatar.small{width:82px;height:82px;border-radius:22px}.sim-character-avatar.caller{background:linear-gradient(135deg,#fff7ef 0%,#eef5fb 100%)}.sim-character-avatar.agent{background:linear-gradient(135deg,#eef8fc 0%,#f7fbff 100%)}.sim-character-portrait-svg{width:100%;height:100%;display:block}
+.sim-dialogue-bubble{padding:14px 16px;border-radius:20px;background:#fff;border:1px solid #dbe6ef;color:#13324b;line-height:1.55;box-shadow:0 8px 22px rgba(17,24,39,.05)}.sim-dialogue-bubble.caller{background:#fff9ef;border-color:#ead8a1}.sim-dialogue-bubble.agent{background:#eef8fc;border-color:#c7e0ee}
+.sim-book-panel{background:rgba(255,255,255,.92);border:1px solid #d9e2ea;border-radius:24px;padding:18px 20px;box-shadow:0 10px 24px rgba(17,24,39,.05)}.sim-book-panel.soft{background:linear-gradient(135deg,#fffdf9 0%,#f7fbff 100%)}.sim-book-panel.critical{background:linear-gradient(135deg,#fff2ef 0%,#ffffff 100%);border-color:#ffb6ab}.sim-book-panel.trainer{background:linear-gradient(135deg,#f4fbfb 0%,#fff 100%);border-color:#bfe0dc}.sim-panel-eyebrow{display:block;font-size:11px;letter-spacing:.17em;text-transform:uppercase;font-weight:800;color:#0A84BD;margin-bottom:10px}.sim-trainer-note{margin-top:12px;padding-top:12px;border-top:1px solid #deeaef}.sim-trainer-note span{display:block;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:800;color:#0b3f66;margin-bottom:6px}.sim-trainer-note p{margin:0;color:#526173;line-height:1.55}
+.sim-page-note{margin-top:auto;padding:12px 14px;border-radius:16px;background:rgba(167,202,198,.18);font-size:14px;line-height:1.5;color:#00484F}
+.sim-book-facts,.sim-book-grid.two,.sim-book-mini-grid,.sim-book-note-grid{display:grid;gap:14px}.sim-book-facts,.sim-book-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.sim-book-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.sim-book-note-grid{grid-template-columns:1fr}.sim-book-fact,.sim-book-mini-card,.sim-book-note-card{background:#fff;border:1px solid #dbe6ef;border-radius:18px;padding:15px 16px}.sim-book-fact span,.sim-book-mini-card span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#0A84BD;margin-bottom:8px}.sim-book-fact strong,.sim-book-mini-card strong{display:block;font-size:18px;line-height:1.35;color:#0b2f63}.sim-book-fact small,.sim-book-mini-card small{display:block;color:#526173;line-height:1.45;margin-top:4px}
+.sim-book-chip-row{display:flex;flex-wrap:wrap;gap:10px}.sim-book-chip{display:inline-flex;align-items:center;gap:6px;padding:10px 14px;border-radius:999px;background:#eef8fc;border:1px solid #c7e0ee;color:#0b3f66;font-size:13px;font-weight:700}
+.sim-story-dialogue{display:grid;gap:12px}.sim-dialogue-line{padding:16px;border-radius:18px;border:1px solid #d8e3eb;background:#fff;box-shadow:0 6px 18px rgba(17,24,39,.04)}.sim-dialogue-line.agent{background:#eef8fc;border-color:#cbe5f1}.sim-dialogue-line.caller{background:#fff9ef;border-color:#ead8a1}.sim-dialogue-line strong{display:block;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#0A84BD;margin-bottom:6px}.sim-dialogue-line p{margin:0;line-height:1.65;color:#17304d}
+.sim-book-alert{padding:16px 18px;border-radius:20px;background:linear-gradient(135deg,#fff2ef 0%,#fff 100%);border:1px solid #ffb6ab}.sim-book-alert.success{background:linear-gradient(135deg,#eef8f7 0%,#fff 100%);border-color:#A7CAC6}.sim-book-alert span{display:block;font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#0A84BD;margin-bottom:8px}.sim-book-alert strong{display:block;font-size:20px;line-height:1.3;color:#0b2f63}.sim-book-alert p{margin:8px 0 0;color:#526173;line-height:1.55}
+.sim-book-required{padding:14px;border:1px solid #ffd1c8;background:#fff;border-radius:18px;margin-bottom:12px}.sim-book-required>div{display:flex;align-items:center;justify-content:space-between;gap:14px}.sim-book-required span{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:#17304d;font-weight:700}.sim-book-required b{display:inline-flex;align-items:center;padding:7px 12px;border-radius:999px;background:#d94132;color:#fff;letter-spacing:.1em;font-size:12px}
+.sim-character-inline{display:grid;grid-template-columns:82px 1fr;gap:14px;align-items:center}.sim-character-inline.end{margin-top:auto}.sim-character-inline p{margin:4px 0 0;line-height:1.55;color:#526173}
+.sim-book-list,.sim-book-checklist,.sim-book-list.check{margin:0;padding-left:20px;display:grid;gap:8px}.sim-book-list li,.sim-book-list.check li{line-height:1.6;color:#17304d}.sim-book-checklist{padding:0;list-style:none}.sim-book-checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid #ecf1f5}.sim-book-checklist li:first-child{border-top:0;padding-top:0}.sim-book-checklist input{width:18px;height:18px;margin-top:2px;accent-color:#00484F}
+.sim-book-entry{display:grid;gap:8px;margin-top:14px}.sim-book-entry span,.sim-book-textarea span{font-size:13px;font-weight:700;color:#17304d}.sim-book-entry input,.sim-book-textarea textarea{width:100%;border:1px solid #cdd8e1;border-radius:16px;padding:12px 14px;font:inherit;color:#17304d;background:#fff}.sim-book-textarea{display:grid;gap:8px;margin-top:12px}.sim-book-textarea textarea{min-height:104px;resize:vertical}
+.sim-reservation-card-wrap .sim-info-card,.sim-book-panel .sim-payment-card,.sim-book-panel .sim-recap-card,.sim-book-panel .sim-closing-card,.sim-book-panel .sim-verify-callout,.sim-book-panel .sim-recipe-shell,.sim-book-panel .sim-recipe-note,.sim-book-panel .sim-verify-card{border-radius:18px}.sim-reservation-card-wrap .sim-info-card{margin-top:12px}.sim-reservation-card-wrap .sim-info-card:first-child{margin-top:0}
+.sim-footer.book{position:sticky;bottom:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-top:1px solid rgba(0,72,79,.12);display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:18px;padding:14px 22px}.sim-footer.book .sim-progress-area{max-width:440px;justify-self:center;width:100%}.sim-footer.book .sim-progress{height:10px;border-radius:999px;background:#dbe6ef}.sim-footer.book .sim-progress-bar{height:100%;border-radius:999px;background:linear-gradient(90deg,#0A84BD,#E6CD88)}.sim-footer.book .sim-tools{display:flex;align-items:center;gap:10px}.sim-footer.book .sim-nav-btn,.sim-footer.book .sim-tool-btn{min-height:48px;border-radius:16px;border:1px solid #c8d8df;background:#fff;color:#0b2f63;font-weight:700;padding:12px 16px;cursor:pointer}.sim-footer.book .sim-nav-btn.primary{background:#0b2f63;border-color:#0b2f63;color:#fff}.sim-footer.book .sim-counter{display:block;text-align:center;color:#00484F;font-size:13px;font-weight:700;margin-top:8px}
+@media(max-width:1220px){.sim-book-spread{grid-template-columns:60px 1fr}.sim-book-page.left{border-right:0;border-bottom:1px solid rgba(204,188,153,.7)}.sim-book-spine{flex-direction:row;align-items:center;justify-content:space-between}.sim-book-spine-title{writing-mode:horizontal-tb;transform:none}.sim-book-page.right{grid-column:2}.sim-topbar.storybook{grid-template-columns:1fr}.sim-topbar.storybook .sim-topbar-nav{justify-content:flex-start}}
+@media(max-width:860px){body.storybook-body{overflow:auto}.sim-shell.storybook{height:auto;min-height:100vh}.sim-book-main{padding:16px 14px 42px}.sim-book-spread{grid-template-columns:1fr;min-height:auto}.sim-book-spine{display:none}.sim-book-page.left{border-right:0;border-bottom:1px solid rgba(204,188,153,.7)}.sim-book-page{padding:22px 18px}.sim-book-title{font-size:34px}.sim-character-showcase,.sim-character-showcase.reverse,.sim-character-inline{grid-template-columns:1fr}.sim-character-showcase.reverse .sim-character-avatar{order:0}.sim-book-facts,.sim-book-grid.two,.sim-book-mini-grid{grid-template-columns:1fr}.sim-footer.book{position:static;grid-template-columns:1fr}.sim-footer.book .sim-tools{justify-content:space-between;flex-wrap:wrap}}
+`}
+
+function buildStorybookCallSimulationDocument(mode='trainee'){
+  if(!ensureScenarioReady())return '';
+  const d=state.currentScenario;
+  const slides=buildCallSimulationSlides(d,mode);
+  const title=`SEAweb Call Simulation – ${focusTitle(d)}`;
+  const storageKey=`seawebCallSimulation-${String(d.id||focusTitle(d)).replace(/[^A-Za-z0-9_-]+/g,'-')}-storybook-${mode}`;
+  const topNav=['Home','Real Sailing Search','Scenario Generator','Call Simulations','Saved Simulations','Training Resources'];
+  const slidesHtml=slides.map((slide,i)=>{
+    const spread=storybookStageSpread(slide.stage||i+1,d,mode);
+    const pageNum=String(slide.stage||i+1).padStart(2,'0');
+    return `<section class="sim-slide sim-book-slide${i===0?' active':''}" data-slide="${i+1}" data-stage="${slide.stage||i+1}" ${i===0?'':'hidden'} style="display:${i===0?'block':'none'}"><div class="sim-book-spread"><aside class="sim-book-spine"><div class="sim-book-spine-top"><div class="sim-book-spine-num">${pageNum}</div><div class="sim-book-spine-title">${escapeHtml(slide.title)}</div></div><div class="sim-book-spine-brand">Norwegian Cruise Line<br/>${mode==='trainer'?'Trainer Storybook':'Call Storybook'}</div></aside><article class="sim-book-page left"><div class="sim-page-number">${pageNum}</div>${spread.left}</article><article class="sim-book-page right"><div class="sim-page-number">${pageNum}</div>${spread.right}</article></div></section>`;
+  }).join('');
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${callSimulationCss()}${callSimulationStorybookCss()}</style></head><body class="storybook-body" data-storage-key="${escapeAttr(storageKey)}"><div class="sim-shell storybook"><header class="sim-topbar storybook"><div class="sim-topbar-brand"><img class="sim-brand-lockup" src="${NCL_SIM_LOGO_DATA}" alt="Norwegian Cruise Line – It's Different Out Here" /></div><nav class="sim-topbar-nav">${topNav.map(label=>`<a href="#" onclick="return false"${label==='Call Simulations'?' class="active"':''}>${escapeHtml(label)}</a>`).join('')}</nav><div class="sim-topbar-meta"><span class="sim-topbar-icon">📖</span><strong>${escapeHtml(mode==='trainer'?'Trainer Storybook View':'Trainee Storybook View')}</strong></div></header><main class="sim-book-main"><div class="sim-book-deck">${slidesHtml}</div></main><footer class="sim-footer book"><button class="sim-nav-btn" id="simPrev">← Previous</button><div class="sim-progress-area"><div class="sim-progress"><div class="sim-progress-bar" id="simProgressBar"></div></div><span class="sim-counter" id="simCounter"></span></div><div class="sim-tools"><button class="sim-tool-btn" id="simFullscreen">Full Screen</button><button class="sim-tool-btn" id="simPrint">Print / PDF</button><button class="sim-tool-btn" id="simReset">Reset</button><button class="sim-nav-btn primary" id="simNext">Next →</button></div></footer></div><script>(${callSimulationClient.toString()})();<\/script></body></html>`;
+}
+
 function buildCallSimulationDocument(mode="trainee"){
+  if(mode==="trainee"||mode==="trainer")return buildStorybookCallSimulationDocument(mode);
   if(!ensureScenarioReady())return "";
   const d=state.currentScenario;
   const slides=buildCallSimulationSlides(d,mode);
@@ -6605,6 +6794,8 @@ window.openSaved=(id)=>{
     String(x.agency)==="7"?"direct_ca":(["5",""].includes(String(x.agency||""))?"direct_us":"travel_agent")
   );
   if($("travelAgentName"))$("travelAgentName").value=x.travelAgentName||"";
+  if($("callerDisplayName"))$("callerDisplayName").value=x.callerDisplayName||"";
+  if($("agentDisplayName"))$("agentDisplayName").value=x.agentDisplayName||"";
   $("existingReservationNumber").value=x.existingReservationNumber||"";
   $("modificationType").value=x.modificationType||"general";
   $("modificationTarget").value=x.modificationTarget||"";
@@ -6774,12 +6965,15 @@ function wizardScenarioSnapshotHtml(){
     : (department==="Guest Services"&&$("newCallerType")?.value==="travel_agent"&&$("travelAgentName")?.value.trim()?`Travel Agent ${$("travelAgentName").value.trim()}`:newReservationCallerLabel({department,newCallerType:$("newCallerType")?.value||"direct_us"}));
   const guestCount=workflow==="new"?(formGuestNames().filter(Boolean).length||+$("guestCount")?.value||1):"Existing booking";
   const sailing=state.selectedSailing?.ship?`${state.selectedSailing.ship}${state.selectedSailing.sailingDate?` • ${formatSailingDate(state.selectedSailing.sailingDate)}`:""}`:"No real sailing selected";
+  const storyCaller=(($("callerDisplayName")?.value||'').trim())||caller;
+  const storyAgent=(($("agentDisplayName")?.value||'').trim())||'Auto-select in presentation';
   return `<section class="wizard-snapshot-card">
     <div class="wizard-snapshot-head"><span>SCENARIO SNAPSHOT</span><strong>${escapeHtml(selectedFocusNames().join(' + ')||'Training Scenario')}</strong></div>
     <dl>
       <div><dt>Department</dt><dd>${escapeHtml(department)}</dd></div>
       <div><dt>Workflow</dt><dd>${escapeHtml(workflow==='modify'?'Existing Reservation':'New Reservation')}</dd></div>
       <div><dt>Caller</dt><dd>${escapeHtml(caller)}</dd></div>
+      <div><dt>Storybook Cast</dt><dd>${escapeHtml(storyCaller)} • ${escapeHtml(storyAgent)}</dd></div>
       <div><dt>Reason for Call</dt><dd>${escapeHtml(wizardReasonForCall())}</dd></div>
       <div><dt>Guests</dt><dd>${escapeHtml(String(guestCount))}</dd></div>
       <div><dt>Sailing</dt><dd>${escapeHtml(sailing)}</dd></div>
@@ -6821,9 +7015,12 @@ function wizardTraineeExperienceHtml(){
   const gdpr=department==="Guest Services"&&workflow==="modify";
   const focuses=selectedFocusNames();
   const caller=workflow==="modify"?(($("gdprCallerType")?.selectedOptions?.[0]?.textContent||"Existing Reservation Caller")):newReservationCallerLabel({department,newCallerType:$("newCallerType")?.value||"direct_us"});
+  const storyCaller=(($("callerDisplayName")?.value||'').trim())||caller;
+  const storyAgent=(($("agentDisplayName")?.value||'').trim())||'Auto-select in presentation';
   const outcome=workflow==="modify"?"Service the request, document the change and recap the outcome":"Build the reservation, explain the applicable booking action and complete the call flow";
   return `<section class="wizard-experience-card"><div class="wizard-experience-head"><span>WHAT THE TRAINEE WILL EXPERIENCE</span><strong>${escapeHtml(wizardReasonForCall())}</strong></div><div class="wizard-experience-grid">
     <div><span>Caller</span><strong>${escapeHtml(caller)}</strong></div>
+    <div><span>Storybook Cast</span><strong>${escapeHtml(storyCaller)} • ${escapeHtml(storyAgent)}</strong></div>
     <div><span>Call Path</span><strong>${escapeHtml(department)} • ${workflow==='modify'?'Service Call':'Sales Call'}</strong></div>
     <div><span>GDPR</span><strong>${gdpr?'Required before servicing':'Not required for this call type'}</strong></div>
     <div><span>Primary Skills</span><strong>${escapeHtml(focuses.join(' + ')||'Not selected')}</strong></div>
@@ -6854,7 +7051,7 @@ function wizardRecommendationsHtml(){
 function savedScenarioTemplates(){try{return JSON.parse(localStorage.getItem("seawebScenarioTemplates")||"[]")}catch{return[]}}
 function setSavedScenarioTemplates(items){localStorage.setItem("seawebScenarioTemplates",JSON.stringify(items));renderWizardTemplateControls()}
 function captureWizardTemplate(){
-  return {id:makeUuid(),name:"",createdAt:new Date().toISOString(),department:$("department")?.value||"Guest Services",workflow:$("reservationWorkflow")?.value||"new",callerType:$("newCallerType")?.value||"direct_us",difficulty:$("difficulty")?.value||"Beginner",approach:$("scenarioApproach")?.value||"variation",focuses:selectedFocusNames(),payment:$("paymentAction")?.value||"",pricePrograms:collectPricePrograms(),commenting:!!$("commentToggle")?.checked,confirmation:!!$("confirmToggle")?.checked,travel:!!$("travelToggle")?.checked};
+  return {id:makeUuid(),name:"",createdAt:new Date().toISOString(),department:$("department")?.value||"Guest Services",workflow:$("reservationWorkflow")?.value||"new",callerType:$("newCallerType")?.value||"direct_us",difficulty:$("difficulty")?.value||"Beginner",approach:$("scenarioApproach")?.value||"variation",focuses:selectedFocusNames(),payment:$("paymentAction")?.value||"",pricePrograms:collectPricePrograms(),commenting:!!$("commentToggle")?.checked,confirmation:!!$("confirmToggle")?.checked,travel:!!$("travelToggle")?.checked,callerDisplayName:$("callerDisplayName")?.value||"",agentDisplayName:$("agentDisplayName")?.value||""};
 }
 function saveCurrentWizardTemplate(){
   const base=captureWizardTemplate();
@@ -6869,6 +7066,8 @@ function applyWizardTemplateById(id){
   $("department").value=t.department||"Guest Services";$("reservationWorkflow").value=t.workflow||"new";$("newCallerType").value=t.callerType||"direct_us";$("difficulty").value=t.difficulty||"Beginner";$("scenarioApproach").value=t.approach||"variation";
   updateDepartmentUI?.();updateWorkflowUI?.(false);updateScenarioFocus(null,null,t.focuses||[]);
   if(t.payment)$("paymentAction").value=t.payment;
+  if($("callerDisplayName"))$("callerDisplayName").value=t.callerDisplayName||"";
+  if($("agentDisplayName"))$("agentDisplayName").value=t.agentDisplayName||"";
   setPricePrograms(t.pricePrograms||{});
   if($("commentToggle"))$("commentToggle").checked=!!t.commenting;if($("confirmToggle"))$("confirmToggle").checked=!!t.confirmation;if($("travelToggle"))$("travelToggle").checked=!!t.travel;
   renderWizardObjectiveCard();renderReservationDetailsVisual();renderAdditionalOptionsVisual();renderWizardReviewSummary();showGeneratorWizardStep(1);flash(`Template loaded: ${t.name}`);
@@ -7091,6 +7290,7 @@ function renderReservationDetailsVisual(){
         <label class="visual-standalone-field"><span>Guest / Item Being Changed</span><input id="visualModificationTarget" value="${escapeAttr($("modificationTarget")?.value||'')}" placeholder="Guest, stateroom, dining request..." /></label>
         ${$("modificationType")?.value==='add_guest'?`<label class="visual-standalone-field"><span>Guest Being Added</span><select id="visualModificationGuestStatus"><option value="new" ${addedGuestStatus==='new'?'selected':''}>New Guest</option><option value="past" ${addedGuestStatus==='past'?'selected':''}>Past Guest</option></select></label>${addedGuestStatus==='past'?`<label class="visual-standalone-field"><span>Latitudes Number</span><input id="visualModificationLatitudes" value="${escapeAttr($("modificationLatitudes")?.value||'')}" inputmode="numeric" maxlength="12" placeholder="Training Latitudes number" /></label>`:''}`:''}
         <label class="visual-standalone-field wide"><span>Requested Change / Scenario Detail</span><textarea id="visualModificationRequest" rows="4" placeholder="Describe exactly what the guest wants changed on the existing reservation.">${escapeHtml($("modificationRequest")?.value||'')}</textarea></label>
+        <div class="visual-agent-fields wide"><label class="visual-standalone-field"><span>Storybook Caller Name</span><input id="visualCallerDisplayName" value="${escapeAttr($("callerDisplayName")?.value||'')}" placeholder="Optional name to show for the caller in the presentation" /></label><label class="visual-standalone-field"><span>Storybook Agent Name</span><input id="visualAgentDisplayName" value="${escapeAttr($("agentDisplayName")?.value||'')}" placeholder="Optional name to show for the agent in the presentation" /></label></div>
         ${$("department")?.value==='Guest Services'?`<div class="visual-gdpr-reminder wide"><strong>Reservation Number — REQUIRED</strong><span>Complete the appropriate GDPR verification before discussing or servicing the reservation.</span></div>`:''}
       </div></section>
       <section class="visual-detail-card visual-sailing-card"><div class="visual-section-icon sailing"></div><div class="visual-detail-copy"><h4>Sailing Details</h4><p>Use the sailing from the existing training reservation or select a real sailing when needed.</p></div><div class="visual-detail-controls visual-sailing-controls"><div class="visual-sailing-summary">${currentSelectedSailingSummaryHtml()}</div><button type="button" class="secondary visual-change-sailing-btn">Find / Change Sailing</button></div></section>
@@ -7101,6 +7301,8 @@ function renderReservationDetailsVisual(){
     bind('visualDirectGroupMarket','directGroupMarket','change',()=>updateGdprPreview?.());
     bind('visualModificationType','modificationType','change',()=>{updateModificationTypeUI?.(false);setTimeout(renderReservationDetailsVisual,0);});
     bind('visualModificationTarget','modificationTarget');
+    bind('visualCallerDisplayName','callerDisplayName');
+    bind('visualAgentDisplayName','agentDisplayName');
     bind('visualModificationGuestStatus','modificationGuestStatus','change',()=>{updateModificationTypeUI?.(false);setTimeout(renderReservationDetailsVisual,0);});
     bind('visualModificationLatitudes','modificationLatitudes');
     bind('visualModificationRequest','modificationRequest');
@@ -7131,6 +7333,7 @@ function renderReservationDetailsVisual(){
         <div class="visual-detail-controls">
           ${callerControl}
           ${outbound?`<div class="visual-market-summary"><span>Outbound Market / Currency</span><strong>${escapeHtml(selectedMarketLabel()||'Selected outbound market')}</strong><small>Agency ${escapeHtml($('agency')?.value||'')}</small></div>`:(callerCurrent==='travel_agent'?`<div class="visual-agent-fields"><label class="visual-standalone-field"><span>Travel Agent Name</span><input id="visualTravelAgentName" value="${escapeAttr($('travelAgentName')?.value||'')}" placeholder="Name of the Travel Agent who is calling" /></label><label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" placeholder="Agency ID or phone number" /></label></div>`:`<label class="visual-standalone-field"><span>Agency / Booking Identifier</span><input id="visualAgencyField" value="${escapeAttr($('agency')?.value||'')}" /></label>`)}
+          <div class="visual-agent-fields"><label class="visual-standalone-field"><span>Storybook Caller Name</span><input id="visualCallerDisplayName" value="${escapeAttr($('callerDisplayName')?.value||'')}" placeholder="Optional name to show for the caller in the presentation" /></label><label class="visual-standalone-field"><span>Storybook Agent Name</span><input id="visualAgentDisplayName" value="${escapeAttr($('agentDisplayName')?.value||'')}" placeholder="Optional name to show for the agent in the presentation" /></label></div>
           <div class="visual-inline-hint">${escapeHtml($('agencyHint')?.textContent||'')}</div>
         </div>
       </section>
@@ -7157,7 +7360,9 @@ function renderReservationDetailsVisual(){
   const visualPayment=$('visualPaymentAction');
   if(visualPayment){visualPayment.value=$('paymentAction')?.value||visualPayment.value; visualPayment.addEventListener('change',()=>{$('paymentAction').value=visualPayment.value;renderWizardReviewSummary();});}
   $('visualAgencyField')?.addEventListener('input',e=>{$('agency').value=e.target.value;syncAgencyCallerLogic();renderWizardReviewSummary();});
-  $('visualTravelAgentName')?.addEventListener('input',e=>{if($('travelAgentName'))$('travelAgentName').value=e.target.value;renderWizardReviewSummary();});
+  $('visualTravelAgentName')?.addEventListener('input',e=>{if($('travelAgentName'))$('travelAgentName').value=e.target.value;renderWizardReviewSummary();refreshWizardSnapshotCards();});
+  $('visualCallerDisplayName')?.addEventListener('input',e=>{if($('callerDisplayName'))$('callerDisplayName').value=e.target.value;renderWizardReviewSummary();refreshWizardSnapshotCards();});
+  $('visualAgentDisplayName')?.addEventListener('input',e=>{if($('agentDisplayName'))$('agentDisplayName').value=e.target.value;renderWizardReviewSummary();refreshWizardSnapshotCards();});
   $('visualConfirmationEmail')?.addEventListener('input',e=>{$('confirmationEmail').value=e.target.value;renderWizardReviewSummary();});
   host.querySelectorAll('[data-source-id]').forEach(input=>input.addEventListener('input',e=>{const src=$(e.target.dataset.sourceId); if(src){src.value=e.target.value; if(src.id==='guest1'||src.id==='guest2'||src.id.startsWith('reservation')) refreshGuestDependentConfigs(); renderWizardReviewSummary();}}));
   host.querySelectorAll('[data-category-base]').forEach(btn=>btn.addEventListener('click',()=>{
@@ -7404,7 +7609,7 @@ function setupGeneratorWizard(){
   step2.appendChild(reservationVisual);
   const hiddenBindings=document.createElement('div');
   hiddenBindings.className='wizard-hidden-bindings';
-  [$("marketAgencyField"),$("agencyField"),$("travelAgentNameField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
+  [$("marketAgencyField"),$("agencyField"),$("travelAgentNameField"),$("callerDisplayNameField"),$("agentDisplayNameField"),$("guestCountField"),$("guest1Field"),$("guest2Field"),$("reservation1ExtraGuests"),$("categoryField"),$("locationField"),$("sideField"),wizardFieldNode($("paymentAction")),$("pricingField"),wizardFieldNode($("confirmationEmail")),$("selectedSailingSummary"),$("multipleReservationPanel"),$("modificationPanel"),$("generateNamesBtn")].filter(Boolean).forEach(node=>hiddenBindings.appendChild(node));
   step2.appendChild(hiddenBindings);
   renderReservationDetailsVisual();
 
@@ -7489,7 +7694,7 @@ function escapeHtml(v=""){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","
 function escapeAttr(v=""){return escapeHtml(v).replace(/`/g,"&#96;")}
 
 
-["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency","travelAgentName"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
+["guestCount","category","locationPref","sidePref","paymentAction","pricing","confirmationEmail","reservation2GuestCount","reservation2Category","reservation2LocationPref","reservation2SidePref","reservation2Pricing","reservationCount","newCallerType","agency","travelAgentName","callerDisplayName","agentDisplayName"].forEach(id=>$(id)?.addEventListener('change',()=>{renderReservationDetailsVisual();renderWizardReviewSummary();}));
 populateMarketAgencies();populateTrainingCards();renderTrainingCard();updateDepartmentUI();setupGeneratorWizard();renderStarters();renderSelectedSailing();updateStats();renderDashboardHome();initSearchDates();updateAnchorUI();refreshLatitudesPanel();updateFollowUpRoleplayButton();renderReservationDetailsVisual();renderWizardReviewSummary();
 
 
